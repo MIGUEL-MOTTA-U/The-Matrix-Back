@@ -31,8 +31,8 @@ jobs:
       - name: pnpm install, build, and test
         run: |
           pnpm install
-          pnpm run build --if-present
-          pnpm run test --if-present
+          pnpm run build
+          pnpm run test
 
       - name: Zip artifact for deployment
         run: zip -r release.zip ./*
