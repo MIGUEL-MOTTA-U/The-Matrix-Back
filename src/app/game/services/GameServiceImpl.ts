@@ -1,7 +1,7 @@
 import type { WebSocket } from 'ws';
+import MatchError from '../../../errors/MatchError.js';
 import { type MatchDetails, validateGameMessage } from '../../../schemas/zod.js';
 import { logger, redis } from '../../../server.js';
-import MatchError from '../../errors/MatchError.js';
 import Match from '../../game/match/Match.js';
 import type GameService from '../../game/services/GameService.js';
 import type Player from '../characters/players/Player.js';

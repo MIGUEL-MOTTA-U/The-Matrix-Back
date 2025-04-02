@@ -69,6 +69,7 @@ interface BoardDTO {
   host: string | null;
   guest: string | null;
   fruitType: string;
+  fruitsType: string[];
   enemies: number;
   enemiesCoordinates: number[][];
   fruitsCoordinates: number[][];

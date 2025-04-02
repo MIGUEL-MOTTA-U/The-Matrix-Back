@@ -1,7 +1,6 @@
+import CharacterError from '../../../../errors/CharacterError.js';
+import MatchError from '../../../../errors/MatchError.js';
 import type { BoardItemDTO } from '../../../../schemas/zod.js';
-import CharacterError from '../../../errors/CharacterError.js';
-import MatchError from '../../../errors/MatchError.js';
-import type Board from '../../match/boards/Board.js';
 import type Cell from '../../match/boards/CellBoard.js';
 import Character from '../Character.js';
 
@@ -13,17 +12,7 @@ class Player extends Character {
   getDTO(): BoardItemDTO {
     return { type: 'player', id: this.id, orientation: this.orientation };
   }
-  private id: string;
-  /**
-   * Method to create a new player
-   * @param id {string} The id of the player
-   * @param cell {Cell} the cell where the player is located
-   */
-  constructor(id: string, cell: Cell, board: Board) {
-    super(cell, board);
-    this.id = id;
-    //this.cell = cell;
-  }
+
   /**
    * This method executes the player power
    */

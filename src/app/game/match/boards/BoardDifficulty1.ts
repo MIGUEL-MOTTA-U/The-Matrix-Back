@@ -1,8 +1,8 @@
 import { resolve } from 'node:path';
 import { Worker } from 'node:worker_threads';
+import BoardError from '../../../../errors/BoardError.js';
 import type { BoardDTO, CellDTO } from '../../../../schemas/zod.js';
 import { logger } from '../../../../server.js';
-import BoardError from '../../../errors/BoardError.js';
 import Troll from '../../characters/enemies/Troll.js';
 import Player from '../../characters/players/Player.js';
 import Board from './Board.js';
@@ -15,7 +15,7 @@ import Fruit from './Fruit.js';
  * @since 1.0
  */
 export default class BoardDifficulty1 extends Board {
-  private FRUIT_TYPE = '';
+  private FRUIT_TYPE: string[] = [];
   private ENEMIES = 0;
   private enemiesCoordinates: number[][] = [];
   private fruitsCoordinates: number[][] = [];
@@ -82,7 +82,7 @@ export default class BoardDifficulty1 extends Board {
     for (let i = 0; i < this.FRUITS; i++) {
       const x = this.fruitsCoordinates[i][0];
       const y = this.fruitsCoordinates[i][1];
-      const fruit = new Fruit(this.board[x][y], this.FRUIT_TYPE, this);
+      const fruit = new Fruit(this.board[x][y], this.FRUIT_TYPE[0], this);
       this.fruits.set({ x, y }, fruit);
       this.board[x][y].setItem(fruit);
     }
@@ -93,11 +93,11 @@ export default class BoardDifficulty1 extends Board {
    */
   protected setUpPlayers(host: string, guest: string): void {
     const [hostCoordinates, guestCoordinates] = this.playersStartCoordinates;
-    const hostPlayer = new Player(host, this.board[hostCoordinates[0]][hostCoordinates[1]], this);
+    const hostPlayer = new Player(this.board[hostCoordinates[0]][hostCoordinates[1]], this, host);
     const guestPlayer = new Player(
-      guest,
       this.board[guestCoordinates[0]][guestCoordinates[1]],
-      this
+      this,
+      guest
     );
     this.host = hostPlayer;
     this.guest = guestPlayer;
@@ -137,7 +137,7 @@ export default class BoardDifficulty1 extends Board {
       [11, 11],
     ];
     this.FRUITS = this.fruitsCoordinates.length;
-    this.FRUIT_TYPE = 'banana';
+    this.FRUIT_TYPE = ['banana', 'grape'];
     this.ENEMIES = 4;
     this.fruitsRounds = 2;
   }
@@ -146,7 +146,8 @@ export default class BoardDifficulty1 extends Board {
     return {
       host: this.host?.getId() || null,
       guest: this.guest?.getId() || null,
-      fruitType: this.FRUIT_TYPE,
+      fruitType: this.FRUIT_TYPE[0],
+      fruitsType: this.FRUIT_TYPE,
       enemies: this.ENEMIES,
       enemiesCoordinates: this.enemiesCoordinates,
       fruitsCoordinates: this.fruitsCoordinates,
