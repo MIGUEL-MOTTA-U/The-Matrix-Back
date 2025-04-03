@@ -82,8 +82,8 @@ class Cell {
     this.character = character;
   }
 
-  public pickItem(): void {
-    this.item?.pick();
+  public pickItem(): string | null {
+    return this.item?.pick() || null;
   }
 
   public getCellDTO(): CellDTO | null {

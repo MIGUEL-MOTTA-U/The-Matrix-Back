@@ -9,6 +9,8 @@ const errors = {
   WIN: 202,
   PLAYER_ALREADY_IN_MATCH: 409,
   MATCH_ALREADY_STARTED: 409,
+  SOCKET_CLOSED: 499,
+  INVALID_ROTATION: 400,
 };
 
 const messageToErrorKey: Record<string, keyof typeof errors> = {
@@ -20,10 +22,13 @@ const messageToErrorKey: Record<string, keyof typeof errors> = {
   'The players won the match': 'WIN',
   'The player is already in a match': 'PLAYER_ALREADY_IN_MATCH',
   'The match has already started': 'MATCH_ALREADY_STARTED',
+  'The socket was closed': 'SOCKET_CLOSED',
+  'The rotation is invalid': 'INVALID_ROTATION',
 };
 
 export default class MatchError extends ErrorTemplate {
   public static readonly MATCH_NOT_FOUND = 'The requested match was not found';
+  public static readonly SOCKET_CLOSED = 'The socket was closed';
   public static readonly MATCH_CANNOT_BE_CREATED = 'The match cannot be created';
   public static readonly PLAYER_NOT_FOUND = 'The requested player was not found';
   public static readonly INVALID_MESSAGE_TYPE = 'The message type is invalid';
@@ -31,6 +36,7 @@ export default class MatchError extends ErrorTemplate {
   public static readonly WIN = 'The players won the match';
   public static readonly PLAYER_ALREADY_IN_MATCH = 'The player is already in a match';
   public static readonly MATCH_ALREADY_STARTED = 'The match has already started';
+  public static readonly INVALID_ROTATION = 'The rotation is invalid';
 
   constructor(message: string) {
     const errorKey = messageToErrorKey[message];

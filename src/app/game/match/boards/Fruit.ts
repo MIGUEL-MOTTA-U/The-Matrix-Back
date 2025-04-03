@@ -15,8 +15,9 @@ export default class Fruit extends BoardItem {
     return false;
   }
 
-  pick(): void {
+  pick(): string {
     this.board.removeFruit(this.cell.getCoordinates());
+    return this.id;
   }
 
   private name: string;

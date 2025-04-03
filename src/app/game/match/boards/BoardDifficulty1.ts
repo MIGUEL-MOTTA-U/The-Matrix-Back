@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import BoardError from '../../../../errors/BoardError.js';
-import type { BoardDTO, CellDTO } from '../../../../schemas/zod.js';
+import type { BoardDTO } from '../../../../schemas/zod.js';
 import { logger } from '../../../../server.js';
 import Troll from '../../characters/enemies/Troll.js';
 import Player from '../../characters/players/Player.js';
@@ -41,6 +41,11 @@ export default class BoardDifficulty1 extends Board {
         this.board[i][j].setNeighbors(cellUp, cellDown, cellLeft, cellRight);
       }
     }
+  }
+
+  public checkLose(): boolean {
+    if (!this.host || !this.guest) throw new BoardError(BoardError.USER_NOT_DEFINED);
+    return !this.host.isAlive() && !this.guest.isAlive();
   }
 
   public checkWin(): boolean {
@@ -155,15 +160,6 @@ export default class BoardDifficulty1 extends Board {
       playersStartCoordinates: this.playersStartCoordinates,
       board: this.cellsBoardDTO(),
     };
-  }
-
-  private cellsBoardDTO(): CellDTO[] {
-    return this.board.flatMap(
-      (row) =>
-        row
-          .map((cell) => cell.getCellDTO())
-          .filter((cellDTO): cellDTO is CellDTO => cellDTO !== null) // Filtra celdas nulas
-    );
   }
 
   protected setUpInmovableObjects(): void {

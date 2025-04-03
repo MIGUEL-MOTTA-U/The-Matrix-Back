@@ -8,7 +8,7 @@ export abstract class BoardItem {
   protected board: Board;
   protected id: string;
   abstract blocked(): boolean;
-  abstract pick(): void;
+  abstract pick(): string | undefined;
   abstract getDTO(): BoardItemDTO;
   constructor(cell: Cell, board: Board, id?: string) {
     this.cell = cell;

@@ -1,3 +1,4 @@
+import { type PlayerMove, type UpdateEnemy, validateUpdateEnemy } from '../../../../schemas/zod.js';
 import Character from '../Character.js';
 
 export default abstract class Enemy extends Character {
@@ -6,6 +7,15 @@ export default abstract class Enemy extends Character {
   public getId(): string {
     return this.id;
   }
+
+  protected getCharacterUpdate(_idItemConsumed: string | null): PlayerMove | UpdateEnemy {
+    return validateUpdateEnemy({
+      id: this.id,
+      coordinates: this.cell.getCoordinates(),
+      direction: this.orientation,
+    });
+  }
+
   kill(): boolean {
     // Enemy can kill
     return true;

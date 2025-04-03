@@ -8,13 +8,14 @@ export default class Troll extends Enemy {
   getDTO(): BoardItemDTO {
     return { type: 'troll', orientation: this.orientation, id: this.id };
   }
-  protected move(cellUp: Cell, character: Character | null): void {
+  protected move(cellUp: Cell, character: Character | null): null {
     this.cell.setCharacter(null);
     cellUp.setCharacter(this);
     this.cell = cellUp;
     if (character && !character.kill()) {
       character.die(); // If it's a player, it dies.
     }
+    return null; // The troll doesn't consume anything
   }
 
   protected validateMove(cell: Cell | null): { character: Character | null; cell: Cell } {

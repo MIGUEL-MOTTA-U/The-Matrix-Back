@@ -1,4 +1,4 @@
-import type { BoardDTO } from '../../../../schemas/zod.js';
+import type { BoardDTO, CellDTO } from '../../../../schemas/zod.js';
 import type { CellCoordinates } from '../../../../schemas/zod.js';
 import type Enemy from '../../characters/enemies/Enemy.js';
 import type Player from '../../characters/players/Player.js';
@@ -49,6 +49,14 @@ abstract class Board {
   public getBoard(): Cell[][] {
     return this.board;
   }
+  public cellsBoardDTO(): CellDTO[] {
+    return this.board.flatMap(
+      (row) =>
+        row
+          .map((cell) => cell.getCellDTO())
+          .filter((cellDTO): cellDTO is CellDTO => cellDTO !== null) // Filtra celdas nulas
+    );
+  }
   public getFruitsNumber(): number {
     return this.fruitsNumber;
   }
@@ -65,7 +73,7 @@ abstract class Board {
 
   public abstract win(): void;
   public abstract checkWin(): boolean;
-
+  public abstract checkLose(): boolean;
   public async startGame(host: string, guest: string, _matchId: string): Promise<void> {
     this.setUpPlayers(host, guest);
     //await this.startEnemies(matchId);
