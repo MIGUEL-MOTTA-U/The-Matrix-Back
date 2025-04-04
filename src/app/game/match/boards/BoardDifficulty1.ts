@@ -15,7 +15,6 @@ import Fruit from './Fruit.js';
  * @since 1.0
  */
 export default class BoardDifficulty1 extends Board {
-  private FRUIT_TYPE: string[] = [];
   private ENEMIES = 0;
   private enemiesCoordinates: number[][] = [];
   private fruitsCoordinates: number[][] = [];
@@ -82,15 +81,22 @@ export default class BoardDifficulty1 extends Board {
   /**
    * This method sets up the fruits in the board
    */
-  protected setUpFruits(): void {
-    this.fruitsNumber = this.FRUITS;
-    for (let i = 0; i < this.FRUITS; i++) {
-      const x = this.fruitsCoordinates[i][0];
-      const y = this.fruitsCoordinates[i][1];
-      const fruit = new Fruit(this.board[x][y], this.FRUIT_TYPE[0], this);
-      this.fruits.set({ x, y }, fruit);
-      this.board[x][y].setItem(fruit);
-    }
+  protected async setUpFruits(): Promise<void>{
+    await this.mutex.runExclusive(() => {
+      this.fruitsNumber = this.FRUITS;
+      for (let i = 0; i < this.FRUITS; i++) {
+        const x = this.fruitsCoordinates[i][0];
+        const y = this.fruitsCoordinates[i][1];
+        if (this.board[x][y].getCharacter() === null || this.board[x][y].getCharacter()?.kill()) {
+          const fruit = new Fruit(this.board[x][y], this.FRUIT_TYPE[0], this);
+          this.fruits.set({ x, y }, fruit);
+          this.board[x][y].setItem(fruit);
+        } else {
+          this.fruitsNumber--;
+        }
+      }
+      this.FRUIT_TYPE.shift();
+    });
   }
 
   /**

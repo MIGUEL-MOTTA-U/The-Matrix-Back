@@ -31,6 +31,9 @@ class Match {
     this.started = false;
     this.timeSeconds = 300; // 5 minutes
   }
+  public async initialize(): Promise<void> {
+    await this.board.initialize();
+  }
 
   public getMatchUpdate(): UpdateAll {
     const time = validateUpdateTime({

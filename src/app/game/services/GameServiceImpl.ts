@@ -83,7 +83,7 @@ class GameServiceImpl implements GameService {
         this.notifyPlayers(socketP1, socketP2, validatePlayerMove(rotatedPlayer));
         break;
       }
-      case 'attack':
+      case 'exec-power':
         // Handle attack - TODO Implement attack --> Priority 2 <--- NOT MVP
         break;
       case 'set-color':
@@ -110,7 +110,7 @@ class GameServiceImpl implements GameService {
     this.connections.set(user, socket);
     return existingSocket;
   }
-  public createMatch(matchDetails: MatchDetails): Match {
+  public async createMatch(matchDetails: MatchDetails): Promise<Match>{
     if (!matchDetails.guest) throw new MatchError(MatchError.MATCH_CANNOT_BE_CREATED);
     const gameMatch = new Match(
       matchDetails.id,
@@ -119,6 +119,7 @@ class GameServiceImpl implements GameService {
       matchDetails.host,
       matchDetails.guest
     );
+    await gameMatch.initialize();
     this.matches.set(matchDetails.id, gameMatch);
     // Update users with match id
     redis.hset(`users:${matchDetails.host}`, 'match', matchDetails.id);
@@ -148,7 +149,7 @@ class GameServiceImpl implements GameService {
     gameMatch: Match;
     player: Player;
     socketP1: WebSocket;
-    socketP2: WebSocket;
+    socketP2: WebSocket | undefined;
   } {
     const { type, payload } = validateGameMesssageInput(JSON.parse(message.toString()));
 
@@ -159,16 +160,15 @@ class GameServiceImpl implements GameService {
       gameMatch.getHost() === userId ? gameMatch.getGuest() : gameMatch.getHost();
     const socketP2 = this.connections.get(otherPlayeId);
     if (!socketP1) throw new MatchError(MatchError.PLAYER_NOT_FOUND); // Not found in the socketP1 connections
-    if (!socketP2) throw new MatchError(MatchError.PLAYER_NOT_FOUND); // Not found in the socketP2 connections
-    this.validateConnections(socketP1, socketP2); // Check the sockets are open
+    this.validateConnections(socketP1); // Check the sockets are open
     const player = gameMatch.getPlayer(userId);
     if (!player) throw new MatchError(MatchError.PLAYER_NOT_FOUND); // Not found in the match asocieated with the matchId
 
     return { type, payload, gameMatch, player, socketP1, socketP2 };
   }
 
-  private validateConnections(socketP1: WebSocket, socketP2: WebSocket): void {
-    if (socketP1.readyState !== WebSocket.OPEN || socketP2.readyState !== WebSocket.OPEN) {
+  private validateConnections(socketP1: WebSocket): void {
+    if (socketP1.readyState !== WebSocket.OPEN) {
       throw new MatchError(MatchError.SOCKET_CLOSED);
     }
   }
@@ -193,6 +193,7 @@ class GameServiceImpl implements GameService {
   }
 
   private rotatePlayer(player: Player, direction: string): PlayerMove | UpdateEnemy {
+    logger.info(`Rotating player ${player.getId()} to ${direction}`);
     switch (direction) {
       case 'up':
         return player.changeOrientation('up');
@@ -207,9 +208,14 @@ class GameServiceImpl implements GameService {
     }
   }
 
-  private notifyPlayers(socketP1: WebSocket, socketP2: WebSocket, dataDTO: unknown): void {
+  private notifyPlayers(
+    socketP1: WebSocket,
+    socketP2: WebSocket | undefined,
+    dataDTO: unknown
+  ): void {
     socketP1.send(this.parseToString(dataDTO));
-    socketP2.send(this.parseToString(dataDTO));
+    if (socketP2 && socketP2.readyState === WebSocket.OPEN)
+      socketP2.send(this.parseToString(dataDTO));
   }
 
   private parseToString(data: unknown): string {

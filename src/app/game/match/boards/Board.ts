@@ -4,7 +4,10 @@ import type Enemy from '../../characters/enemies/Enemy.js';
 import type Player from '../../characters/players/Player.js';
 import type Cell from './CellBoard.js';
 import type Fruit from './Fruit.js';
+import { Mutex } from 'async-mutex';
 abstract class Board {
+  protected FRUIT_TYPE: string[] = [];
+  protected readonly mutex = new Mutex();
   protected readonly ROWS: number;
   protected readonly COLS: number;
   protected readonly map: string;
@@ -18,7 +21,7 @@ abstract class Board {
 
   protected abstract generateBoard(): void;
   protected abstract setUpEnemies(): void;
-  protected abstract setUpFruits(): void;
+  protected abstract setUpFruits(): Promise<void>;
   protected abstract setUpPlayers(host: string, guest: string): void;
   protected abstract setUpInmovableObjects(): void;
   protected abstract loadContext(): void;
@@ -36,14 +39,23 @@ abstract class Board {
     this.loadContext();
     this.generateBoard();
     this.setUpEnemies();
-    this.setUpFruits();
     this.setUpInmovableObjects();
   }
 
-  public removeFruit({ x, y }: CellCoordinates): void {
-    this.board[x][y].setItem(null);
-    this.fruitsNumber--;
-    this.fruits.delete({ x, y });
+  public async initialize(): Promise<void>{
+    await this.setUpFruits();
+  }
+
+  public async removeFruit({ x, y }: CellCoordinates): Promise<void> {
+    this.mutex.runExclusive(() => {
+      this.board[x][y].setItem(null);
+      this.fruitsNumber--;
+      this.fruits.delete({ x, y });
+      if (this.fruitsNumber === 0 && this.FRUIT_TYPE.length > 0) {
+        this.setUpFruits()
+        console.log(`This is happening at i: ${x} and j: ${y}`);
+      }
+    });
   }
 
   public getBoard(): Cell[][] {

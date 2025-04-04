@@ -83,7 +83,7 @@ abstract class Character extends BoardItem {
     return false;
   }
 
-  public pick(): undefined {
+  public async pick(): Promise<undefined>{
     return undefined;
   } // The characters can't be picked up
 }

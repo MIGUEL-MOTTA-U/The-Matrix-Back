@@ -4,7 +4,7 @@ import type Match from '../match/Match.js';
 
 export default interface GameService {
   startMatch(matchId: string): Promise<void>;
-  createMatch(match: MatchDetails): Match;
+  createMatch(match: MatchDetails): Promise<Match>;
   registerConnection(user: string, socket: WebSocket): boolean;
   removeConnection(user: string): void;
   handleGameMessage(user: string, matchId: string, message: Buffer): Promise<void>;
