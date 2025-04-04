@@ -8,6 +8,7 @@ const boardItemSchema = z.object({
   type: z.string().nonempty(),
   id: z.string().optional(),
   orientation: z.string().optional(),
+  color: z.string().optional(),
 });
 const cellCordinatesSchema = z.object({
   x: z.number().nonnegative(),
@@ -24,6 +25,7 @@ const cellDTOSchema = z.object({
 const playerStateSchema = z.object({
   id: z.string().nonempty(),
   state: z.enum(['dead', 'alive']),
+  color: z.string().optional(),
 });
 
 const EndMatchSchema = z.object({
@@ -66,8 +68,8 @@ const updateAllSchema = z.object({
 });
 
 const gameMessageInputSchema = z.object({
-  type: z.enum(['movement', 'exec-power', 'rotate']),
-  payload: z.enum(['up', 'down', 'left', 'right']),
+  type: z.enum(['movement', 'exec-power', 'rotate', 'set-color']),
+  payload: z.union([z.enum(['up', 'down', 'left', 'right']), z.string()]),
 });
 
 const gameMessageOutputSchema = z.object({

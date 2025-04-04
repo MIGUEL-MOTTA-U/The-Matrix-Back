@@ -9,6 +9,7 @@ import {
   validateEndMatch,
   validateErrorMatch,
   validateGameMesssageInput,
+  validatePlayerState,
 } from '../../../schemas/zod.js';
 import { logger, redis } from '../../../server.js';
 import Match from '../../game/match/Match.js';
@@ -55,6 +56,10 @@ class GameServiceImpl implements GameService {
       message
     );
     const gameMatch = this.matches.get(matchId);
+    if (!player.isAlive())
+      return socketP1.send(
+        this.parseToString(validatePlayerState({ id: player.getId(), state: 'dead' }))
+      );
     if (gameMatch?.checkWin())
       return this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'win' }));
     if (gameMatch?.checkLose())
@@ -77,6 +82,15 @@ class GameServiceImpl implements GameService {
         break;
       case 'attack':
         // Handle attack // TODO Implement attack --> Priority 2 <--- NOT MVP
+        break;
+      case 'set-color':
+        player.setColor(payload);
+        await redis.hset(`users:${userId}`, 'color', payload);
+        this.notifyPlayers(
+          socketP1,
+          socketP2,
+          validatePlayerState({ id: player.getId(), state: 'alive', color: payload })
+        );
         break;
       default:
         throw new MatchError(MatchError.INVALID_MESSAGE_TYPE);

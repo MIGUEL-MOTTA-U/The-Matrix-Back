@@ -10,8 +10,11 @@ import type Cell from '../match/boards/CellBoard.js';
 abstract class Character extends BoardItem {
   protected readonly mutex = new Mutex();
   protected alive = true;
+  protected color: string | null = null;
   protected orientation: 'down' | 'up' | 'left' | 'right' = 'down';
-
+  public setColor(color: string): void {
+    this.color = color;
+  }
   async moveUp(): Promise<PlayerMove | UpdateEnemy> {
     const idItemBOard = await this.mutex.runExclusive(() => {
       const cellUp = this.cell.getUpCell();

@@ -113,6 +113,7 @@ interface BoardItemDTO {
   type: string;
   id?: string;
   orientation?: string;
+  color?: string;
 }
 interface CellCoordinates {
   x: number;
@@ -138,12 +139,13 @@ interface GameMessageOutput {
   payload: PlayerMove | EndMatch | UpdateEnemy | UpdateTime | ErrorMatch | UpdateAll;
 }
 interface GameMessageInput {
-  type: 'movement' | 'exec-power' | 'rotate';
-  payload: 'up' | 'down' | 'left' | 'right';
+  type: 'movement' | 'exec-power' | 'rotate' | 'set-color';
+  payload: 'up' | 'down' | 'left' | 'right' | string;
 }
 interface PlayerState {
   id: string;
   state: 'dead' | 'alive';
+  color?: string;
 }
 interface EndMatch {
   result: 'win' | 'lose';
