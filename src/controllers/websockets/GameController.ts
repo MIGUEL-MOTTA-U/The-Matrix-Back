@@ -28,6 +28,7 @@ export default class GameController {
       const userIdParsed = validateString(userId);
       await this.validateUserExists(userIdParsed);
       const matchDetails = validateMatchDetails(await redis.hgetall(`matches:${matchIdParsed}`));
+      if (matchDetails.host !== userIdParsed && matchDetails.guest !== userIdParsed) throw new GameError(GameError.USER_NOT_IN_MATCH);
 
       this.gameService.checkMatchDetails(matchDetails);
       const existingSocket = this.gameService.registerConnection(userIdParsed, socket);
