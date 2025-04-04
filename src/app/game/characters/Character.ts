@@ -26,8 +26,11 @@ abstract class Character extends BoardItem {
     return this.getCharacterUpdate(idItemBOard);
   }
 
-  public changeOrientation(orientation: 'down' | 'up' | 'left' | 'right'): void {
+  public changeOrientation(
+    orientation: 'down' | 'up' | 'left' | 'right'
+  ): PlayerMove | UpdateEnemy {
     this.orientation = orientation;
+    return this.getCharacterUpdate(null);
   }
 
   async moveDown(): Promise<PlayerMove | UpdateEnemy> {

@@ -68,7 +68,7 @@ const updateAllSchema = z.object({
 });
 
 const gameMessageInputSchema = z.object({
-  type: z.enum(['movement', 'exec-power', 'rotate', 'set-color']),
+  type: z.enum(['movement', 'exec-power', 'rotate', 'set-color', 'orientation']),
   payload: z.union([z.enum(['up', 'down', 'left', 'right']), z.string()]),
 });
 

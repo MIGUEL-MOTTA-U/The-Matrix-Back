@@ -9,6 +9,7 @@ import {
   validateEndMatch,
   validateErrorMatch,
   validateGameMesssageInput,
+  validatePlayerMove,
   validatePlayerState,
 } from '../../../schemas/zod.js';
 import { logger, redis } from '../../../server.js';
@@ -77,11 +78,13 @@ class GameServiceImpl implements GameService {
           logger.error(error);
         }
         break;
-      case 'rotate':
-        this.rotatePlayer(player, payload);
+      case 'rotate': {
+        const rotatedPlayer = this.rotatePlayer(player, payload);
+        this.notifyPlayers(socketP1, socketP2, validatePlayerMove(rotatedPlayer));
         break;
+      }
       case 'attack':
-        // Handle attack // TODO Implement attack --> Priority 2 <--- NOT MVP
+        // Handle attack - TODO Implement attack --> Priority 2 <--- NOT MVP
         break;
       case 'set-color':
         player.setColor(payload);
@@ -104,9 +107,6 @@ class GameServiceImpl implements GameService {
 
   public registerConnection(user: string, socket: WebSocket): boolean {
     const existingSocket = this.connections.has(user);
-    logger.info(`The user was already in the connections map: ${existingSocket}`);
-    const keys = Array.from(this.connections.keys());
-    logger.info(`The keys in the connections map are: ${keys}`);
     this.connections.set(user, socket);
     return existingSocket;
   }
@@ -132,10 +132,10 @@ class GameServiceImpl implements GameService {
     return;
   }
   public async extendUsersSession(userId: string): Promise<void> {
-    await redis.expire(`users:${userId}`, 5 * 60); // 5 minutes
+    await redis.expire(`users:${userId}`, 20 * 60); // 20 minutes
   }
   public async extendMatchSession(matchId: string): Promise<void> {
-    await redis.expire(`matches:${matchId}`, 5 * 60); // 5 minutes
+    await redis.expire(`matches:${matchId}`, 20 * 60); // 20 minutes
   }
 
   private validateMessage(
@@ -192,20 +192,16 @@ class GameServiceImpl implements GameService {
     }
   }
 
-  private rotatePlayer(player: Player, direction: string): void {
+  private rotatePlayer(player: Player, direction: string): PlayerMove | UpdateEnemy {
     switch (direction) {
       case 'up':
-        player.changeOrientation('up');
-        break;
+        return player.changeOrientation('up');
       case 'down':
-        player.changeOrientation('down');
-        break;
+        return player.changeOrientation('down');
       case 'left':
-        player.changeOrientation('left');
-        break;
+        return player.changeOrientation('left');
       case 'right':
-        player.changeOrientation('right');
-        break;
+        return player.changeOrientation('right');
       default:
         throw new MatchError(MatchError.INVALID_ROTATION);
     }

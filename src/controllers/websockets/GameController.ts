@@ -85,9 +85,7 @@ export default class GameController {
     await this.gameService.startMatch(matchDetails.id);
     const updateMatch = this.gameService.getMatchUpdate(matchDetails.id);
     socket.send(this.parseToString(updateMatch));
-    logger.info(
-      `The match ${matchDetails.id} just started by order of ${userIdParsed} \nHost: ${matchDetails.host} \nGuest: ${matchDetails.guest}\n`
-    );
+    logger.info(`The User: ${userIdParsed} is connected to the match ${matchDetails.id}`);
   }
 
   private async reconnectMatch(
