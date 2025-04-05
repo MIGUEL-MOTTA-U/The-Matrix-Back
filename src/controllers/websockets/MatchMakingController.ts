@@ -2,7 +2,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { v4 as uuidv4 } from 'uuid';
 import type { WebSocket } from 'ws';
 import WebsocketService from '../../app/WebSocketServiceImpl.js';
-import MatchError from '../../app/errors/MatchError.js';
+import MatchError from '../../errors/MatchError.js';
 import {
   type MatchDetails,
   validateMatchDetails,

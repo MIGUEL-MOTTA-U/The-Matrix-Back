@@ -5,8 +5,9 @@ import { describe, it, expect } from 'vitest';
 import Troll from '../../../../../src/app/game/characters/enemies/Troll.js';
 
 describe('Board', () => {
-    it('should generate the board', () => {
+    it('should generate the board', async () => {
         const board = new BoardDifficulty1("desert", 1)
+        await board.initialize();
         const cellsBoard = board.getBoard();
         expect(cellsBoard).toHaveLength(16);
         expect(cellsBoard[0]).toHaveLength(16);
@@ -17,8 +18,9 @@ describe('Board', () => {
         }
     });
 
-    it('should generate the enemies', () => {
+    it('should generate the enemies',async () => {
         const board = new BoardDifficulty1("desert", 1)
+        await board.initialize();
         const enemies = board.getEnemies();
         expect(enemies).toHaveLength(4);
         const enemy1 = board.getBoard()[2][4].getCharacter();
@@ -31,16 +33,18 @@ describe('Board', () => {
         expect(enemy4).toBeInstanceOf(Troll);
     });
 
-    it('should remove a fruit', () => {
+    it('should remove a fruit',async () => {
         const board = new BoardDifficulty1("desert", 1);
+        await board.initialize();
         expect(board.getBoard()[4][10].getItem()).toBeInstanceOf(Fruit);
-        board.removeFruit({ x: 4, y: 10 });
+        await board.removeFruit({ x: 4, y: 10 });
         expect(board.getBoard()[4][10].getItem()).toBeNull();
         expect(board.getFruitsNumber()).toBe(13);
     })
 
     it('should set up players', async () => {
         const board = new BoardDifficulty1("desert", 1);
+        await board.initialize();
         const host = 'host';
         const guest = 'guest';
         await board.startGame(host, guest, 'matchId');

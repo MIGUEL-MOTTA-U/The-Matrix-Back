@@ -1,6 +1,6 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { ZodError } from 'zod';
-import ErrorTemplate from '../app/errors/ErrorTemplate.js';
+import ErrorTemplate from '../errors/ErrorTemplate.js';
 import { logger } from '../server.js';
 
 export class AppError extends Error {

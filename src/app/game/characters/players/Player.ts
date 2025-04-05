@@ -1,7 +1,6 @@
-import type { BoardItemDTO } from '../../../../schemas/zod.js';
-import CharacterError from '../../../errors/CharacterError.js';
-import MatchError from '../../../errors/MatchError.js';
-import type Board from '../../match/boards/Board.js';
+import CharacterError from '../../../../errors/CharacterError.js';
+import MatchError from '../../../../errors/MatchError.js';
+import { type BoardItemDTO, type PlayerMove, validatePlayerMove } from '../../../../schemas/zod.js';
 import type Cell from '../../match/boards/CellBoard.js';
 import Character from '../Character.js';
 
@@ -10,20 +9,20 @@ import Character from '../Character.js';
  * of a player in the game of bad-ice-cream.
  */
 class Player extends Character {
+  protected getCharacterUpdate(idItem: string | null): PlayerMove {
+    const idItemConsumed = idItem ? idItem : undefined;
+    return validatePlayerMove({
+      id: this.id,
+      coordinates: this.getCoordinates(),
+      direction: this.orientation,
+      state: this.getState(),
+      idItemConsumed,
+    });
+  }
   getDTO(): BoardItemDTO {
     return { type: 'player', id: this.id, orientation: this.orientation };
   }
-  private id: string;
-  /**
-   * Method to create a new player
-   * @param id {string} The id of the player
-   * @param cell {Cell} the cell where the player is located
-   */
-  constructor(id: string, cell: Cell, board: Board) {
-    super(cell, board);
-    this.id = id;
-    //this.cell = cell;
-  }
+
   /**
    * This method executes the player power
    */
@@ -65,26 +64,26 @@ class Player extends Character {
   public isAlive(): boolean {
     return this.alive;
   }
+  public getState(): 'alive' | 'dead' {
+    return this.alive ? 'alive' : 'dead';
+  }
 
   public getCoordinates(): { x: number; y: number } {
     return this.cell.getCoordinates();
   }
 
-  protected move(cellnew: Cell, character: Character | null): void {
-    if (this.checkWin()) throw new MatchError(MatchError.WIN);
+  protected async move(cellnew: Cell, character: Character | null): Promise<string | null> {
+    if (this.board.checkWin()) throw new MatchError(MatchError.WIN);
     this.cell.setCharacter(null);
     cellnew.setCharacter(this);
     this.cell = cellnew;
-    this.cell.pickItem();
+    const idItem = this.cell.pickItem();
 
     if (character?.kill()) {
       // If it's an enemy, it dies.
       this.die();
     }
-  }
-
-  private checkWin(): boolean {
-    return this.board.checkWin();
+    return idItem;
   }
 
   protected validateMove(cell: Cell | null): { character: Character | null; cell: Cell } {

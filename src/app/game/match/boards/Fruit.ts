@@ -5,7 +5,7 @@ import type Cell from './CellBoard.js';
 
 export default class Fruit extends BoardItem {
   getDTO(): BoardItemDTO {
-    return { type: 'fruit' };
+    return { type: 'fruit', id: this.id };
   }
   /**
    * The cell doesn't block the movement of the character
@@ -15,8 +15,9 @@ export default class Fruit extends BoardItem {
     return false;
   }
 
-  pick(): void {
+  async pick(): Promise<string> {
     this.board.removeFruit(this.cell.getCoordinates());
+    return this.id;
   }
 
   private name: string;
