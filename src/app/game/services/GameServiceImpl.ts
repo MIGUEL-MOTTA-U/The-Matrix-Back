@@ -110,7 +110,7 @@ class GameServiceImpl implements GameService {
     this.connections.set(user, socket);
     return existingSocket;
   }
-  public async createMatch(matchDetails: MatchDetails): Promise<Match>{
+  public async createMatch(matchDetails: MatchDetails): Promise<Match> {
     if (!matchDetails.guest) throw new MatchError(MatchError.MATCH_CANNOT_BE_CREATED);
     const gameMatch = new Match(
       matchDetails.id,

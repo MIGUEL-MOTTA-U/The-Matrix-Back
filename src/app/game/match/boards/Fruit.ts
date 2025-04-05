@@ -15,7 +15,7 @@ export default class Fruit extends BoardItem {
     return false;
   }
 
-  async pick(): Promise<string>{
+  async pick(): Promise<string> {
     this.board.removeFruit(this.cell.getCoordinates());
     return this.id;
   }

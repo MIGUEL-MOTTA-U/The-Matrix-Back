@@ -72,7 +72,7 @@ class Player extends Character {
     return this.cell.getCoordinates();
   }
 
-  protected move(cellnew: Cell, character: Character | null): string | null {
+  protected async move(cellnew: Cell, character: Character | null): Promise<string | null> {
     if (this.board.checkWin()) throw new MatchError(MatchError.WIN);
     this.cell.setCharacter(null);
     cellnew.setCharacter(this);

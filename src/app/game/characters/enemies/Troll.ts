@@ -8,7 +8,7 @@ export default class Troll extends Enemy {
   getDTO(): BoardItemDTO {
     return { type: 'troll', orientation: this.orientation, id: this.id };
   }
-  protected move(cellUp: Cell, character: Character | null): null {
+  protected async move(cellUp: Cell, character: Character | null): Promise<null> {
     this.cell.setCharacter(null);
     cellUp.setCharacter(this);
     this.cell = cellUp;

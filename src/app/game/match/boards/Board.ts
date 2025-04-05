@@ -1,10 +1,10 @@
+import { Mutex } from 'async-mutex';
 import type { BoardDTO, CellDTO } from '../../../../schemas/zod.js';
 import type { CellCoordinates } from '../../../../schemas/zod.js';
 import type Enemy from '../../characters/enemies/Enemy.js';
 import type Player from '../../characters/players/Player.js';
 import type Cell from './CellBoard.js';
 import type Fruit from './Fruit.js';
-import { Mutex } from 'async-mutex';
 abstract class Board {
   protected FRUIT_TYPE: string[] = [];
   protected readonly mutex = new Mutex();
@@ -42,7 +42,7 @@ abstract class Board {
     this.setUpInmovableObjects();
   }
 
-  public async initialize(): Promise<void>{
+  public async initialize(): Promise<void> {
     await this.setUpFruits();
   }
 
@@ -52,8 +52,7 @@ abstract class Board {
       this.fruitsNumber--;
       this.fruits.delete({ x, y });
       if (this.fruitsNumber === 0 && this.FRUIT_TYPE.length > 0) {
-        this.setUpFruits()
-        console.log(`This is happening at i: ${x} and j: ${y}`);
+        this.setUpFruits();
       }
     });
   }

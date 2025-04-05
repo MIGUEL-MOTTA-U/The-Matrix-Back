@@ -16,10 +16,10 @@ abstract class Character extends BoardItem {
     this.color = color;
   }
   async moveUp(): Promise<PlayerMove | UpdateEnemy> {
-    const idItemBOard = await this.mutex.runExclusive(() => {
+    const idItemBOard = await this.mutex.runExclusive(async () => {
       const cellUp = this.cell.getUpCell();
       const { character, cell } = this.validateMove(cellUp);
-      const idItem = this.move(cell, character);
+      const idItem = await this.move(cell, character);
       this.orientation = 'up';
       return idItem;
     });
@@ -34,10 +34,10 @@ abstract class Character extends BoardItem {
   }
 
   async moveDown(): Promise<PlayerMove | UpdateEnemy> {
-    const idItemBoard = await this.mutex.runExclusive(() => {
+    const idItemBoard = await this.mutex.runExclusive(async () => {
       const cellDown = this.cell.getDownCell();
       const { character, cell } = this.validateMove(cellDown);
-      const idItem = this.move(cell, character);
+      const idItem = await this.move(cell, character);
       this.orientation = 'down';
       return idItem;
     });
@@ -45,10 +45,10 @@ abstract class Character extends BoardItem {
   }
 
   async moveLeft(): Promise<PlayerMove | UpdateEnemy> {
-    const idItemBoard = await this.mutex.runExclusive(() => {
+    const idItemBoard = await this.mutex.runExclusive(async () => {
       const cellLeft = this.cell.getLeftCell();
       const { character, cell } = this.validateMove(cellLeft);
-      const idItem = this.move(cell, character);
+      const idItem = await this.move(cell, character);
       this.orientation = 'left';
       return idItem;
     });
@@ -56,10 +56,10 @@ abstract class Character extends BoardItem {
   }
 
   async moveRight(): Promise<PlayerMove | UpdateEnemy> {
-    const idItemBoard = await this.mutex.runExclusive(() => {
+    const idItemBoard = await this.mutex.runExclusive(async () => {
       const cellRight = this.cell.getRightCell();
       const { character, cell } = this.validateMove(cellRight);
-      const idItem = this.move(cell, character);
+      const idItem = await this.move(cell, character);
       this.orientation = 'right';
       return idItem;
     });
@@ -74,7 +74,7 @@ abstract class Character extends BoardItem {
   abstract die(): void;
   abstract kill(): boolean;
   abstract reborn(): void;
-  protected abstract move(cell: Cell, character: Character | null): string | null;
+  protected abstract move(cell: Cell, character: Character | null): Promise<string | null>;
   protected abstract validateMove(cell: Cell | null): { character: Character | null; cell: Cell };
   protected abstract getCharacterUpdate(idItemConsumed: string | null): PlayerMove | UpdateEnemy;
 
@@ -83,7 +83,7 @@ abstract class Character extends BoardItem {
     return false;
   }
 
-  public async pick(): Promise<undefined>{
+  public async pick(): Promise<undefined> {
     return undefined;
   } // The characters can't be picked up
 }

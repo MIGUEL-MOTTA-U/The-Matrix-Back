@@ -82,7 +82,7 @@ class Cell {
     this.character = character;
   }
 
-  public async pickItem(): Promise<string | null >{
+  public async pickItem(): Promise<string | null> {
     const pickedItem = await this.item?.pick();
     return pickedItem || null;
   }

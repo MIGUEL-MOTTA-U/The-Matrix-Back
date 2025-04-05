@@ -81,7 +81,7 @@ export default class BoardDifficulty1 extends Board {
   /**
    * This method sets up the fruits in the board
    */
-  protected async setUpFruits(): Promise<void>{
+  protected async setUpFruits(): Promise<void> {
     await this.mutex.runExclusive(() => {
       this.fruitsNumber = this.FRUITS;
       for (let i = 0; i < this.FRUITS; i++) {
@@ -96,6 +96,7 @@ export default class BoardDifficulty1 extends Board {
         }
       }
       this.FRUIT_TYPE.shift();
+      this.fruitsRounds--;
     });
   }
 
