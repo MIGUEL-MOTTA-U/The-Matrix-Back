@@ -1,4 +1,11 @@
-import type { MatchDTO } from '../../../schemas/zod.js';
+import {
+  type MatchDTO,
+  type PlayerState,
+  type UpdateAll,
+  validatePlayerState,
+  validateUpdateAll,
+  validateUpdateTime,
+} from '../../../schemas/zod.js';
 import type Enemy from '../characters/enemies/Enemy.js';
 import type Player from '../characters/players/Player.js';
 import type Board from './boards/Board.js';
@@ -11,6 +18,7 @@ class Match {
   private guest: string;
   private started: boolean;
   private readonly board: Board;
+  private timeSeconds: number;
   constructor(id: string, level: number, map: string, host: string, guest: string) {
     this.id = id;
     this.level = level;
@@ -19,6 +27,24 @@ class Match {
     this.guest = guest;
     this.board = new BoardDifficulty1(this.map, this.level);
     this.started = false;
+    this.timeSeconds = 300; // 5 minutes
+  }
+  public async initialize(): Promise<void> {
+    await this.board.initialize();
+  }
+
+  public getMatchUpdate(): UpdateAll {
+    const time = validateUpdateTime({
+      minutesLeft: Math.floor(this.timeSeconds / 60),
+      secondsLeft: this.timeSeconds % 60,
+    });
+    const players = this.getPlayers();
+    const board = this.board.cellsBoardDTO();
+    return validateUpdateAll({
+      players,
+      time,
+      board,
+    });
   }
 
   public getMatchDTO(): MatchDTO {
@@ -57,6 +83,27 @@ class Match {
     if (this.started) return;
     await this.board.startGame(this.host, this.guest, this.id);
     this.started = true;
+  }
+
+  public checkWin(): boolean {
+    return this.board.checkWin();
+  }
+
+  public checkLose(): boolean {
+    return this.board.checkLose();
+  }
+
+  private getPlayers(): PlayerState[] {
+    return [
+      validatePlayerState({
+        id: this.host,
+        state: this.board.getHost()?.getState(),
+      }),
+      validatePlayerState({
+        id: this.guest,
+        state: this.board.getGuest()?.getState(),
+      }),
+    ];
   }
 }
 export default Match;

@@ -82,8 +82,9 @@ class Cell {
     this.character = character;
   }
 
-  public pickItem(): void {
-    this.item?.pick();
+  public async pickItem(): Promise<string | null> {
+    const pickedItem = await this.item?.pick();
+    return pickedItem || null;
   }
 
   public getCellDTO(): CellDTO | null {

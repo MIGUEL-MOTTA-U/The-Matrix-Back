@@ -2,13 +2,13 @@ import { describe, it, expect } from 'vitest';
 import Player from '../../../../../src/app/game/characters/players/Player.js';
 import BoardDifficulty1 from '../../../../../src/app/game/match/boards/BoardDifficulty1.js';
 import Cell from '../../../../../src/app/game/match/boards/CellBoard.js';
-import CharacterError from '../../../../../src/app/errors/CharacterError.js';
+import CharacterError from '../../../../../src/errors/CharacterError.js';
 
 describe('Player', () => {
     it('should create a player', () => {
         const board = new BoardDifficulty1('map', 1);
         const cell = new Cell(1, 1);
-        const player = new Player('id-player-test-1', cell, board);
+        const player = new Player(cell, board, 'id-player-test-1');
         expect(player).toBeDefined();
         expect(player.getId()).toBe('id-player-test-1');
         expect(player.getCoordinates()).toStrictEqual(cell.getCoordinates());
@@ -17,14 +17,14 @@ describe('Player', () => {
     it('player should not kill', () => {
         const board = new BoardDifficulty1('map', 1);
         const cell = new Cell(1, 1);
-        const player = new Player('id-player-test-2', cell, board);
+        const player = new Player(cell, board, 'id-player-test-2');
         expect(player.kill()).toBeFalsy();
     })
 
     it('player should die', () => {
         const board = new BoardDifficulty1('map', 1);
         const cell = new Cell(1, 1);
-        const player = new Player('id-player-test-3', cell, board);
+        const player = new Player(cell, board, 'id-player-test-3');
         player.die();
         expect(player.die()).toBeFalsy();
     });

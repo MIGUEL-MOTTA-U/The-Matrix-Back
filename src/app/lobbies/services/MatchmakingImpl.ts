@@ -40,7 +40,7 @@ class MatchMaking implements MatchMakingInterface {
       this.updateUser(hostId, matchId);
       this.updateMatch(matchId, hostId, guest);
 
-      const match = this.createMatch(matchDetails);
+      const match = await this.createMatch(matchDetails);
       this.webSocketService.notifyMatchFound(match, ghostMatch);
     } else {
       logger.info(
@@ -64,7 +64,7 @@ class MatchMaking implements MatchMakingInterface {
     throw new Error('Method not implemented.');
   }
 
-  private createMatch(match: MatchDetails): Match {
+  private async createMatch(match: MatchDetails): Promise<Match> {
     return this.gameService.createMatch(match);
   }
 }

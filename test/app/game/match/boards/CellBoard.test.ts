@@ -18,11 +18,12 @@ describe('Cell', () => {
         expect(cell.getItem()).toBeNull();
     })
 
-    it('should pick a fruit', () => {
+    it('should pick a fruit', async () => {
         const board = new BoardDifficulty1("desert", 1);
+        await board.initialize();
         const cell = board.getBoard()[4][10];
         expect(cell.getItem()).toBeInstanceOf(Fruit);
-        cell.pickItem();
+        await cell.pickItem();
         expect(cell.getItem()).toBeNull();
     });
 
