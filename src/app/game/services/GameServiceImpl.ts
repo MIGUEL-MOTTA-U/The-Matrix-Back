@@ -65,7 +65,7 @@ class GameServiceImpl implements GameService {
 
   private async gameFinished(
     gameMatch: Match | undefined,
-    socketP1: WebSocket,
+    socketP1: WebSocket | undefined,
     socketP2: WebSocket | undefined
   ): Promise<boolean> {
     if (gameMatch && !gameMatch.isRunning()) return true;
@@ -107,13 +107,13 @@ class GameServiceImpl implements GameService {
       message
     );
     const gameMatch = this.matches.get(matchId);
+    if (await this.gameFinished(gameMatch, socketP1, socketP2)) {
+      await this.removeMatch(gameMatch, socketP1, socketP2);
+    }
     if (!player.isAlive())
       return socketP1.send(
         this.parseToString(validatePlayerState({ id: player.getId(), state: 'dead' }))
       );
-    if (await this.gameFinished(gameMatch, socketP1, socketP2)) {
-      await this.removeMatch(gameMatch, socketP1, socketP2);
-    }
 
     switch (type) {
       case 'movement':
@@ -149,6 +149,21 @@ class GameServiceImpl implements GameService {
     }
 
     if (await this.gameFinished(gameMatch, socketP1, socketP2)) return;
+  }
+
+  public async updateEnemy(
+    matchId: string,
+    hostId: string,
+    guestId: string,
+    data: UpdateEnemy | PlayerMove
+  ): Promise<void> {
+    const gameMatch = this.matches.get(matchId);
+    if (!gameMatch) throw new MatchError(MatchError.MATCH_NOT_FOUND);
+    const socketP1 = this.connections.get(hostId);
+    const socketP2 = this.connections.get(guestId);
+    if (socketP1 && socketP1.readyState === WebSocket.OPEN) socketP1.send(this.parseToString(data));
+    if (socketP2 && socketP2.readyState === WebSocket.OPEN) socketP2.send(this.parseToString(data));
+    await this.gameFinished(gameMatch, socketP1, socketP2);
   }
 
   public registerConnection(user: string, socket: WebSocket): boolean {
@@ -260,7 +275,8 @@ class GameServiceImpl implements GameService {
     socketP2: WebSocket | undefined,
     dataDTO: unknown
   ): void {
-    socketP1?.send(this.parseToString(dataDTO));
+    if (socketP1 && socketP1.readyState === WebSocket.OPEN)
+      socketP1.send(this.parseToString(dataDTO));
     if (socketP2 && socketP2.readyState === WebSocket.OPEN)
       socketP2.send(this.parseToString(dataDTO));
   }

@@ -1,5 +1,11 @@
 import type { WebSocket } from 'ws';
-import type { MatchDetails, UpdateAll, UpdateTime } from '../../../schemas/zod.js';
+import type {
+  MatchDetails,
+  PlayerMove,
+  UpdateAll,
+  UpdateEnemy,
+  UpdateTime,
+} from '../../../schemas/zod.js';
 import type Match from '../match/Match.js';
 
 export default interface GameService {
@@ -14,4 +20,10 @@ export default interface GameService {
   extendUsersSession(userId: string): Promise<void>;
   extendMatchSession(matchId: string): Promise<void>;
   updateTimeMatch(matchId: string, time: UpdateTime): Promise<void>;
+  updateEnemy(
+    matchId: string,
+    hostId: string,
+    guestId: string,
+    data: UpdateEnemy | PlayerMove
+  ): Promise<void>;
 }

@@ -3,10 +3,19 @@ import BoardDifficulty1 from '../../../../../src/app/game/match/boards/BoardDiff
 import Fruit from '../../../../../src/app/game/match/boards/Fruit.js';
 import { describe, it, expect } from 'vitest';
 import Troll from '../../../../../src/app/game/characters/enemies/Troll.js';
+import { mockDeep, mockReset } from 'vitest-mock-extended';
+import { beforeEach } from 'node:test';
+import type Match from '../../../../../src/app/game/match/Match.js';
 
 describe('Board', () => {
+    const match = mockDeep<Match>();
+
+    beforeEach(() => {
+        mockReset(match)
+    })
+
     it('should generate the board', async () => {
-        const board = new BoardDifficulty1("desert", 1)
+        const board = new BoardDifficulty1(match,"desert", 1)
         await board.initialize();
         const cellsBoard = board.getBoard();
         expect(cellsBoard).toHaveLength(16);
@@ -19,7 +28,7 @@ describe('Board', () => {
     });
 
     it('should generate the enemies',async () => {
-        const board = new BoardDifficulty1("desert", 1)
+        const board = new BoardDifficulty1(match,"desert", 1)
         await board.initialize();
         const enemies = board.getEnemies();
         expect(enemies).toHaveLength(4);
@@ -34,7 +43,7 @@ describe('Board', () => {
     });
 
     it('should remove a fruit',async () => {
-        const board = new BoardDifficulty1("desert", 1);
+        const board = new BoardDifficulty1(match,"desert", 1);
         await board.initialize();
         expect(board.getBoard()[4][10].getItem()).toBeInstanceOf(Fruit);
         await board.removeFruit({ x: 4, y: 10 });
@@ -43,11 +52,11 @@ describe('Board', () => {
     })
 
     it('should set up players', async () => {
-        const board = new BoardDifficulty1("desert", 1);
+        const board = new BoardDifficulty1(match,"desert", 1);
         await board.initialize();
         const host = 'host';
         const guest = 'guest';
-        await board.startGame(host, guest, 'matchId');
+        await board.startGame(host, guest);
         expect(board.getBoard()[9][1].getCharacter()).toBe(board.getHost());
         expect(board.getBoard()[9][1].getCharacter() !== null).toBeTruthy();
         expect(board.getBoard()[9][14].getCharacter() !== null).toBeTruthy();

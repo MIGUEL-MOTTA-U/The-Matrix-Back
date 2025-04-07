@@ -3,8 +3,10 @@ import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
 import {
   type MatchDTO,
+  type PlayerMove,
   type PlayerState,
   type UpdateAll,
+  type UpdateEnemy,
   type UpdateTime,
   validatePlayerState,
   validateUpdateAll,
@@ -42,7 +44,7 @@ class Match {
     this.map = map;
     this.host = host;
     this.guest = guest;
-    this.board = new BoardDifficulty1(this.map, this.level);
+    this.board = new BoardDifficulty1(this, this.map, this.level);
     this.started = false;
     this.timeSeconds = config.MATCH_TIME_SECONDS; // default time in seconds is 300
     this.running = true;
@@ -60,6 +62,10 @@ class Match {
       minutesLeft: Math.floor(this.timeSeconds / 60),
       secondsLeft: this.timeSeconds % 60,
     });
+  }
+
+  public async notifyPlayers(data: UpdateEnemy | PlayerMove): Promise<void> {
+    await this.gameService.updateEnemy(this.id, this.host, this.guest, data);
   }
 
   public getMatchUpdate(): UpdateAll {
@@ -112,7 +118,7 @@ class Match {
   }
   public async startGame(): Promise<void> {
     if (this.started) return;
-    await this.board.startGame(this.host, this.guest, this.id);
+    await this.board.startGame(this.host, this.guest);
     await this.startTimeMatch();
     this.started = true;
   }
@@ -154,8 +160,8 @@ class Match {
 
   public async stopGame(): Promise<void> {
     if (this.running) {
-      this.stopTime();
-      this.board.stopGame();
+      await this.stopTime();
+      await this.board.stopGame();
       this.running = false;
     }
   }

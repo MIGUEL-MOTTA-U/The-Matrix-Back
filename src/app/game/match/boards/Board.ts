@@ -1,8 +1,10 @@
+import type { Worker } from 'node:worker_threads';
 import { Mutex } from 'async-mutex';
 import type { BoardDTO, CellDTO } from '../../../../schemas/zod.js';
 import type { CellCoordinates } from '../../../../schemas/zod.js';
 import type Enemy from '../../characters/enemies/Enemy.js';
 import type Player from '../../characters/players/Player.js';
+import type Match from '../Match.js';
 import type Cell from './CellBoard.js';
 import type Fruit from './Fruit.js';
 abstract class Board {
@@ -12,13 +14,14 @@ abstract class Board {
   protected readonly COLS: number;
   protected readonly map: string;
   protected readonly level: number;
+  protected readonly match: Match;
   protected host: Player | null = null;
   protected guest: Player | null = null;
   protected board: Cell[][];
   protected enemies: Map<string, Enemy>;
   protected fruits: Map<CellCoordinates, Fruit>;
   protected fruitsNumber = 0;
-  protected worker: Worker | null = null;
+  protected workers: Worker[] = [];
 
   protected abstract generateBoard(): void;
   protected abstract setUpEnemies(): void;
@@ -26,10 +29,11 @@ abstract class Board {
   protected abstract setUpPlayers(host: string, guest: string): void;
   protected abstract setUpInmovableObjects(): void;
   protected abstract loadContext(): void;
-  protected abstract startEnemies(matchId: string): Promise<void>;
+  protected abstract startEnemies(): Promise<void>;
   abstract getBoardDTO(): BoardDTO;
 
-  constructor(map: string, level: number) {
+  constructor(match: Match, map: string, level: number) {
+    this.match = match;
     this.ROWS = 16;
     this.COLS = 16;
     this.board = [];
@@ -83,22 +87,19 @@ abstract class Board {
     return this.guest;
   }
 
-  public abstract win(): void;
   public abstract checkWin(): boolean;
   public abstract checkLose(): boolean;
-  public async startGame(host: string, guest: string, _matchId: string): Promise<void> {
+  public async startGame(host: string, guest: string): Promise<void> {
     this.setUpPlayers(host, guest);
-    // await this.startEnemies(matchId);
-
-    // TODO
-    // Start threads of enemies
+    await this.startEnemies();
   }
 
   public async stopGame(): Promise<void> {
-    if (this.worker) {
-      this.worker.terminate();
-      this.worker = null;
+    for (const worker of this.workers) {
+      console.info('Terminating worker:', worker.threadId);
+      await worker.terminate();
     }
+    this.workers = [];
   }
 }
 export default Board;

@@ -75,6 +75,9 @@ importers:
       vitest:
         specifier: 3.0.8
         version: 3.0.8(@types/node@22.13.9)(tsx@4.19.3)
+      vitest-mock-extended:
+        specifier: 3.1.0
+        version: 3.1.0(typescript@5.8.2)(vitest@3.0.8(@types/node@22.13.9)(tsx@4.19.3))
 
 packages:
 
@@ -1300,6 +1303,14 @@ packages:
     resolution: {integrity: sha512-r0eojU4bI8MnHr8c5bNo7lJDdI2qXlWWJk6a9EAFG7vbhTjElYhBVS3/miuE0uOuoLdb8Mc/rVfsmm6eo5o9GA==}
     hasBin: true
 
+  ts-essentials@10.0.4:
+    resolution: {integrity: sha512-lwYdz28+S4nicm+jFi6V58LaAIpxzhg9rLdgNC1VsdP/xiFBseGhF1M/shwCk6zMmwahBZdXcl34LVHrEang3A==}
+    peerDependencies:
+      typescript: '>=4.5.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
@@ -1376,6 +1387,12 @@ packages:
         optional: true
       yaml:
         optional: true
+
+  vitest-mock-extended@3.1.0:
+    resolution: {integrity: sha512-vCM0VkuocOUBwwqwV7JB7YStw07pqeKvEIrZnR8l3PtwYi6rAAJAyJACeC1UYNfbQWi85nz7EdiXWBFI5hll2g==}
+    peerDependencies:
+      typescript: 3.x || 4.x || 5.x
+      vitest: '>=3.0.0'
 
   vitest@3.0.8:
     resolution: {integrity: sha512-dfqAsNqRGUc8hB9OVR2P0w8PZPEckti2+5rdZip0WIz9WW0MnImJ8XiR61QhqLa92EQzKP2uPkzenKOAHyEIbA==}
@@ -2635,6 +2652,10 @@ snapshots:
 
   touch@3.1.1: {}
 
+  ts-essentials@10.0.4(typescript@5.8.2):
+    optionalDependencies:
+      typescript: 5.8.2
+
   tslib@2.8.1: {}
 
   tsx@4.19.3:
@@ -2690,6 +2711,12 @@ snapshots:
       '@types/node': 22.13.9
       fsevents: 2.3.3
       tsx: 4.19.3
+
+  vitest-mock-extended@3.1.0(typescript@5.8.2)(vitest@3.0.8(@types/node@22.13.9)(tsx@4.19.3)):
+    dependencies:
+      ts-essentials: 10.0.4(typescript@5.8.2)
+      typescript: 5.8.2
+      vitest: 3.0.8(@types/node@22.13.9)(tsx@4.19.3)
 
   vitest@3.0.8(@types/node@22.13.9)(tsx@4.19.3):
     dependencies:

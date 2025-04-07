@@ -6,7 +6,6 @@ if (!parentPort) {
 
 const main = async () => {
   parentPort?.postMessage(1);
-}
-
+};
 
 setInterval(main, 1000);
