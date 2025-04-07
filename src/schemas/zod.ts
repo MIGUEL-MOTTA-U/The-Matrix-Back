@@ -148,7 +148,7 @@ interface PlayerState {
   color?: string;
 }
 interface EndMatch {
-  result: 'win' | 'lose';
+  result: 'win' | 'lose' | 'end game';
 }
 interface UpdateEnemy {
   enemyId: string;
@@ -161,6 +161,7 @@ interface PlayerMove {
   direction: 'up' | 'down' | 'left' | 'right';
   state: 'alive' | 'dead';
   idItemConsumed?: string;
+  numberOfFruits?: number;
 }
 interface UpdateTime {
   minutesLeft: number;

@@ -8,6 +8,10 @@ const schema = {
   type: 'object',
   required: ['PORT', 'HOST'],
   properties: {
+    MATCH_TIME_SECONDS: {
+      type: 'number',
+      default: 300, // 5 minutes
+    },
     PORT: {
       type: 'string',
       default: '3000',
@@ -52,6 +56,7 @@ export async function configureEnv(server: FastifyInstance): Promise<void> {
 
 // Definir tipos importados
 export type EnvConfig = {
+  MATCH_TIME_SECONDS: number;
   PORT: number;
   HOST: string;
   NODE_ENV: string;

@@ -29,7 +29,7 @@ const playerStateSchema = z.object({
 });
 
 const EndMatchSchema = z.object({
-  result: z.enum(['win', 'lose']),
+  result: z.enum(['win', 'lose', 'end game']),
 });
 
 const updateEnemySchema = z.object({
@@ -50,6 +50,7 @@ const playerMoveSchema = z.object({
   direction: z.enum(['up', 'down', 'left', 'right']),
   state: z.enum(['alive', 'dead']),
   idItemConsumed: z.string().optional(),
+  numberOfFruits: z.number().optional(),
 });
 
 const updateTimeSchema = z.object({

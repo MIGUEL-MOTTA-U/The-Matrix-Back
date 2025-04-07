@@ -1,25 +1,42 @@
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { Worker } from 'node:worker_threads';
 import {
   type MatchDTO,
   type PlayerState,
   type UpdateAll,
+  type UpdateTime,
   validatePlayerState,
   validateUpdateAll,
   validateUpdateTime,
 } from '../../../schemas/zod.js';
+import { config, logger } from '../../../server.js';
 import type Enemy from '../characters/enemies/Enemy.js';
 import type Player from '../characters/players/Player.js';
+import type GameService from '../services/GameService.js';
 import type Board from './boards/Board.js';
 import BoardDifficulty1 from './boards/BoardDifficulty1.js';
 class Match {
-  private id: string; // Should be auto-generated
-  private level: number;
-  private map: string; // Should be a Map object
-  private host: string;
-  private guest: string;
-  private started: boolean;
+  private readonly id: string;
+  private readonly level: number;
+  private readonly map: string;
+  private readonly host: string;
+  private readonly guest: string;
   private readonly board: Board;
+  private readonly gameService: GameService;
+  private started: boolean;
+  private running: boolean;
   private timeSeconds: number;
-  constructor(id: string, level: number, map: string, host: string, guest: string) {
+  private worker: Worker | null = null;
+  constructor(
+    gameService: GameService,
+    id: string,
+    level: number,
+    map: string,
+    host: string,
+    guest: string
+  ) {
+    this.gameService = gameService;
     this.id = id;
     this.level = level;
     this.map = map;
@@ -27,17 +44,26 @@ class Match {
     this.guest = guest;
     this.board = new BoardDifficulty1(this.map, this.level);
     this.started = false;
-    this.timeSeconds = 300; // 5 minutes
+    this.timeSeconds = config.MATCH_TIME_SECONDS; // default time in seconds is 300
+    this.running = true;
+  }
+
+  public isRunning(): boolean {
+    return this.running;
   }
   public async initialize(): Promise<void> {
     await this.board.initialize();
   }
 
-  public getMatchUpdate(): UpdateAll {
-    const time = validateUpdateTime({
+  public getUpdateTime(): UpdateTime {
+    return validateUpdateTime({
       minutesLeft: Math.floor(this.timeSeconds / 60),
       secondsLeft: this.timeSeconds % 60,
     });
+  }
+
+  public getMatchUpdate(): UpdateAll {
+    const time = this.getUpdateTime();
     const players = this.getPlayers();
     const board = this.board.cellsBoardDTO();
     return validateUpdateAll({
@@ -78,11 +104,60 @@ class Match {
   public getGuest(): string {
     return this.guest;
   }
-
+  private async updateTimeMatch(): Promise<void> {
+    if (this.timeSeconds > 0) {
+      this.timeSeconds -= 1;
+    }
+    await this.gameService.updateTimeMatch(this.id, this.getUpdateTime());
+  }
   public async startGame(): Promise<void> {
     if (this.started) return;
     await this.board.startGame(this.host, this.guest, this.id);
+    await this.startTimeMatch();
     this.started = true;
+  }
+
+  private async startTimeMatch(): Promise<void> {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const fileName =
+      config.NODE_ENV === 'development'
+        ? resolve(__dirname, '../../../../dist/src/workers/clock.js')
+        : resolve(__dirname, '../../../workers/clock.js');
+    this.worker = new Worker(fileName);
+
+    this.worker.on('message', async (_message) => {
+      if (this.timeSeconds <= 0) {
+        await this.stopTime();
+        return;
+      }
+      await this.updateTimeMatch();
+    });
+
+    this.worker.on('error', (error) => {
+      logger.warn('An error occurred while running the time worker');
+      logger.error(error);
+    });
+
+    this.worker.on('exit', (code) => {
+      if (code !== 0) logger.warn(`Enemies worker stopped with exit code ${code}`);
+      else logger.info('Enemies worker finished');
+    });
+  }
+
+  private async stopTime(): Promise<void> {
+    if (this.worker) {
+      await this.worker.terminate();
+      this.worker = null;
+    }
+  }
+
+  public async stopGame(): Promise<void> {
+    if (this.running) {
+      this.stopTime();
+      this.board.stopGame();
+      this.running = false;
+    }
   }
 
   public checkWin(): boolean {
@@ -90,7 +165,7 @@ class Match {
   }
 
   public checkLose(): boolean {
-    return this.board.checkLose();
+    return this.board.checkLose() || this.timeSeconds <= 0;
   }
 
   private getPlayers(): PlayerState[] {

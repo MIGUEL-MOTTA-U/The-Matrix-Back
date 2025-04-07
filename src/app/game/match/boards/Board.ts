@@ -18,6 +18,7 @@ abstract class Board {
   protected enemies: Map<string, Enemy>;
   protected fruits: Map<CellCoordinates, Fruit>;
   protected fruitsNumber = 0;
+  protected worker: Worker | null = null;
 
   protected abstract generateBoard(): void;
   protected abstract setUpEnemies(): void;
@@ -87,10 +88,17 @@ abstract class Board {
   public abstract checkLose(): boolean;
   public async startGame(host: string, guest: string, _matchId: string): Promise<void> {
     this.setUpPlayers(host, guest);
-    //await this.startEnemies(matchId);
+    // await this.startEnemies(matchId);
 
     // TODO
     // Start threads of enemies
+  }
+
+  public async stopGame(): Promise<void> {
+    if (this.worker) {
+      this.worker.terminate();
+      this.worker = null;
+    }
   }
 }
 export default Board;

@@ -6,6 +6,7 @@ import {
   type PlayerMove,
   type UpdateAll,
   type UpdateEnemy,
+  type UpdateTime,
   validateEndMatch,
   validateErrorMatch,
   validateGameMesssageInput,
@@ -21,6 +22,18 @@ class GameServiceImpl implements GameService {
   private readonly matches: Map<string, Match>;
   private readonly connections: Map<string, WebSocket>;
   private static instance: GameServiceImpl;
+
+  public async updateTimeMatch(matchId: string, time: UpdateTime): Promise<void> {
+    const match = this.matches.get(matchId);
+    if (!match) throw new MatchError(MatchError.MATCH_NOT_FOUND);
+    const socketP1 = this.connections.get(match.getHost());
+    const socketP2 = this.connections.get(match.getGuest());
+    this.notifyPlayers(socketP1, socketP2, time);
+    if (match.checkWin())
+      return this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'win' }));
+    if (match.checkLose())
+      return this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'lose' }));
+  }
 
   public static getInstance(): GameServiceImpl {
     if (!GameServiceImpl.instance) GameServiceImpl.instance = new GameServiceImpl();
@@ -50,6 +63,43 @@ class GameServiceImpl implements GameService {
     this.connections.delete(user);
   }
 
+  private async gameFinished(
+    gameMatch: Match | undefined,
+    socketP1: WebSocket,
+    socketP2: WebSocket | undefined
+  ): Promise<boolean> {
+    if (gameMatch && !gameMatch.isRunning()) return true;
+    if (gameMatch?.checkWin()) {
+      this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'win' }));
+      await gameMatch.stopGame();
+      return true;
+    }
+    if (gameMatch?.checkLose()) {
+      this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'lose' }));
+      await gameMatch.stopGame();
+      return true;
+    }
+    return false;
+  }
+
+  private async removeMatch(
+    gameMatch: Match | undefined,
+    socketP1: WebSocket,
+    socketP2: WebSocket | undefined
+  ): Promise<void> {
+    this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'end game' }));
+    socketP1.close();
+    socketP2?.close();
+    if (!gameMatch) return;
+    this.matches.delete(gameMatch.getId());
+    this.removeConnection(gameMatch.getHost());
+    this.removeConnection(gameMatch.getGuest());
+    redis.hdel(`users:${gameMatch.getHost()}`, 'match');
+    redis.hdel(`users:${gameMatch.getGuest()}`, 'match');
+    redis.del(`matches:${gameMatch.getId()}`);
+    return;
+  }
+
   public async handleGameMessage(userId: string, matchId: string, message: Buffer): Promise<void> {
     const { type, payload, player, socketP1, socketP2 } = this.validateMessage(
       userId,
@@ -61,10 +111,9 @@ class GameServiceImpl implements GameService {
       return socketP1.send(
         this.parseToString(validatePlayerState({ id: player.getId(), state: 'dead' }))
       );
-    if (gameMatch?.checkWin())
-      return this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'win' }));
-    if (gameMatch?.checkLose())
-      return this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'lose' }));
+    if (await this.gameFinished(gameMatch, socketP1, socketP2)) {
+      await this.removeMatch(gameMatch, socketP1, socketP2);
+    }
 
     switch (type) {
       case 'movement':
@@ -99,10 +148,7 @@ class GameServiceImpl implements GameService {
         throw new MatchError(MatchError.INVALID_MESSAGE_TYPE);
     }
 
-    if (gameMatch?.checkWin())
-      return this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'win' }));
-    if (gameMatch?.checkLose())
-      return this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'lose' }));
+    if (await this.gameFinished(gameMatch, socketP1, socketP2)) return;
   }
 
   public registerConnection(user: string, socket: WebSocket): boolean {
@@ -113,6 +159,7 @@ class GameServiceImpl implements GameService {
   public async createMatch(matchDetails: MatchDetails): Promise<Match> {
     if (!matchDetails.guest) throw new MatchError(MatchError.MATCH_CANNOT_BE_CREATED);
     const gameMatch = new Match(
+      this,
       matchDetails.id,
       matchDetails.level,
       matchDetails.map,
@@ -209,11 +256,11 @@ class GameServiceImpl implements GameService {
   }
 
   private notifyPlayers(
-    socketP1: WebSocket,
+    socketP1: WebSocket | undefined,
     socketP2: WebSocket | undefined,
     dataDTO: unknown
   ): void {
-    socketP1.send(this.parseToString(dataDTO));
+    socketP1?.send(this.parseToString(dataDTO));
     if (socketP2 && socketP2.readyState === WebSocket.OPEN)
       socketP2.send(this.parseToString(dataDTO));
   }

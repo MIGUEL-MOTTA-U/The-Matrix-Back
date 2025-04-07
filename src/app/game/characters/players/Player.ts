@@ -11,12 +11,14 @@ import Character from '../Character.js';
 class Player extends Character {
   protected getCharacterUpdate(idItem: string | null): PlayerMove {
     const idItemConsumed = idItem ? idItem : undefined;
+    const numberOfFruits = idItemConsumed ? this.board.getFruitsNumber() : undefined;
     return validatePlayerMove({
       id: this.id,
       coordinates: this.getCoordinates(),
       direction: this.orientation,
       state: this.getState(),
       idItemConsumed,
+      numberOfFruits,
     });
   }
   getDTO(): BoardItemDTO {
