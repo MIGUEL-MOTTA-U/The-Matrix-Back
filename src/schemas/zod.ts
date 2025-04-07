@@ -79,6 +79,11 @@ const validateGameMesssageInput = (data: unknown): GameMessageInput => {
   return schema.parse(data);
 };
 
+const validateUpdateFruits = (data: unknown): UpdateFruits => {
+  const schema = objects.fruitsSchema;
+  return schema.parse(data);
+};
+
 interface MatchInputDTO {
   level: number;
   map: string;
@@ -94,8 +99,6 @@ interface MatchDetails {
 interface BoardDTO {
   host: string | null;
   guest: string | null;
-  fruitType: string;
-  fruitsType: string[];
   enemies: number;
   enemiesCoordinates: number[][];
   fruitsCoordinates: number[][];
@@ -181,6 +184,14 @@ interface UserQueue {
   matchId: string;
 }
 
+interface UpdateFruits {
+  fruits: number;
+  board: CellDTO[];
+  fruitType: string;
+  currentRound: number;
+  nextFruitType: string | null;
+}
+
 export type {
   MatchInputDTO,
   MatchDetails,
@@ -200,6 +211,7 @@ export type {
   UpdateTime,
   ErrorMatch,
   UpdateAll,
+  UpdateFruits,
 };
 export {
   validateString,
@@ -218,4 +230,5 @@ export {
   validateErrorMatch,
   validateUpdateAll,
   validateBoardItemDTO,
+  validateUpdateFruits,
 };

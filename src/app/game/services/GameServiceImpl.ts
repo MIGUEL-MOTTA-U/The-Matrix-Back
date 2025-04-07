@@ -6,6 +6,7 @@ import {
   type PlayerMove,
   type UpdateAll,
   type UpdateEnemy,
+  type UpdateFruits,
   type UpdateTime,
   validateEndMatch,
   validateErrorMatch,
@@ -151,11 +152,11 @@ class GameServiceImpl implements GameService {
     if (await this.gameFinished(gameMatch, socketP1, socketP2)) return;
   }
 
-  public async updateEnemy(
+  public async updatePlayers(
     matchId: string,
     hostId: string,
     guestId: string,
-    data: UpdateEnemy | PlayerMove
+    data: UpdateEnemy | PlayerMove | UpdateFruits
   ): Promise<void> {
     const gameMatch = this.matches.get(matchId);
     if (!gameMatch) throw new MatchError(MatchError.MATCH_NOT_FOUND);

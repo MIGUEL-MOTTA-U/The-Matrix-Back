@@ -4,6 +4,7 @@ import type {
   PlayerMove,
   UpdateAll,
   UpdateEnemy,
+  UpdateFruits,
   UpdateTime,
 } from '../../../schemas/zod.js';
 import type Match from '../match/Match.js';
@@ -20,10 +21,10 @@ export default interface GameService {
   extendUsersSession(userId: string): Promise<void>;
   extendMatchSession(matchId: string): Promise<void>;
   updateTimeMatch(matchId: string, time: UpdateTime): Promise<void>;
-  updateEnemy(
+  updatePlayers(
     matchId: string,
     hostId: string,
     guestId: string,
-    data: UpdateEnemy | PlayerMove
+    data: UpdateEnemy | PlayerMove | UpdateFruits
   ): Promise<void>;
 }

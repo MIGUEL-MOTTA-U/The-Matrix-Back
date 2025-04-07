@@ -28,6 +28,14 @@ const playerStateSchema = z.object({
   color: z.string().optional(),
 });
 
+const fruitsSchema = z.object({
+  fruits: z.number().nonnegative(),
+  board: z.array(cellDTOSchema),
+  fruitType: z.string().nonempty(),
+  currentRound: z.number().nonnegative(),
+  nextFruitType: z.string().nullable(),
+});
+
 const EndMatchSchema = z.object({
   result: z.enum(['win', 'lose', 'end game']),
 });
@@ -135,4 +143,5 @@ export {
   gameMessageOutputSchema,
   gameMessageInputSchema,
   userQueueSchema,
+  fruitsSchema,
 };

@@ -3,8 +3,7 @@ import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
 import BoardError from '../../../../errors/BoardError.js';
 import type { BoardDTO } from '../../../../schemas/zod.js';
-import { logger } from '../../../../server.js';
-import { config } from '../../../../server.js';
+import { config, logger } from '../../../../server.js';
 import Troll from '../../characters/enemies/Troll.js';
 import Player from '../../characters/players/Player.js';
 import type Match from '../Match.js';
@@ -22,7 +21,6 @@ export default class BoardDifficulty1 extends Board {
   private enemiesCoordinates: number[][] = [];
   private fruitsCoordinates: number[][] = [];
   private FRUITS = 0;
-  private fruitsRounds = 0;
   private playersStartCoordinates: number[][] = [];
 
   constructor(match: Match, map: string, level: number) {
@@ -85,22 +83,22 @@ export default class BoardDifficulty1 extends Board {
    * This method sets up the fruits in the board
    */
   protected async setUpFruits(): Promise<void> {
-    await this.mutex.runExclusive(() => {
-      this.fruitsNumber = this.FRUITS;
-      for (let i = 0; i < this.FRUITS; i++) {
-        const x = this.fruitsCoordinates[i][0];
-        const y = this.fruitsCoordinates[i][1];
-        if (this.board[x][y].getCharacter() === null || this.board[x][y].getCharacter()?.kill()) {
-          const fruit = new Fruit(this.board[x][y], this.FRUIT_TYPE[0], this);
-          this.fruits.set({ x, y }, fruit);
-          this.board[x][y].setItem(fruit);
-        } else {
-          this.fruitsNumber--;
-        }
+    this.fruitsNumber = this.FRUITS;
+    this.currentFruitType = this.FRUIT_TYPE[0];
+    for (let i = 0; i < this.FRUITS; i++) {
+      const x = this.fruitsCoordinates[i][0];
+      const y = this.fruitsCoordinates[i][1];
+      if (this.board[x][y].getCharacter() === null || this.board[x][y].getCharacter()?.kill()) {
+        const fruit = new Fruit(this.board[x][y], this.FRUIT_TYPE[0], this);
+        this.fruits.set({ x, y }, fruit);
+        this.board[x][y].setItem(fruit);
+      } else {
+        this.fruitsNumber--;
       }
-      this.FRUIT_TYPE.shift();
-      this.fruitsRounds--;
-    });
+    }
+    this.FRUIT_TYPE.shift();
+    this.fruitsRounds--;
+    this.currentRound++;
   }
 
   /**
@@ -154,15 +152,13 @@ export default class BoardDifficulty1 extends Board {
     this.FRUITS = this.fruitsCoordinates.length;
     this.FRUIT_TYPE = ['banana', 'grape'];
     this.ENEMIES = 4;
-    this.fruitsRounds = 2;
+    this.fruitsRounds = this.FRUIT_TYPE.length;
   }
 
   public getBoardDTO(): BoardDTO {
     return {
       host: this.host?.getId() || null,
       guest: this.guest?.getId() || null,
-      fruitType: this.FRUIT_TYPE[0],
-      fruitsType: this.FRUIT_TYPE,
       enemies: this.ENEMIES,
       enemiesCoordinates: this.enemiesCoordinates,
       fruitsCoordinates: this.fruitsCoordinates,
@@ -181,9 +177,8 @@ export default class BoardDifficulty1 extends Board {
     const __dirname = dirname(__filename);
     const fileName =
       config.NODE_ENV === 'development'
-        ? resolve(__dirname, '../../../../../dist/src/workers/clock.js')
-        : resolve(__dirname, '../../../../workers/clock.js');
-    logger.info(`Starting enemies workers for match ${this.match.getId()}`);
+        ? resolve(__dirname, '../../../../../dist/src/workers/Enemies.worker.js')
+        : resolve(__dirname, '../../../../workers/Enemies.worker.js');
     for (const enemy of this.enemies.values()) {
       const worker = new Worker(fileName);
       this.workers.push(worker);

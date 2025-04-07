@@ -7,6 +7,7 @@ import {
   type PlayerState,
   type UpdateAll,
   type UpdateEnemy,
+  type UpdateFruits,
   type UpdateTime,
   validatePlayerState,
   validateUpdateAll,
@@ -64,8 +65,8 @@ class Match {
     });
   }
 
-  public async notifyPlayers(data: UpdateEnemy | PlayerMove): Promise<void> {
-    await this.gameService.updateEnemy(this.id, this.host, this.guest, data);
+  public async notifyPlayers(data: UpdateEnemy | PlayerMove | UpdateFruits): Promise<void> {
+    this.gameService.updatePlayers(this.id, this.host, this.guest, data);
   }
 
   public getMatchUpdate(): UpdateAll {
@@ -146,8 +147,8 @@ class Match {
     });
 
     this.worker.on('exit', (code) => {
-      if (code !== 0) logger.warn(`Enemies worker stopped with exit code ${code}`);
-      else logger.info('Enemies worker finished');
+      if (code !== 0) logger.warn(`Time worker stopped with exit code ${code}`);
+      else logger.info('Time worker finished');
     });
   }
 

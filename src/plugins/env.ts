@@ -8,6 +8,14 @@ const schema = {
   type: 'object',
   required: ['PORT', 'HOST'],
   properties: {
+    TIMER_SPEED_MS: {
+      type: 'number',
+      default: 1000, // 1 second
+    },
+    ENEMIES_SPEED_MS: {
+      type: 'number',
+      default: 1000, // 1 second
+    },
     MATCH_TIME_SECONDS: {
       type: 'number',
       default: 300, // 5 minutes
@@ -56,6 +64,8 @@ export async function configureEnv(server: FastifyInstance): Promise<void> {
 
 // Definir tipos importados
 export type EnvConfig = {
+  TIMER_SPEED_MS: number;
+  ENEMIES_SPEED_MS: number;
   MATCH_TIME_SECONDS: number;
   PORT: number;
   HOST: string;
