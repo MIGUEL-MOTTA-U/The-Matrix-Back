@@ -52,3 +52,5 @@ if (isMainThread && server.config.NODE_ENV !== 'test') {
 export const logger = server.log;
 // Instead of redis, use server redis.
 export const redis = server.redis;
+
+export const config = server.config;

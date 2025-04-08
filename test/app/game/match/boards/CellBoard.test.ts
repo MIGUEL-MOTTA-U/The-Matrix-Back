@@ -3,9 +3,20 @@ import Cell from '../../../../../src/app/game/match/boards/CellBoard.js';
 import BoardDifficulty1 from '../../../../../src/app/game/match/boards/BoardDifficulty1.js';
 import Fruit from '../../../../../src/app/game/match/boards/Fruit.js';
 import Troll from '../../../../../src/app/game/characters/enemies/Troll.js';
+import { mockDeep, mockReset } from 'vitest-mock-extended';
+import { beforeEach } from 'node:test';
+import type Match from '../../../../../src/app/game/match/Match.js';
 
 
 describe('Cell', () => {
+    const match = mockDeep<Match>();
+    const board = new BoardDifficulty1(match, 'desert', 1);
+
+    
+    beforeEach(() => {
+        mockReset(match);
+    })
+
     it('should create empty cell', () => {
         const cell = new Cell(1, 1);
         expect(cell).toBeInstanceOf(Cell);
@@ -19,7 +30,6 @@ describe('Cell', () => {
     })
 
     it('should pick a fruit', async () => {
-        const board = new BoardDifficulty1("desert", 1);
         await board.initialize();
         const cell = board.getBoard()[4][10];
         expect(cell.getItem()).toBeInstanceOf(Fruit);
@@ -35,7 +45,6 @@ describe('Cell', () => {
     })
 
     it('should set character', () => {
-        const board = new BoardDifficulty1("desert", 1);
         const cell = new Cell(1, 1);
         const troll = board.getBoard()[2][4].getCharacter();
         cell.setCharacter(troll);

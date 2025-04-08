@@ -1,8 +1,15 @@
+import type { Worker } from 'node:worker_threads';
 import { Mutex } from 'async-mutex';
-import type { BoardDTO, CellDTO } from '../../../../schemas/zod.js';
+import {
+  type BoardDTO,
+  type CellDTO,
+  type UpdateFruits,
+  validateUpdateFruits,
+} from '../../../../schemas/zod.js';
 import type { CellCoordinates } from '../../../../schemas/zod.js';
 import type Enemy from '../../characters/enemies/Enemy.js';
 import type Player from '../../characters/players/Player.js';
+import type Match from '../Match.js';
 import type Cell from './CellBoard.js';
 import type Fruit from './Fruit.js';
 abstract class Board {
@@ -12,12 +19,17 @@ abstract class Board {
   protected readonly COLS: number;
   protected readonly map: string;
   protected readonly level: number;
+  protected readonly match: Match;
   protected host: Player | null = null;
   protected guest: Player | null = null;
   protected board: Cell[][];
   protected enemies: Map<string, Enemy>;
   protected fruits: Map<CellCoordinates, Fruit>;
   protected fruitsNumber = 0;
+  protected fruitsRounds = 0;
+  protected currentRound = 0;
+  protected workers: Worker[] = [];
+  protected currentFruitType: string | undefined;
 
   protected abstract generateBoard(): void;
   protected abstract setUpEnemies(): void;
@@ -25,10 +37,11 @@ abstract class Board {
   protected abstract setUpPlayers(host: string, guest: string): void;
   protected abstract setUpInmovableObjects(): void;
   protected abstract loadContext(): void;
-  protected abstract startEnemies(matchId: string): Promise<void>;
+  protected abstract startEnemies(): Promise<void>;
   abstract getBoardDTO(): BoardDTO;
 
-  constructor(map: string, level: number) {
+  constructor(match: Match, map: string, level: number) {
+    this.match = match;
     this.ROWS = 16;
     this.COLS = 16;
     this.board = [];
@@ -47,13 +60,26 @@ abstract class Board {
   }
 
   public async removeFruit({ x, y }: CellCoordinates): Promise<void> {
-    this.mutex.runExclusive(() => {
+    await this.mutex.runExclusive(async () => {
       this.board[x][y].setItem(null);
       this.fruitsNumber--;
       this.fruits.delete({ x, y });
       if (this.fruitsNumber === 0 && this.FRUIT_TYPE.length > 0) {
-        this.setUpFruits();
+        await this.setUpFruits();
+        await this.match.notifyPlayers(this.getUpdateFruits());
       }
+      return;
+    });
+  }
+
+  protected getUpdateFruits(): UpdateFruits {
+    const nextFruitType = this.FRUIT_TYPE[0] ? this.FRUIT_TYPE[0] : null;
+    return validateUpdateFruits({
+      fruits: this.fruitsNumber,
+      board: this.cellsBoardDTO().filter((cell: CellDTO) => cell.item !== null),
+      fruitType: this.currentFruitType,
+      currentRound: this.currentRound,
+      nextFruitType: nextFruitType,
     });
   }
 
@@ -82,15 +108,18 @@ abstract class Board {
     return this.guest;
   }
 
-  public abstract win(): void;
   public abstract checkWin(): boolean;
   public abstract checkLose(): boolean;
-  public async startGame(host: string, guest: string, _matchId: string): Promise<void> {
+  public async startGame(host: string, guest: string): Promise<void> {
     this.setUpPlayers(host, guest);
-    //await this.startEnemies(matchId);
+    await this.startEnemies();
+  }
 
-    // TODO
-    // Start threads of enemies
+  public async stopGame(): Promise<void> {
+    for (const worker of this.workers) {
+      await worker.terminate();
+    }
+    this.workers = [];
   }
 }
 export default Board;

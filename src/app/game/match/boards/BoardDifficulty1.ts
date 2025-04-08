@@ -1,10 +1,12 @@
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
 import BoardError from '../../../../errors/BoardError.js';
 import type { BoardDTO } from '../../../../schemas/zod.js';
-import { logger } from '../../../../server.js';
+import { config, logger } from '../../../../server.js';
 import Troll from '../../characters/enemies/Troll.js';
 import Player from '../../characters/players/Player.js';
+import type Match from '../Match.js';
 import Board from './Board.js';
 import Cell from './CellBoard.js';
 import Fruit from './Fruit.js';
@@ -19,11 +21,10 @@ export default class BoardDifficulty1 extends Board {
   private enemiesCoordinates: number[][] = [];
   private fruitsCoordinates: number[][] = [];
   private FRUITS = 0;
-  private fruitsRounds = 0;
   private playersStartCoordinates: number[][] = [];
 
-  constructor(map: string, level: number) {
-    super(map, level);
+  constructor(match: Match, map: string, level: number) {
+    super(match, map, level);
     this.loadContext(); // We exec this method twice, because of TypeScript, it doesn't saves the statue assigned after we use the father constructor:)
   }
   /**
@@ -82,22 +83,22 @@ export default class BoardDifficulty1 extends Board {
    * This method sets up the fruits in the board
    */
   protected async setUpFruits(): Promise<void> {
-    await this.mutex.runExclusive(() => {
-      this.fruitsNumber = this.FRUITS;
-      for (let i = 0; i < this.FRUITS; i++) {
-        const x = this.fruitsCoordinates[i][0];
-        const y = this.fruitsCoordinates[i][1];
-        if (this.board[x][y].getCharacter() === null || this.board[x][y].getCharacter()?.kill()) {
-          const fruit = new Fruit(this.board[x][y], this.FRUIT_TYPE[0], this);
-          this.fruits.set({ x, y }, fruit);
-          this.board[x][y].setItem(fruit);
-        } else {
-          this.fruitsNumber--;
-        }
+    this.fruitsNumber = this.FRUITS;
+    this.currentFruitType = this.FRUIT_TYPE[0];
+    for (let i = 0; i < this.FRUITS; i++) {
+      const x = this.fruitsCoordinates[i][0];
+      const y = this.fruitsCoordinates[i][1];
+      if (this.board[x][y].getCharacter() === null || this.board[x][y].getCharacter()?.kill()) {
+        const fruit = new Fruit(this.board[x][y], this.FRUIT_TYPE[0], this);
+        this.fruits.set({ x, y }, fruit);
+        this.board[x][y].setItem(fruit);
+      } else {
+        this.fruitsNumber--;
       }
-      this.FRUIT_TYPE.shift();
-      this.fruitsRounds--;
-    });
+    }
+    this.FRUIT_TYPE.shift();
+    this.fruitsRounds--;
+    this.currentRound++;
   }
 
   /**
@@ -151,15 +152,13 @@ export default class BoardDifficulty1 extends Board {
     this.FRUITS = this.fruitsCoordinates.length;
     this.FRUIT_TYPE = ['banana', 'grape'];
     this.ENEMIES = 4;
-    this.fruitsRounds = 2;
+    this.fruitsRounds = this.FRUIT_TYPE.length;
   }
 
   public getBoardDTO(): BoardDTO {
     return {
       host: this.host?.getId() || null,
       guest: this.guest?.getId() || null,
-      fruitType: this.FRUIT_TYPE[0],
-      fruitsType: this.FRUIT_TYPE,
       enemies: this.ENEMIES,
       enemiesCoordinates: this.enemiesCoordinates,
       fruitsCoordinates: this.fruitsCoordinates,
@@ -173,21 +172,26 @@ export default class BoardDifficulty1 extends Board {
     // TODO --> Priority 3 <-- Implement this method
   }
 
-  private async stop(): Promise<void> {
-    // TODO --> Priority 2 <-- Implement this method
-  }
-
-  protected async startEnemies(matchId: string): Promise<void> {
-    // Here I call the worker
-    const fileName = resolve(__dirname, '../../../../../dist/src/workers/Enemies.worker.js');
+  protected async startEnemies(): Promise<void> {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const fileName =
+      config.NODE_ENV === 'development'
+        ? resolve(__dirname, '../../../../../dist/src/workers/Enemies.worker.js')
+        : resolve(__dirname, '../../../../workers/Enemies.worker.js');
     for (const enemy of this.enemies.values()) {
-      const worker = new Worker(fileName, {
-        workerData: {
-          enemyId: enemy.getId(),
-          matchId,
-        },
+      const worker = new Worker(fileName);
+      this.workers.push(worker);
+      worker.on('message', async (_message) => {
+        if (this.checkLose() || this.match.checkWin()) {
+          await this.stopGame();
+          return;
+        }
+        await enemy.calculateMovement();
+        const enemyDTO = enemy.getCharacterUpdate(null);
+        await this.match.notifyPlayers(enemyDTO);
       });
-      worker.on('message', (_message) => {});
+
       worker.on('error', (error) => {
         logger.warn('An error occurred while running the enemies worker');
         logger.error(error);
@@ -197,10 +201,5 @@ export default class BoardDifficulty1 extends Board {
         else logger.info('Enemies worker finished');
       });
     }
-  }
-
-  public async win(): Promise<boolean> {
-    await this.stop();
-    return true;
   }
 }

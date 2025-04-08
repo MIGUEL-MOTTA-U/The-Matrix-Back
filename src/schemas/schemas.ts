@@ -28,8 +28,16 @@ const playerStateSchema = z.object({
   color: z.string().optional(),
 });
 
+const fruitsSchema = z.object({
+  fruits: z.number().nonnegative(),
+  board: z.array(cellDTOSchema),
+  fruitType: z.string().nonempty(),
+  currentRound: z.number().nonnegative(),
+  nextFruitType: z.string().nullable(),
+});
+
 const EndMatchSchema = z.object({
-  result: z.enum(['win', 'lose']),
+  result: z.enum(['win', 'lose', 'end game']),
 });
 
 const updateEnemySchema = z.object({
@@ -50,6 +58,7 @@ const playerMoveSchema = z.object({
   direction: z.enum(['up', 'down', 'left', 'right']),
   state: z.enum(['alive', 'dead']),
   idItemConsumed: z.string().optional(),
+  numberOfFruits: z.number().optional(),
 });
 
 const updateTimeSchema = z.object({
@@ -134,4 +143,5 @@ export {
   gameMessageOutputSchema,
   gameMessageInputSchema,
   userQueueSchema,
+  fruitsSchema,
 };

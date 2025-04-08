@@ -26,7 +26,7 @@ export default class Troll extends Enemy {
     return { character, cell };
   }
 
-  async calculateMovement(): Promise<void> {
+  public async calculateMovement(): Promise<void> {
     try {
       await this.keepMoving();
     } catch (_error) {
@@ -45,16 +45,16 @@ export default class Troll extends Enemy {
     switch (random) {
       case 0:
         await this.moveDown();
-        break;
+        return;
       case 1:
         await this.moveUp();
-        break;
+        return;
       case 2:
         await this.moveLeft();
-        break;
+        return;
       case 3:
         await this.moveRight();
-        break;
+        return;
     }
   }
 
@@ -62,16 +62,16 @@ export default class Troll extends Enemy {
     switch (this.orientation) {
       case 'down':
         await this.moveDown();
-        break;
+        return;
       case 'up':
         await this.moveUp();
-        break;
+        return;
       case 'left':
         await this.moveLeft();
-        break;
+        return;
       case 'right':
         await this.moveRight();
-        break;
+        return;
     }
   }
 }

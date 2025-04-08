@@ -8,9 +8,9 @@ export default abstract class Enemy extends Character {
     return this.id;
   }
 
-  protected getCharacterUpdate(_idItemConsumed: string | null): PlayerMove | UpdateEnemy {
+  public getCharacterUpdate(_idItemConsumed: string | null): PlayerMove | UpdateEnemy {
     return validateUpdateEnemy({
-      id: this.id,
+      enemyId: this.id,
       coordinates: this.cell.getCoordinates(),
       direction: this.orientation,
     });
