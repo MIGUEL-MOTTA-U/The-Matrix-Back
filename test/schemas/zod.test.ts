@@ -2,7 +2,22 @@ import { describe, it, expect } from 'vitest';
 import {
   validateMatchInputDTO,
   validateMatchDetails,
-  validateString
+  validateString,
+  validateUserQueue,
+  validateGameMessageOutput,
+  validatePlayerState,
+  validateEndMatch,
+  validatePlayerMove,
+  validateUpdateTime,
+  validateErrorMatch,
+  validateUpdateAll,
+  validateBoardItemDTO,
+  validateCoordinates,
+  validateCellDTO,
+  validateGameMesssageInput,
+  validateUpdateFruits,
+  validateInfo,
+  validateUpdateEnemy
 } from '../../src/schemas/zod.js';
 
 describe('validateMatchInputDTO', () => {
@@ -35,6 +50,12 @@ describe('validateMatchInputDTO', () => {
     expect(() => validateMatchInputDTO({ map: 'forest' })).toThrow();
     expect(() => validateMatchInputDTO({})).toThrow();
   });
+
+  it('should throw error for invalid data types', () => {
+    expect(() => validateMatchInputDTO({ level: 'two', map: 'forest' })).toThrow();
+    expect(() => validateMatchInputDTO({ level: 2, map: 123 })).toThrow();
+    expect(() => validateMatchInputDTO(null)).toThrow();
+  });
 });
 
 describe('validateMatchDetails', () => {
@@ -54,7 +75,7 @@ describe('validateMatchDetails', () => {
       id: 'match2',
       host: 'Bob',
       guest: 'Charlie',
-      level: '3', // level as string, should be converted
+      level: '3',
       map: 'city'
     };
     const expectedOutput = {
@@ -87,9 +108,7 @@ describe('validateMatchDetails', () => {
   });
 
   it('should throw error when required fields are missing', () => {
-    // Falta id y host
     expect(() => validateMatchDetails({ level: 1, map: 'desert' })).toThrow();
-    // Falta level y map
     expect(() => validateMatchDetails({ id: 'match5', host: 'Frank' })).toThrow();
   });
 
@@ -97,6 +116,17 @@ describe('validateMatchDetails', () => {
     expect(() => validateMatchDetails(null)).toThrow();
     expect(() => validateMatchDetails('string')).toThrow();
     expect(() => validateMatchDetails(123)).toThrow();
+  });
+
+  it('should throw error for invalid guest type', () => {
+    const invalidData = {
+      id: 'match6',
+      host: 'George',
+      guest: 123,
+      level: 1,
+      map: 'forest'
+    };
+    expect(() => validateMatchDetails(invalidData)).toThrow();
   });
 });
 
@@ -116,5 +146,267 @@ describe('validateString', () => {
     expect(() => validateString(123)).toThrow();
     expect(() => validateString({})).toThrow();
     expect(() => validateString([])).toThrow();
+  });
+});
+
+describe('validateUserQueue', () => {
+  it('should validate correct user queue data', () => {
+    const validData = {
+      id: 'user1',
+      matchId: 'match1'
+    };
+    expect(validateUserQueue(validData)).toEqual(validData);
+  });
+
+  it('should throw error for missing fields', () => {
+    expect(() => validateUserQueue({ id: 'user1' })).toThrow();
+    expect(() => validateUserQueue({ matchId: 'match1' })).toThrow();
+  });
+
+  it('should throw error for invalid data types', () => {
+    expect(() => validateUserQueue({ id: 123, matchId: 'match1' })).toThrow();
+    expect(() => validateUserQueue(null)).toThrow();
+  });
+});
+
+describe('validateGameMessageOutput', () => {
+  it('should validate correct game message output', () => {
+    const validData = {
+      type: 'update-state',
+      payload: {
+        id: 'player1',
+        coordinates: { x: 1, y: 2 },
+        direction: 'up',
+        state: 'alive'
+      }
+    };
+    expect(validateGameMessageOutput(validData)).toEqual(validData);
+  });
+
+  it('should throw error for invalid type', () => {
+    const invalidData = {
+      type: 'invalid-type',
+      payload: {}
+    };
+    expect(() => validateGameMessageOutput(invalidData)).toThrow();
+  });
+
+  it('should throw error for missing payload', () => {
+    const invalidData = {
+      type: 'update-state'
+    };
+    expect(() => validateGameMessageOutput(invalidData)).toThrow();
+  });
+});
+
+describe('validatePlayerState', () => {
+  it('should validate correct player state', () => {
+    const validData = {
+      id: 'player1',
+      state: 'alive',
+      color: 'red'
+    };
+    expect(validatePlayerState(validData)).toEqual(validData);
+  });
+
+  it('should throw error for invalid state', () => {
+    const invalidData = {
+      id: 'player1',
+      state: 'unknown'
+    };
+    expect(() => validatePlayerState(invalidData)).toThrow();
+  });
+
+  it('should throw error for missing fields', () => {
+    expect(() => validatePlayerState({ id: 'player1' })).toThrow();
+  });
+});
+
+describe('validateEndMatch', () => {
+  it('should validate correct end match data', () => {
+    const validData = {
+      result: 'win'
+    };
+    expect(validateEndMatch(validData)).toEqual(validData);
+  });
+
+  it('should throw error for invalid result', () => {
+    const invalidData = {
+      result: 'unknown'
+    };
+    expect(() => validateEndMatch(invalidData)).toThrow();
+  });
+});
+
+describe('validateUpdateEnemy', () => {
+  it('should validate correct update enemy data', () => {
+    const validData = {
+      enemyId: 'enemy1',
+      coordinates: { x: 1, y: 2 },
+      direction: 'up'
+    };
+    expect(validateUpdateEnemy(validData)).toEqual(validData);
+  });
+
+  it('should throw error for missing fields', () => {
+    expect(() => validateUpdateEnemy({ enemyId: 'enemy1' })).toThrow();
+  });
+});
+
+describe('validatePlayerMove', () => {
+  it('should validate correct player move data', () => {
+    const validData = {
+      id: 'player1',
+      coordinates: { x: 1, y: 2 },
+      direction: 'down',
+      state: 'alive'
+    };
+    expect(validatePlayerMove(validData)).toEqual(validData);
+  });
+
+  it('should throw error for invalid direction', () => {
+    const invalidData = {
+      id: 'player1',
+      coordinates: { x: 1, y: 2 },
+      direction: 'invalid',
+      state: 'alive'
+    };
+    expect(() => validatePlayerMove(invalidData)).toThrow();
+  });
+});
+
+describe('validateUpdateTime', () => {
+  it('should validate correct update time data', () => {
+    const validData = {
+      minutesLeft: 5,
+      secondsLeft: 30
+    };
+    expect(validateUpdateTime(validData)).toEqual(validData);
+  });
+
+  it('should throw error for negative time values', () => {
+    const invalidData = {
+      minutesLeft: -1,
+      secondsLeft: 30
+    };
+    expect(() => validateUpdateTime(invalidData)).toThrow();
+  });
+});
+
+describe('validateErrorMatch', () => {
+  it('should validate correct error match data', () => {
+    const validData = {
+      error: 'An error occurred'
+    };
+    expect(validateErrorMatch(validData)).toEqual(validData);
+  });
+
+  it('should throw error for missing error field', () => {
+    expect(() => validateErrorMatch({})).toThrow();
+  });
+});
+
+describe('validateUpdateAll', () => {
+  it('should validate correct update all data', () => {
+    const validData = {
+      players: [{ id: 'player1', state: 'alive' }],
+      cells: [],
+      time: { minutesLeft: 5, secondsLeft: 30 }
+    };
+    expect(validateUpdateAll(validData)).toEqual(validData);
+  });
+
+  it('should throw error for missing fields', () => {
+    expect(() => validateUpdateAll({ players: [] })).toThrow();
+  });
+});
+
+describe('validateBoardItemDTO', () => {
+  it('should validate correct board item DTO', () => {
+    const validData = {
+      type: 'item',
+      id: 'item1',
+      orientation: 'north',
+      color: 'blue'
+    };
+    expect(validateBoardItemDTO(validData)).toEqual(validData);
+  });
+
+  it('should throw error for missing fields', () => {
+    expect(() => validateBoardItemDTO({ type: 'item' })).toThrow();
+  });
+});
+
+describe('validateCoordinates', () => {
+  it('should validate correct coordinates', () => {
+    const validData = { x: 1, y: 2 };
+    expect(validateCoordinates(validData)).toEqual(validData);
+  });
+
+  it('should throw error for invalid coordinates', () => {
+    expect(() => validateCoordinates({ x: '1', y: 2 })).toThrow();
+  });
+});
+
+describe('validateCellDTO', () => {
+  it('should validate correct cell DTO', () => {
+    const validData = {
+      coordinates: { x: 1, y: 2 },
+      item: null,
+      character: null
+    };
+    expect(validateCellDTO(validData)).toEqual(validData);
+  });
+
+  it('should throw error for missing fields', () => {
+    expect(() => validateCellDTO({ coordinates: { x: 1, y: 2 } })).toThrow();
+  });
+});
+
+describe('validateGameMessageInput', () => {
+  it('should validate correct game message input', () => {
+    const validData = {
+      type: 'movement',
+      payload: 'up'
+    };
+    expect(validateGameMesssageInput(validData)).toEqual(validData);
+  });
+
+  it('should throw error for invalid type', () => {
+    const invalidData = {
+      type: 'invalid',
+      payload: 'up'
+    };
+    expect(() => validateGameMesssageInput(invalidData)).toThrow();
+  });
+});
+
+describe('validateUpdateFruits', () => {
+  it('should validate correct update fruits data', () => {
+    const validData = {
+      fruitType: 'apple',
+      fruitsNumber: 5,
+      cells: [],
+      currentRound: 1,
+      nextFruitType: 'banana'
+    };
+    expect(validateUpdateFruits(validData)).toEqual(validData);
+  });
+
+  it('should throw error for missing fields', () => {
+    expect(() => validateUpdateFruits({ fruitType: 'apple' })).toThrow();
+  });
+});
+
+describe('validateInfo', () => {
+  it('should validate correct info data', () => {
+    const validData = {
+      message: 'Game started'
+    };
+    expect(validateInfo(validData)).toEqual(validData);
+  });
+
+  it('should throw error for missing message field', () => {
+    expect(() => validateInfo({})).toThrow();
   });
 });

@@ -90,8 +90,7 @@ class Cell {
   public getCellDTO(): CellDTO | null {
     if (!this.item && !this.character) return null;
     return {
-      x: this.xPosition,
-      y: this.yPosition,
+      coordinates: this.getCoordinates(),
       item: this.item?.getDTO() || null,
       character: this.character?.getDTO() || null,
     };

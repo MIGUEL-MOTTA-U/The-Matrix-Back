@@ -1,12 +1,15 @@
 import { z } from 'zod';
 const stringSchema = z.string().nonempty().min(1);
+const infoSchema = z.object({
+  message: stringSchema,
+});
 const matchInputDTOSchema = z.object({
   level: z.number().nonnegative(),
   map: z.string().nonempty(),
 });
 const boardItemSchema = z.object({
   type: z.string().nonempty(),
-  id: z.string().optional(),
+  id: z.string(),
   orientation: z.string().optional(),
   color: z.string().optional(),
 });
@@ -16,8 +19,7 @@ const cellCordinatesSchema = z.object({
 });
 
 const cellDTOSchema = z.object({
-  x: z.number().nonnegative(),
-  y: z.number().nonnegative(),
+  coordinates: cellCordinatesSchema,
   item: boardItemSchema.nullable(),
   character: boardItemSchema.nullable(),
 });
@@ -29,9 +31,9 @@ const playerStateSchema = z.object({
 });
 
 const fruitsSchema = z.object({
-  fruits: z.number().nonnegative(),
-  board: z.array(cellDTOSchema),
   fruitType: z.string().nonempty(),
+  fruitsNumber: z.number().nonnegative(),
+  cells: z.array(cellDTOSchema),
   currentRound: z.number().nonnegative(),
   nextFruitType: z.string().nullable(),
 });
@@ -42,10 +44,7 @@ const EndMatchSchema = z.object({
 
 const updateEnemySchema = z.object({
   enemyId: z.string().nonempty(),
-  coordinates: z.object({
-    x: z.number().nonnegative(),
-    y: z.number().nonnegative(),
-  }),
+  coordinates: cellCordinatesSchema,
   direction: z.enum(['up', 'down', 'left', 'right']),
 });
 
@@ -72,7 +71,7 @@ const errorMatchSchema = z.object({
 
 const updateAllSchema = z.object({
   players: z.array(playerStateSchema),
-  board: z.array(cellDTOSchema),
+  cells: z.array(cellDTOSchema),
   time: updateTimeSchema,
 });
 
@@ -144,4 +143,5 @@ export {
   gameMessageInputSchema,
   userQueueSchema,
   fruitsSchema,
+  infoSchema,
 };

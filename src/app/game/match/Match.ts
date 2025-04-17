@@ -75,8 +75,8 @@ class Match {
     const board = this.board.cellsBoardDTO();
     return validateUpdateAll({
       players,
+      cells: board,
       time,
-      board,
     });
   }
 
@@ -85,8 +85,8 @@ class Match {
       id: this.id,
       level: this.level,
       map: this.map,
-      host: this.host,
-      guest: this.guest,
+      hostId: this.host,
+      guestId: this.guest,
       board: this.board.getBoardDTO(),
     };
   }

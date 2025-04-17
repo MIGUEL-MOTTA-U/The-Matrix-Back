@@ -157,14 +157,12 @@ export default class BoardDifficulty1 extends Board {
 
   public getBoardDTO(): BoardDTO {
     return {
-      host: this.host?.getId() || null,
-      guest: this.guest?.getId() || null,
-      enemies: this.ENEMIES,
+      enemiesNumber: this.ENEMIES,
       enemiesCoordinates: this.enemiesCoordinates,
+      fruitsNumber: this.FRUITS,
       fruitsCoordinates: this.fruitsCoordinates,
-      fruits: this.FRUITS,
       playersStartCoordinates: this.playersStartCoordinates,
-      board: this.cellsBoardDTO(),
+      cells: this.cellsBoardDTO(),
     };
   }
 

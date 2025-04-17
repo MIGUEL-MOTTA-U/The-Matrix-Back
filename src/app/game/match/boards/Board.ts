@@ -75,9 +75,9 @@ abstract class Board {
   protected getUpdateFruits(): UpdateFruits {
     const nextFruitType = this.FRUIT_TYPE[0] ? this.FRUIT_TYPE[0] : null;
     return validateUpdateFruits({
-      fruits: this.fruitsNumber,
-      board: this.cellsBoardDTO().filter((cell: CellDTO) => cell.item !== null),
       fruitType: this.currentFruitType,
+      fruitsNumber: this.fruitsNumber,
+      cells: this.cellsBoardDTO().filter((cell: CellDTO) => cell.item !== null),
       currentRound: this.currentRound,
       nextFruitType: nextFruitType,
     });

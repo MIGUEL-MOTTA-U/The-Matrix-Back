@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import MatchMakingController from '../../src/controllers/websockets/MatchMakingController.js';
 import WebsocketService from '../../src/app/WebSocketServiceImpl.js';
-import { validateString, validateMatchDetails, validateMatchInputDTO } from '../../src/schemas/zod.js';
-import type { FastifyRequest, FastifyReply } from 'fastify';
+import { validateString, validateMatchDetails, validateInfo, validateErrorMatch } from '../../src/schemas/zod.js';
+import type { FastifyRequest } from 'fastify';
 import type { WebSocket } from 'ws';
 import { redis } from '../../src/server.js';
 
@@ -38,6 +38,8 @@ vi.mock('../../src/schemas/zod.js', () => ({
   validateString: vi.fn((input) => input),
   validateMatchDetails: vi.fn((input) => input),
   validateMatchInputDTO: vi.fn((input) => input),
+  validateInfo: vi.fn((input) => input),
+  validateErrorMatch: vi.fn((input) => input),
 }));
 
 describe('MatchMakingController', () => {
@@ -50,7 +52,6 @@ describe('MatchMakingController', () => {
 
   let mockSocket: MockWebSocket;
   let mockRequest: FastifyRequest;
-  let mockReply: FastifyReply;
   let messageHandler: ((message: Buffer) => void) | undefined;
   let closeHandler: (() => void) | undefined;
 
@@ -80,10 +81,6 @@ describe('MatchMakingController', () => {
     mockRequest = {
       params: { matchId: 'user123' },
     } as unknown as FastifyRequest;
-
-    mockReply = {
-      send: vi.fn(),
-    } as unknown as FastifyReply;
 
     (redis.hgetall as Mock).mockResolvedValue(validMatchDetails);
 
@@ -120,7 +117,7 @@ describe('MatchMakingController', () => {
       (validateString as Mock).mockImplementation(() => { throw new Error('Invalid'); });
       const controller = MatchMakingController.getInstance();
       await controller.handleMatchMaking(mockSocket as unknown as WebSocket, mockRequest);
-      expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({message: 'Internal server error'}));
+      expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({ error: 'Internal server error' }));
     });
 
     it('should respond with progress message on message event', async () => {
@@ -143,37 +140,6 @@ describe('MatchMakingController', () => {
       } else {
         throw new Error('Close handler not registered');
       }
-    });
-  });
-
-  describe('handleCreateMatch', () => {
-    it('should create a match and return a match id', async () => {
-      const matchInput = { level: 3, map: 'city' };
-      const req = {
-        params: { userId: 'user123' },
-        body: JSON.stringify(matchInput),
-      } as unknown as FastifyRequest;
-      const controller = MatchMakingController.getInstance();
-      await controller.handleCreateMatch(req, mockReply);
-      expect(validateString).toHaveBeenCalledWith('user123');
-      expect(validateMatchInputDTO).toHaveBeenCalledWith(JSON.stringify(matchInput));
-      expect(redis.hset).toHaveBeenCalled();
-      expect(redis.expire).toHaveBeenCalled();
-      const sentArg = (mockReply.send as Mock).mock.calls[0][0];
-      expect(typeof sentArg).toBe('object');
-      expect(sentArg.matchId.length).toBe(8);
-    });
-  });
-
-  describe('handleGetMatch', () => {
-    it('should retrieve the match id from user record and send it in response', async () => {
-      (redis.hgetall as Mock).mockResolvedValue({ match: 'match789' });
-      const req = {
-        params: { userId: 'user123' },
-      } as unknown as FastifyRequest;
-      const controller = MatchMakingController.getInstance();
-      await controller.handleGetMatch(req, mockReply);
-      expect(mockReply.send).toHaveBeenCalledWith({ matchId: 'match789' });
     });
   });
 });
