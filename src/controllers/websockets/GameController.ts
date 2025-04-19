@@ -1,5 +1,6 @@
 import type { FastifyRequest } from 'fastify';
 import type { WebSocket } from 'ws';
+import { ZodError } from 'zod';
 import type GameService from '../../app/game/services/GameService.js';
 import GameServiceImpl from '../../app/game/services/GameServiceImpl.js';
 import GameError from '../../errors/GameError.js';
@@ -46,37 +47,25 @@ export default class GameController {
    */
   public async handleGameConnection(socket: WebSocket, request: FastifyRequest): Promise<void> {
     try {
-      const { userId, matchId } = request.params as { userId: string; matchId: string };
-      const matchIdParsed = validateString(matchId);
-      const userIdParsed = validateString(userId);
-      await this.validateUserExists(userIdParsed);
-      const matchDetails = validateMatchDetails(await redis.hgetall(`matches:${matchIdParsed}`));
-      if (matchDetails.host !== userIdParsed && matchDetails.guest !== userIdParsed)
-        throw new GameError(GameError.USER_NOT_IN_MATCH);
-
-      this.gameService.checkMatchDetails(matchDetails);
+      const {
+        matchId: matchIdParsed,
+        userId: userIdParsed,
+        matchDetails,
+      } = await this.validateData(request.params);
       const existingSocket = this.gameService.registerConnection(userIdParsed, socket);
       if (existingSocket) {
         await this.reconnectMatch(matchDetails, userIdParsed, socket);
       } else {
         await this.startMatch(matchDetails, userIdParsed, socket);
       }
-      await this.gameService.extendUsersSession(userIdParsed);
-      await this.gameService.extendMatchSession(matchIdParsed);
+      await this.extendSession(userIdParsed, matchIdParsed);
 
       socket.on('message', async (message: Buffer) => {
         try {
           await this.gameService.handleGameMessage(userIdParsed, matchIdParsed, message);
-          await this.gameService.extendMatchSession(matchIdParsed);
-          await this.gameService.extendUsersSession(userIdParsed);
+          await this.extendSession(userIdParsed, matchIdParsed);
         } catch (error) {
-          logger.warn('An error occurred on Socket message request...');
-          logger.error(error);
-          if (error instanceof GameError) {
-            socket.send(this.parseToString(validateErrorMatch({ error: error.message })));
-          } else {
-            socket.send(this.parseToString(validateErrorMatch({ error: 'Internal server error' })));
-          }
+          this.handleError(error, socket);
         }
       });
 
@@ -85,17 +74,34 @@ export default class GameController {
       });
 
       socket.on('error', (error: Error) => {
-        logger.warn('An error occurred on Socket Connection...');
-        logger.error(error);
+        this.handleError(error, socket);
       });
     } catch (error) {
-      logger.warn('An error occurred on Game controller...');
-      logger.error(error);
-      socket.send(this.parseToString(validateErrorMatch({ error: 'Internal server error' })));
+      this.handleError(error, socket);
       socket.close();
       return;
     }
   }
+  private async extendSession(userId: string, matchId: string): Promise<void> {
+    this.gameService.extendUsersSession(userId);
+    this.gameService.extendMatchSession(matchId);
+  }
+
+  private async validateData(
+    data: unknown
+  ): Promise<{ matchId: string; userId: string; matchDetails: MatchDetails }> {
+    const { userId, matchId } = data as { userId: string; matchId: string };
+    const matchIdParsed = validateString(matchId);
+    const userIdParsed = validateString(userId);
+    await this.validateUserExists(userIdParsed);
+    await this.validateMatchExists(matchIdParsed);
+    const matchDetails = validateMatchDetails(await redis.hgetall(`matches:${matchIdParsed}`));
+    if (matchDetails.host !== userIdParsed && matchDetails.guest !== userIdParsed)
+      throw new GameError(GameError.USER_NOT_IN_MATCH);
+    this.gameService.checkMatchDetails(matchDetails);
+    return { matchId: matchIdParsed, userId: userIdParsed, matchDetails };
+  }
+
   private parseToString(data: unknown): string {
     return JSON.stringify(data);
   }
@@ -109,6 +115,20 @@ export default class GameController {
     const updateMatch = this.gameService.getMatchUpdate(matchDetails.id);
     socket.send(this.parseToString(updateMatch));
     logger.info(`The User: ${userIdParsed} is connected to the match ${matchDetails.id}`);
+  }
+
+  private handleError(error: unknown, socket: WebSocket): void {
+    logger.warn('An error occurred on Socket message request...');
+    logger.error(error);
+    if (error instanceof GameError) {
+      socket.send(
+        this.parseToString(validateErrorMatch({ error: `${error.code}, ${error.message}` }))
+      );
+    } else if (error instanceof ZodError) {
+      socket.send(this.parseToString(validateErrorMatch({ error: 'Bad Request' })));
+    } else {
+      socket.send(this.parseToString(validateErrorMatch({ error: 'Internal server error' })));
+    }
   }
 
   private async reconnectMatch(
@@ -126,5 +146,10 @@ export default class GameController {
   private async validateUserExists(userId: string): Promise<void> {
     const userExists = await redis.exists(`users:${userId}`);
     if (!userExists) throw new GameError(GameError.USER_NOT_FOUND);
+  }
+
+  private async validateMatchExists(matchId: string): Promise<void> {
+    const matchExists = await redis.exists(`matches:${matchId}`);
+    if (!matchExists) throw new GameError(GameError.MATCH_NOT_FOUND);
   }
 }
