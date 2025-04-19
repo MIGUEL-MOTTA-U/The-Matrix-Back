@@ -18,12 +18,24 @@ import { logger, redis } from '../../../server.js';
 import Match from '../../game/match/Match.js';
 import type GameService from '../../game/services/GameService.js';
 import type Player from '../characters/players/Player.js';
-
+/**
+ * @class GameServiceImpl
+ * Class that implements the GameService interface
+ * @since 18/04/2025
+ * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
+ */
 class GameServiceImpl implements GameService {
   private readonly matches: Map<string, Match>;
   private readonly connections: Map<string, WebSocket>;
   private static instance: GameServiceImpl;
 
+  /**
+   * Updates the time of a match and notifies the players.
+   *
+   * @param {string} matchId The ID of the match to notify the time update.
+   * @param {UpdateTime} time The time to notify.
+   * @return {Promise<void>} A promise that resolves when the time is updated.
+   */
   public async updateTimeMatch(matchId: string, time: UpdateTime): Promise<void> {
     const match = this.matches.get(matchId);
     if (!match) throw new MatchError(MatchError.MATCH_NOT_FOUND);
@@ -36,6 +48,11 @@ class GameServiceImpl implements GameService {
       return this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'lose' }));
   }
 
+  /**
+   * Retrieves the singleton instance of the GameServiceImpl class.
+   *
+   * @return {GameServiceImpl} The singleton instance.
+   */
   public static getInstance(): GameServiceImpl {
     if (!GameServiceImpl.instance) GameServiceImpl.instance = new GameServiceImpl();
     return GameServiceImpl.instance;
@@ -45,23 +62,201 @@ class GameServiceImpl implements GameService {
     this.matches = new Map<string, Match>();
     this.connections = new Map();
   }
-  getMatchUpdate(matchId: string): UpdateAll {
+
+  /**
+   * Retrieves the match update for the given match ID.
+   *
+   * @param {string} matchId The ID of the match to get the update.
+   * @return {UpdateAll} The match update.
+   */
+  public getMatchUpdate(matchId: string): UpdateAll {
     const match = this.getMatch(matchId);
     if (!match) throw new MatchError(MatchError.MATCH_NOT_FOUND);
     return match.getMatchUpdate();
   }
-  checkMatchDetails(matchDetails: MatchDetails): void {
+
+  /**
+   * Validates the match details.
+   *
+   * @param {MatchDetails} matchDetails The match details to validate.
+   * @throws {GameError} If the match details are invalid.
+   */
+  public checkMatchDetails(matchDetails: MatchDetails): void {
     if (matchDetails.host === matchDetails.guest) throw new GameError(GameError.MATCH_CANNOT_START);
     if (!matchDetails.host || !matchDetails.guest)
       throw new GameError(GameError.MATCH_CANNOT_START);
     if (!matchDetails.started) throw new GameError(GameError.MATCH_CANNOT_START);
   }
-  getMatch(matchId: string): Match | undefined {
+
+  /**
+   * Retrieves the match for the given match ID.
+   *
+   * @param {string} matchId The ID of the match to retrieve.
+   * @return {Match | undefined} The match if it exists, undefined otherwise.
+   */
+  public getMatch(matchId: string): Match | undefined {
     if (!this.matches.has(matchId)) return undefined;
     return this.matches.get(matchId);
   }
+
+  /**
+   * Removes the connection for the given user ID.
+   *
+   * @param {string} user The ID of the user to remove the connection for.
+   */
   public removeConnection(user: string): void {
     this.connections.delete(user);
+  }
+
+  /**
+   * Handles a game message from a user.
+   *
+   * @param {string} userId The ID of the user that sent the message.
+   * @param {string} matchId The ID of the match the user is playing.
+   * @param {Buffer} message The message sent by the user.
+   * @throws {MatchError} If the message is invalid.
+   * @throws {GameError} If the match or player is not found.
+   */
+  public async handleGameMessage(userId: string, matchId: string, message: Buffer): Promise<void> {
+    const { type, payload, player, socketP1, socketP2 } = this.validateMessage(
+      userId,
+      matchId,
+      message
+    );
+    const gameMatch = this.matches.get(matchId);
+    if (await this.gameFinished(gameMatch, socketP1, socketP2)) {
+      await this.removeMatch(gameMatch, socketP1, socketP2);
+    }
+    if (!player.isAlive())
+      return socketP1.send(
+        this.parseToString(validatePlayerState({ id: player.getId(), state: 'dead' }))
+      );
+
+    switch (type) {
+      case 'movement':
+        try {
+          const playerUpdate = await this.movePlayer(player, payload);
+          this.notifyPlayers(socketP1, socketP2, playerUpdate);
+        } catch (error) {
+          socketP1.send(this.parseToString(validateErrorMatch({ error: 'Invalid move' })));
+          logger.warn(`An error occurred while trying to move player ${userId} ${payload}`);
+          logger.error(error);
+        }
+        break;
+      case 'rotate': {
+        const rotatedPlayer = this.rotatePlayer(player, payload);
+        this.notifyPlayers(socketP1, socketP2, validatePlayerMove(rotatedPlayer));
+        break;
+      }
+      case 'exec-power':
+        // Handle attack - TODO Implement attack --> Priority 2 <--- NOT MVP
+        break;
+      case 'set-color':
+        player.setColor(payload);
+        await redis.hset(`users:${userId}`, 'color', payload);
+        this.notifyPlayers(
+          socketP1,
+          socketP2,
+          validatePlayerState({ id: player.getId(), state: 'alive', color: payload })
+        );
+        break;
+      default:
+        throw new MatchError(MatchError.INVALID_MESSAGE_TYPE);
+    }
+
+    if (await this.gameFinished(gameMatch, socketP1, socketP2)) return;
+  }
+
+  /**
+   * Updates the players in the match with the given data.
+   *
+   * @param {string} matchId The ID of the match to update.
+   * @param {string} hostId The ID of the host player.
+   * @param {string} guestId The ID of the guest player.
+   * @param {UpdateEnemy | PlayerMove | UpdateFruits} data The data to update the players with.
+   * @return {Promise<void>} A promise that resolves when the players are updated.
+   */
+  public async updatePlayers(
+    matchId: string,
+    hostId: string,
+    guestId: string,
+    data: UpdateEnemy | PlayerMove | UpdateFruits
+  ): Promise<void> {
+    const gameMatch = this.matches.get(matchId);
+    if (!gameMatch) throw new MatchError(MatchError.MATCH_NOT_FOUND);
+    const socketP1 = this.connections.get(hostId);
+    const socketP2 = this.connections.get(guestId);
+    if (socketP1 && socketP1.readyState === WebSocket.OPEN) socketP1.send(this.parseToString(data));
+    if (socketP2 && socketP2.readyState === WebSocket.OPEN) socketP2.send(this.parseToString(data));
+    await this.gameFinished(gameMatch, socketP1, socketP2);
+  }
+
+  /**
+   * Registers a connection for a user.
+   *
+   * @param {string} user The ID of the user to register.
+   * @param {WebSocket} socket The WebSocket connection of the user.
+   * @return {boolean} True if the user was already connected, false otherwise.
+   */
+  public registerConnection(user: string, socket: WebSocket): boolean {
+    const existingSocket = this.connections.has(user);
+    this.connections.set(user, socket);
+    return existingSocket;
+  }
+
+  /**
+   * Creates a match with the given details.
+   *
+   * @param {MatchDetails} matchDetails The details of the match to create.
+   * @return {Promise<Match>} A promise that resolves to the created match.
+   */
+  public async createMatch(matchDetails: MatchDetails): Promise<Match> {
+    if (!matchDetails.guest) throw new MatchError(MatchError.MATCH_CANNOT_BE_CREATED);
+    const gameMatch = new Match(
+      this,
+      matchDetails.id,
+      matchDetails.level,
+      matchDetails.map,
+      matchDetails.host,
+      matchDetails.guest
+    );
+    await gameMatch.initialize();
+    this.matches.set(matchDetails.id, gameMatch);
+    redis.hset(`users:${matchDetails.host}`, 'match', matchDetails.id);
+    redis.hset(`users:${matchDetails.guest}`, 'match', matchDetails.id);
+    return gameMatch;
+  }
+
+  /**
+   * Starts a match with the given ID.
+   *
+   * @param {string} matchId The ID of the match to start.
+   * @return {Promise<void>} A promise that resolves when the match starts.
+   */
+  public async startMatch(matchId: string): Promise<void> {
+    const gameMatch = this.matches.get(matchId);
+    if (!gameMatch) throw new MatchError(MatchError.MATCH_NOT_FOUND);
+    await gameMatch.startGame();
+  }
+
+  /**
+   * Extends the session of a user.
+   *
+   * @param {string} userId The ID of the user to extend the session for.
+   * @return {Promise<void>} A promise that resolves when the session is extended.
+   */
+  public async extendUsersSession(userId: string): Promise<void> {
+    await redis.expire(`users:${userId}`, 20 * 60); // 20 minutes
+  }
+
+  /**
+   * Extends the session of a match.
+   *
+   * @param {string} matchId The ID of the match to extend the session for.
+   * @return {Promise<void>} A promise that resolves when the session is extended.
+   */
+  public async extendMatchSession(matchId: string): Promise<void> {
+    await redis.expire(`matches:${matchId}`, 20 * 60); // 20 minutes
   }
 
   private async gameFinished(
@@ -99,107 +294,6 @@ class GameServiceImpl implements GameService {
     redis.hdel(`users:${gameMatch.getGuest()}`, 'match');
     redis.del(`matches:${gameMatch.getId()}`);
     return;
-  }
-
-  public async handleGameMessage(userId: string, matchId: string, message: Buffer): Promise<void> {
-    const { type, payload, player, socketP1, socketP2 } = this.validateMessage(
-      userId,
-      matchId,
-      message
-    );
-    const gameMatch = this.matches.get(matchId);
-    if (await this.gameFinished(gameMatch, socketP1, socketP2)) {
-      await this.removeMatch(gameMatch, socketP1, socketP2);
-    }
-    if (!player.isAlive())
-      return socketP1.send(
-        this.parseToString(validatePlayerState({ id: player.getId(), state: 'dead' }))
-      );
-
-    switch (type) {
-      case 'movement':
-        try {
-          // Tries to move the player || Throws an error if the move is invalid
-          const playerUpdate = await this.movePlayer(player, payload);
-          this.notifyPlayers(socketP1, socketP2, playerUpdate);
-        } catch (error) {
-          socketP1.send(this.parseToString(validateErrorMatch({ error: 'Invalid move' })));
-          logger.warn(`An error occurred while trying to move player ${userId} ${payload}`);
-          logger.error(error);
-        }
-        break;
-      case 'rotate': {
-        const rotatedPlayer = this.rotatePlayer(player, payload);
-        this.notifyPlayers(socketP1, socketP2, validatePlayerMove(rotatedPlayer));
-        break;
-      }
-      case 'exec-power':
-        // Handle attack - TODO Implement attack --> Priority 2 <--- NOT MVP
-        break;
-      case 'set-color':
-        player.setColor(payload);
-        await redis.hset(`users:${userId}`, 'color', payload);
-        this.notifyPlayers(
-          socketP1,
-          socketP2,
-          validatePlayerState({ id: player.getId(), state: 'alive', color: payload })
-        );
-        break;
-      default:
-        throw new MatchError(MatchError.INVALID_MESSAGE_TYPE);
-    }
-
-    if (await this.gameFinished(gameMatch, socketP1, socketP2)) return;
-  }
-
-  public async updatePlayers(
-    matchId: string,
-    hostId: string,
-    guestId: string,
-    data: UpdateEnemy | PlayerMove | UpdateFruits
-  ): Promise<void> {
-    const gameMatch = this.matches.get(matchId);
-    if (!gameMatch) throw new MatchError(MatchError.MATCH_NOT_FOUND);
-    const socketP1 = this.connections.get(hostId);
-    const socketP2 = this.connections.get(guestId);
-    if (socketP1 && socketP1.readyState === WebSocket.OPEN) socketP1.send(this.parseToString(data));
-    if (socketP2 && socketP2.readyState === WebSocket.OPEN) socketP2.send(this.parseToString(data));
-    await this.gameFinished(gameMatch, socketP1, socketP2);
-  }
-
-  public registerConnection(user: string, socket: WebSocket): boolean {
-    const existingSocket = this.connections.has(user);
-    this.connections.set(user, socket);
-    return existingSocket;
-  }
-  public async createMatch(matchDetails: MatchDetails): Promise<Match> {
-    if (!matchDetails.guest) throw new MatchError(MatchError.MATCH_CANNOT_BE_CREATED);
-    const gameMatch = new Match(
-      this,
-      matchDetails.id,
-      matchDetails.level,
-      matchDetails.map,
-      matchDetails.host,
-      matchDetails.guest
-    );
-    await gameMatch.initialize();
-    this.matches.set(matchDetails.id, gameMatch);
-    // Update users with match id
-    redis.hset(`users:${matchDetails.host}`, 'match', matchDetails.id);
-    redis.hset(`users:${matchDetails.guest}`, 'match', matchDetails.id);
-    return gameMatch;
-  }
-  public async startMatch(matchId: string): Promise<void> {
-    const gameMatch = this.matches.get(matchId);
-    if (!gameMatch) throw new MatchError(MatchError.MATCH_NOT_FOUND);
-    await gameMatch.startGame();
-    return;
-  }
-  public async extendUsersSession(userId: string): Promise<void> {
-    await redis.expire(`users:${userId}`, 20 * 60); // 20 minutes
-  }
-  public async extendMatchSession(matchId: string): Promise<void> {
-    await redis.expire(`matches:${matchId}`, 20 * 60); // 20 minutes
   }
 
   private validateMessage(

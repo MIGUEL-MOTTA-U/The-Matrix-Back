@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import MatchMakingController from '../../src/controllers/websockets/MatchMakingController.js';
-import WebsocketService from '../../src/app/WebSocketServiceImpl.js';
-import { validateString, validateMatchDetails, validateInfo, validateErrorMatch } from '../../src/schemas/zod.js';
+import WebsocketService from '../../src/app/lobbies/services/WebSocketServiceImpl.js';
+import { validateString, validateMatchDetails, } from '../../src/schemas/zod.js';
 import type { FastifyRequest } from 'fastify';
 import type { WebSocket } from 'ws';
 import { redis } from '../../src/server.js';
@@ -21,7 +21,7 @@ vi.mock('../../src/server.js', () => {
   };
 });
 
-vi.mock('../../src/app/WebSocketServiceImpl.js', () => {
+vi.mock('../../src/app/lobbies/services/WebSocketServiceImpl.js', () => {
   const mockInstance = {
     registerConnection: vi.fn(),
     matchMaking: vi.fn(),

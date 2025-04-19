@@ -4,8 +4,11 @@ import { BoardItem } from '../match/boards/BoardItem.js';
 import type Cell from '../match/boards/CellBoard.js';
 
 /**
- * This class represents the behaviour and the properties
+ * @abstract class Character
+ * This abstract class represents the behaviour and the properties
  * of a character in the game of bad-ice-cream. (Player or Enemy)
+ * @since 18/04/2025
+ * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 abstract class Character extends BoardItem {
   protected readonly mutex = new Mutex();

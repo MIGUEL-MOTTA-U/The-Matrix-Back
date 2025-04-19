@@ -3,21 +3,47 @@ import { v4 as uuidv4 } from 'uuid';
 import MatchError from '../../errors/MatchError.js';
 import { type MatchDetails, validateMatchInputDTO, validateString } from '../../schemas/zod.js';
 import { redis } from '../../server.js';
-
+/**
+ * @class MatchController
+ * This class handles the match creation and retrieval.
+ * @since 18/04/2025
+ * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
+ */
 export default class MatchController {
   private static instance: MatchController;
   private constructor() {}
+
+  /**
+   * Retrieves the singleton instance of the MatchController class.
+   *
+   * @return {MatchController} The singleton instance of MatchController.
+   */
   public static getInstance(): MatchController {
     if (!MatchController.instance) MatchController.instance = new MatchController();
     return MatchController.instance;
   }
 
+  /**
+   * Handles the request to get the match ID for a user.
+   *
+   * @param {FastifyRequest} req The request from the client.
+   * @param {FastifyReply} res The response to be sent to the client.
+   * @return {Promise<void>} A promise that resolves when the match ID is retrieved and sent.
+   */
   public async handleGetMatch(req: FastifyRequest, res: FastifyReply): Promise<void> {
     const { userId } = req.params as { userId: string };
     const match = await redis.hgetall(`users:${userId}`);
     return res.send({ matchId: match.match });
   }
 
+  /**
+   * Handles the request to create a match.
+   *
+   * @param {FastifyRequest} req The request from the client.
+   * @param {FastifyReply} res The response to be sent to the client.
+   * @return {Promise<void>} A promise that resolves when the match is created and its ID is sent.
+   * @throws {MatchError} If the user is not found or is already in a match.
+   */
   public async handleCreateMatch(req: FastifyRequest, res: FastifyReply): Promise<void> {
     const { userId } = req.params as { userId: string };
     const userIdParsed = validateString(userId);

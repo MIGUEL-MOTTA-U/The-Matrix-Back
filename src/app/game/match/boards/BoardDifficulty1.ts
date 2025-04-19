@@ -11,10 +11,11 @@ import Board from './Board.js';
 import Cell from './CellBoard.js';
 import Fruit from './Fruit.js';
 /**
+ * @class BoardDifficulty1
  * Class to represent the board of the game
  * with a difficulty of 1 with troll enemies
- * @version 1.0
- * @since 1.0
+ * @since 18/04/2025
+ * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 export default class BoardDifficulty1 extends Board {
   private ENEMIES = 0;
@@ -43,11 +44,19 @@ export default class BoardDifficulty1 extends Board {
     }
   }
 
+  /**
+   * This method checks if the players lose the game.
+   * @returns True if the game is over
+   */
   public checkLose(): boolean {
     if (!this.host || !this.guest) throw new BoardError(BoardError.USER_NOT_DEFINED);
     return !this.host.isAlive() && !this.guest.isAlive();
   }
 
+  /**
+   * This method checks if the players have won the game
+   * @returns True if the players complete the fruits and the rounds. False Otherwise.
+   */
   public checkWin(): boolean {
     if (!this.host || !this.guest) throw new BoardError(BoardError.USER_NOT_DEFINED);
     return (
@@ -118,10 +127,6 @@ export default class BoardDifficulty1 extends Board {
     this.board[guestCoordinates[0]][guestCoordinates[1]].setCharacter(this.guest);
   }
 
-  public getFruits(): number {
-    return this.FRUITS;
-  }
-
   protected loadContext(): void {
     this.playersStartCoordinates = [
       [9, 1],
@@ -155,6 +160,14 @@ export default class BoardDifficulty1 extends Board {
     this.fruitsRounds = this.FRUIT_TYPE.length;
   }
 
+  /**
+   * This method returns a Data Transfer Object with the preliminar information
+   * of the Board. It sends redundant data such as the array of coordinates of elements and the matrix
+   * of the board, we might delete those arrays in the future.
+   * @returns The Board DTO with the number of enemies, an array with the enemies coordinates,
+   * the fruits number, the fruits coordinates, the start coordinates of the players and the matrix
+   * of the board.
+   */
   public getBoardDTO(): BoardDTO {
     return {
       enemiesNumber: this.ENEMIES,

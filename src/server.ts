@@ -4,7 +4,7 @@ import Fastify from 'fastify';
 import { envOptions } from './plugins/env.js';
 import { registerPlugins } from './plugins/index.js';
 import { registerRoutes } from './routes/register.js';
-// Crear instancia de Fastify con TypeBox
+// Set up Fastify instance with TypeBox
 const server = Fastify({
   logger: {
     level: envOptions.schema.properties.LOG_LEVEL.default,
@@ -13,13 +13,13 @@ const server = Fastify({
       : undefined,
   },
 }).withTypeProvider<TypeBoxTypeProvider>();
-// Registrar plugins
+// Register plugins
 await registerPlugins(server);
 
-// Registrar rutas
+// Register routes
 await registerRoutes(server);
 
-// Iniciar
+// Start the server
 const start = async () => {
   try {
     const port = server.config.PORT;
@@ -33,7 +33,7 @@ const start = async () => {
   }
 };
 
-// Pa cerrarlo
+// To close the server gracefully
 const closeGracefully = async (signal: string) => {
   server.log.info(`\nKilling server ;-; ${signal} I'm dying...\nR.I.P. Server`);
   await server.close();
@@ -43,14 +43,13 @@ const closeGracefully = async (signal: string) => {
 process.on('SIGINT', () => closeGracefully('SIGINT'));
 process.on('SIGTERM', () => closeGracefully('SIGTERM'));
 
-// Iniciar el servidor
+// Start the server if it's the main thread
 if (isMainThread && server.config.NODE_ENV !== 'test') {
   start();
 }
-
 // Instead of console.log, use server logger.
 export const logger = server.log;
 // Instead of redis, use server redis.
 export const redis = server.redis;
-
+// We can use the server config directly for enviroment variables.
 export const config = server.config;

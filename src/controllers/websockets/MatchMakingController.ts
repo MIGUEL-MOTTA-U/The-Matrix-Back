@@ -1,6 +1,6 @@
 import type { FastifyRequest } from 'fastify';
 import type { WebSocket } from 'ws';
-import WebsocketService from '../../app/WebSocketServiceImpl.js';
+import WebsocketService from '../../app/lobbies/services/WebSocketServiceImpl.js';
 import MatchError from '../../errors/MatchError.js';
 import {
   type ErrorMatch,
@@ -14,9 +14,12 @@ import {
 import { logger, redis } from '../../server.js';
 const websocketService = WebsocketService.getInstance();
 /**
+ * @class MatchMakingController
  * This class handles the errors different way a rest controller does.
  * It is responsible for managing WebSocket connections and handling messages.
  * It also provides matchmaking services for players looking for a match.
+ * @since 18/04/2025
+ * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 export default class MatchMakingController {
   // Singleton instace
@@ -28,7 +31,14 @@ export default class MatchMakingController {
     return MatchMakingController.instance;
   }
 
-  public async handleMatchMaking(socket: WebSocket, request: FastifyRequest) {
+  /**
+   * This method handles the matchmaking process for a player.
+   * @param {WebSocket} socket The socket connection to the client
+   * @param {FastifyRequest} request The request object containing the match details
+   * @returns {Promise<void>} A promise that resolves when the matchmaking process is complete
+   * @throws {MatchError} if the match is already started or if there is an internal server error
+   */
+  public async handleMatchMaking(socket: WebSocket, request: FastifyRequest): Promise<void> {
     try {
       const match = await this.validateMatch(request.params);
       if (match.started) throw new MatchError(MatchError.MATCH_ALREADY_STARTED);

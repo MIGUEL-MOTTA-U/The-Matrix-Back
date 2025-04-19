@@ -2,11 +2,19 @@ import type AsyncQueueInterface from 'src/utils/AsyncQueueInterface.js';
 import { type MatchDetails, type UserQueue, validateUserQueue } from '../../../schemas/zod.js';
 import { logger, redis } from '../../../server.js';
 import AsyncQueue from '../../../utils/AsyncQueue.js';
-import type WebSocketService from '../../WebSocketServiceImpl.js';
 import type Match from '../../game/match/Match.js';
 import type GameService from '../../game/services/GameService.js';
 import GameServiceImpl from '../../game/services/GameServiceImpl.js';
 import type MatchMakingInterface from '../../lobbies/services/MatchMakingService.js';
+import type WebSocketService from './WebSocketServiceImpl.js';
+/**
+ * @class MatchMaking
+ * This class is responsible for managing the matchmaking process.
+ * It uses a thread-safety queue to manage users looking for a match.
+ * @see {@link MatchMakingInterface}
+ * @since 18/04/2025
+ * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
+ */
 class MatchMaking implements MatchMakingInterface {
   private queue: AsyncQueueInterface<UserQueue>;
   private gameService: GameService;
@@ -24,6 +32,10 @@ class MatchMaking implements MatchMakingInterface {
     return MatchMaking.instance;
   }
 
+  /**
+   * This method is used to search for a match with the given match details.
+   * @param matchDetails The match details to find matchmaking
+   */
   // TODO -- Priority 3 --> Implement logic of different matches types (difficulties, maps, etc)
   public async searchMatch(matchDetails: MatchDetails): Promise<void> {
     const host = await this.queue.dequeue();
@@ -50,6 +62,10 @@ class MatchMaking implements MatchMakingInterface {
     }
   }
 
+  public cancelMatchMaking(_userId: string): void {
+    throw new Error('Method not implemented.');
+  }
+
   private async updateMatch(matchId: string, host: string, guest: string): Promise<void> {
     redis.hset(`matches:${matchId}`, 'guest', guest, 'host', host);
     redis.expire(`matches:${matchId}`, 10 * 60);
@@ -59,11 +75,6 @@ class MatchMaking implements MatchMakingInterface {
     redis.hset(`users:${userId}`, 'match', matchId);
     redis.expire(`users:${userId}`, 10 * 60);
   }
-
-  public cancelMatchMaking(_userId: string): void {
-    throw new Error('Method not implemented.');
-  }
-
   private async createMatch(match: MatchDetails): Promise<Match> {
     return this.gameService.createMatch(match);
   }

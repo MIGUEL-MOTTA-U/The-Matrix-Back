@@ -14,6 +14,7 @@
     "check:fix": "biome check --apply src/",
     "test": "vitest",
     "coverage": "vitest --coverage",
+    "doc": "typedoc --out docs ./src --entryPointStrategy expand",
     "clear": "exec RMDIR dist/ coverage/ "
   },
   "keywords": [],
@@ -43,6 +44,7 @@
     "pino-pretty": "13.0.0",
     "shx": "0.4.0",
     "tsx": "4.19.3",
+    "typedoc": "0.28.2",
     "typescript": "5.8.2",
     "vitest": "3.0.8",
     "vitest-mock-extended": "3.1.0"
