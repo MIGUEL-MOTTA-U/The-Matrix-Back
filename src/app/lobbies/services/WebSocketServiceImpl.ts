@@ -1,10 +1,11 @@
 import type { WebSocket } from 'ws';
+import type MatchRepository from '../../../schemas/MatchRepository.js';
+import MatchRepositoryRedis from '../../../schemas/MatchRepositoryRedis.js';
 import type { MatchDetails } from '../../../schemas/zod.js';
-import { logger, redis } from '../../../server.js';
+import { logger } from '../../../server.js';
 import type Match from '../../game/match/Match.js';
 import type MatchMakingService from './MatchMakingService.js';
 import MatchMaking from './MatchmakingImpl.js';
-
 /**
  * @class WebsocketService
  * This class is responsible for managing WebSocket connections and matchmaking.
@@ -13,6 +14,7 @@ import MatchMaking from './MatchmakingImpl.js';
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 export default class WebsocketService {
+  private readonly matchRepository: MatchRepository = MatchRepositoryRedis.getInstance();
   private static instance: WebsocketService;
   private connections: Map<string, WebSocket>;
   private matchMakingService: MatchMakingService;
@@ -85,14 +87,15 @@ export default class WebsocketService {
         this.connections.get(match.getHost())?.close();
         this.removeConnection(match.getHost());
         this.removeConnection(match.getGuest());
-        redis.hset(`matches:${match.getId()}`, 'started', 'true');
-        redis.del(`matches:${ghostMatch}`);
+        this.matchRepository.updateMatch(match.getId(), {
+          started: true,
+        });
+        this.matchRepository.removeMatch(ghostMatch);
       } else {
-        // TODO --> implement reconnect logic // Priority 2 NOT MVP
         throw new Error('One of the players is not connected');
       }
     } catch (error) {
-      logger.warn('An error occurred on web scoket controller...');
+      logger.warn('An error occurred on Web Socket Service While trying to notify match...');
       logger.error(error);
     }
   }

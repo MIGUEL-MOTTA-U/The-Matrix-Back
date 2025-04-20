@@ -124,6 +124,7 @@ class Match {
       map: this.map,
       hostId: this.host,
       guestId: this.guest,
+      typeFruits: this.board.getFruitTypes(),
       board: this.board.getBoardDTO(),
     };
   }

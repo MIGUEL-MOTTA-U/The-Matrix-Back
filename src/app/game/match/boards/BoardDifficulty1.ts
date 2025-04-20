@@ -156,6 +156,7 @@ export default class BoardDifficulty1 extends Board {
     ];
     this.FRUITS = this.fruitsCoordinates.length;
     this.FRUIT_TYPE = ['banana', 'grape'];
+    this.FRUITS_CONTAINER = [...this.FRUIT_TYPE];
     this.ENEMIES = 4;
     this.fruitsRounds = this.FRUIT_TYPE.length;
   }
@@ -171,9 +172,7 @@ export default class BoardDifficulty1 extends Board {
   public getBoardDTO(): BoardDTO {
     return {
       enemiesNumber: this.ENEMIES,
-      enemiesCoordinates: this.enemiesCoordinates,
       fruitsNumber: this.FRUITS,
-      fruitsCoordinates: this.fruitsCoordinates,
       playersStartCoordinates: this.playersStartCoordinates,
       cells: this.cellsBoardDTO(),
     };
@@ -187,7 +186,7 @@ export default class BoardDifficulty1 extends Board {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
     const fileName =
-      config.NODE_ENV === 'development'
+      config.NODE_ENV === 'development' || config.NODE_ENV === 'test'
         ? resolve(__dirname, '../../../../../dist/src/workers/Enemies.worker.js')
         : resolve(__dirname, '../../../../workers/Enemies.worker.js');
     for (const enemy of this.enemies.values()) {

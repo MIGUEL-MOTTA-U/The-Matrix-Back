@@ -124,6 +124,7 @@ const matchDetailsSchema = z.object({
 const userQueueSchema = z.object({
   id: z.string().nonempty(),
   matchId: z.string().nonempty(),
+  color: z.string().optional(),
 });
 export {
   stringSchema,

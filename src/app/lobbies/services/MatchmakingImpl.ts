@@ -1,6 +1,10 @@
 import type AsyncQueueInterface from 'src/utils/AsyncQueueInterface.js';
+import type MatchRepository from '../../../schemas/MatchRepository.js';
+import MatchRepositoryRedis from '../../../schemas/MatchRepositoryRedis.js';
+import type UserRepository from '../../../schemas/UserRepository.js';
+import UserRepositoryRedis from '../../../schemas/UserRepositoryRedis.js';
 import { type MatchDetails, type UserQueue, validateUserQueue } from '../../../schemas/zod.js';
-import { logger, redis } from '../../../server.js';
+import { logger } from '../../../server.js';
 import AsyncQueue from '../../../utils/AsyncQueue.js';
 import type Match from '../../game/match/Match.js';
 import type GameService from '../../game/services/GameService.js';
@@ -16,6 +20,8 @@ import type WebSocketService from './WebSocketServiceImpl.js';
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 class MatchMaking implements MatchMakingInterface {
+  private readonly matchRepository: MatchRepository = MatchRepositoryRedis.getInstance();
+  private readonly userRepository: UserRepository = UserRepositoryRedis.getInstance();
   private queue: AsyncQueueInterface<UserQueue>;
   private gameService: GameService;
   private webSocketService: WebSocketService;
@@ -67,13 +73,13 @@ class MatchMaking implements MatchMakingInterface {
   }
 
   private async updateMatch(matchId: string, host: string, guest: string): Promise<void> {
-    redis.hset(`matches:${matchId}`, 'guest', guest, 'host', host);
-    redis.expire(`matches:${matchId}`, 10 * 60);
+    this.matchRepository.updateMatch(matchId, { guest, host });
+    this.matchRepository.extendSession(matchId, 10);
   }
 
   private async updateUser(userId: string, matchId: string): Promise<void> {
-    redis.hset(`users:${userId}`, 'match', matchId);
-    redis.expire(`users:${userId}`, 10 * 60);
+    this.userRepository.updateUser(userId, { matchId });
+    this.userRepository.extendSession(userId, 10);
   }
   private async createMatch(match: MatchDetails): Promise<Match> {
     return this.gameService.createMatch(match);

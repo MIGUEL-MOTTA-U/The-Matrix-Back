@@ -1,17 +1,15 @@
 import type { FastifyRequest } from 'fastify';
+import type MatchRepository from 'src/schemas/MatchRepository.js';
+import type UserRepository from 'src/schemas/UserRepository.js';
 import type { WebSocket } from 'ws';
 import { ZodError } from 'zod';
 import type GameService from '../../app/game/services/GameService.js';
 import GameServiceImpl from '../../app/game/services/GameServiceImpl.js';
 import GameError from '../../errors/GameError.js';
-import {
-  type MatchDetails,
-  validateErrorMatch,
-  validateMatchDetails,
-  validateString,
-} from '../../schemas/zod.js';
-import { logger, redis } from '../../server.js';
-
+import MatchRepositoryRedis from '../../schemas/MatchRepositoryRedis.js';
+import UserRepositoryRedis from '../../schemas/UserRepositoryRedis.js';
+import { type MatchDetails, validateErrorMatch, validateString } from '../../schemas/zod.js';
+import { logger } from '../../server.js';
 /**
  * @class GameController
  * Handles WebSocket connections and game-related operations for matches.
@@ -22,6 +20,8 @@ import { logger, redis } from '../../server.js';
  * Santiago Avellaneda, Andres Serrato, and Miguel Motta
  */
 export default class GameController {
+  private readonly matchRepository: MatchRepository = MatchRepositoryRedis.getInstance();
+  private readonly userRepository: UserRepository = UserRepositoryRedis.getInstance();
   private static instance: GameController;
   private gameService: GameService = GameServiceImpl.getInstance();
 
@@ -95,7 +95,7 @@ export default class GameController {
     const userIdParsed = validateString(userId);
     await this.validateUserExists(userIdParsed);
     await this.validateMatchExists(matchIdParsed);
-    const matchDetails = validateMatchDetails(await redis.hgetall(`matches:${matchIdParsed}`));
+    const matchDetails = await this.matchRepository.getMatchById(matchIdParsed);
     if (matchDetails.host !== userIdParsed && matchDetails.guest !== userIdParsed)
       throw new GameError(GameError.USER_NOT_IN_MATCH);
     this.gameService.checkMatchDetails(matchDetails);
@@ -144,12 +144,12 @@ export default class GameController {
   }
 
   private async validateUserExists(userId: string): Promise<void> {
-    const userExists = await redis.exists(`users:${userId}`);
+    const userExists = await this.userRepository.userExists(userId);
     if (!userExists) throw new GameError(GameError.USER_NOT_FOUND);
   }
 
   private async validateMatchExists(matchId: string): Promise<void> {
-    const matchExists = await redis.exists(`matches:${matchId}`);
+    const matchExists = await this.matchRepository.matchExists(matchId);
     if (!matchExists) throw new GameError(GameError.MATCH_NOT_FOUND);
   }
 }

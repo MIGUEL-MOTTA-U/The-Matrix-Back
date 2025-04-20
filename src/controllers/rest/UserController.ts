@@ -1,8 +1,9 @@
-import type { FastifyRedis } from '@fastify/redis';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { v4 as uuidv4 } from 'uuid';
+import type UserRepository from '../../schemas/UserRepository.js';
+import UserRepositoryRedis from '../../schemas/UserRepositoryRedis.js';
 import { validateString } from '../../schemas/zod.js';
-import { redis } from '../../server.js';
+
 /**
  * @class UserController
  * UserController class to handle user REST related operations.
@@ -10,6 +11,7 @@ import { redis } from '../../server.js';
  * @author Santigo Avellaneda, Andres Serrato and Miguel Motta
  */
 export default class UserController {
+  private readonly userRepository: UserRepository = UserRepositoryRedis.getInstance();
   // Singleton
   private static instance: UserController;
   private constructor() {}
@@ -35,8 +37,7 @@ export default class UserController {
    */
   public async handleCreateUser(_req: FastifyRequest, res: FastifyReply): Promise<void> {
     const userId: string = uuidv4();
-    await redis.hset(`users:${userId}`, 'id', userId);
-    await redis.expire(`users:${userId}`, 10 * 60);
+    await this.userRepository.createUser({ id: userId, matchId: '' });
     return res.send({ userId });
   }
 
@@ -50,7 +51,7 @@ export default class UserController {
   public async handleGetUser(req: FastifyRequest, res: FastifyReply): Promise<void> {
     const { userId } = req.params as { userId: string };
     const parsedId = validateString(userId);
-    const user = await redis.hgetall(`users:${parsedId}`);
+    const user = await this.userRepository.getUserById(parsedId);
     return res.send(user);
   }
 
@@ -62,13 +63,7 @@ export default class UserController {
    * @return {Promise<void>} A promise that resolves when all user data is retrieved and sent.
    */
   public async handleGetUsers(_req: FastifyRequest, res: FastifyReply): Promise<void> {
-    const users = await redis.keys('users:*');
-    const usersData = await Promise.all(
-      users.map(async (key) => {
-        return await redis.hgetall(key);
-      })
-    );
-
+    const usersData = await this.userRepository.getAllUsers();
     return res.send(usersData);
   }
 }

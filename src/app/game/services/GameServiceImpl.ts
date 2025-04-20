@@ -1,6 +1,10 @@
 import { WebSocket } from 'ws';
 import GameError from '../../../errors/GameError.js';
 import MatchError from '../../../errors/MatchError.js';
+import type MatchRepository from '../../../schemas/MatchRepository.js';
+import MatchRepositoryRedis from '../../../schemas/MatchRepositoryRedis.js';
+import type UserRepository from '../../../schemas/UserRepository.js';
+import UserRepositoryRedis from '../../../schemas/UserRepositoryRedis.js';
 import {
   type MatchDetails,
   type PlayerMove,
@@ -14,7 +18,7 @@ import {
   validatePlayerMove,
   validatePlayerState,
 } from '../../../schemas/zod.js';
-import { logger, redis } from '../../../server.js';
+import { logger } from '../../../server.js';
 import Match from '../../game/match/Match.js';
 import type GameService from '../../game/services/GameService.js';
 import type Player from '../characters/players/Player.js';
@@ -25,6 +29,8 @@ import type Player from '../characters/players/Player.js';
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 class GameServiceImpl implements GameService {
+  private readonly userRepository: UserRepository = UserRepositoryRedis.getInstance();
+  private readonly matchRepository: MatchRepository = MatchRepositoryRedis.getInstance();
   private readonly matches: Map<string, Match>;
   private readonly connections: Map<string, WebSocket>;
   private static instance: GameServiceImpl;
@@ -124,9 +130,9 @@ class GameServiceImpl implements GameService {
       message
     );
     const gameMatch = this.matches.get(matchId);
-    if (await this.gameFinished(gameMatch, socketP1, socketP2)) {
-      await this.removeMatch(gameMatch, socketP1, socketP2);
-    }
+    // if (await this.gameFinished(gameMatch, socketP1, socketP2)) {
+    //   await this.removeMatch(gameMatch, socketP1, socketP2);
+    // }
     if (!player.isAlive())
       return socketP1.send(
         this.parseToString(validatePlayerState({ id: player.getId(), state: 'dead' }))
@@ -153,7 +159,7 @@ class GameServiceImpl implements GameService {
         break;
       case 'set-color':
         player.setColor(payload);
-        await redis.hset(`users:${userId}`, 'color', payload);
+        await this.userRepository.updateUser(userId, { color: payload });
         this.notifyPlayers(
           socketP1,
           socketP2,
@@ -222,8 +228,8 @@ class GameServiceImpl implements GameService {
     );
     await gameMatch.initialize();
     this.matches.set(matchDetails.id, gameMatch);
-    redis.hset(`users:${matchDetails.host}`, 'match', matchDetails.id);
-    redis.hset(`users:${matchDetails.guest}`, 'match', matchDetails.id);
+    this.userRepository.updateUser(matchDetails.host, { matchId: matchDetails.id });
+    this.userRepository.updateUser(matchDetails.guest, { matchId: matchDetails.id });
     return gameMatch;
   }
 
@@ -246,7 +252,7 @@ class GameServiceImpl implements GameService {
    * @return {Promise<void>} A promise that resolves when the session is extended.
    */
   public async extendUsersSession(userId: string): Promise<void> {
-    await redis.expire(`users:${userId}`, 20 * 60); // 20 minutes
+    await this.userRepository.extendSession(userId, 20);
   }
 
   /**
@@ -256,7 +262,7 @@ class GameServiceImpl implements GameService {
    * @return {Promise<void>} A promise that resolves when the session is extended.
    */
   public async extendMatchSession(matchId: string): Promise<void> {
-    await redis.expire(`matches:${matchId}`, 20 * 60); // 20 minutes
+    await this.matchRepository.extendSession(matchId, 20);
   }
 
   private async gameFinished(
@@ -268,11 +274,13 @@ class GameServiceImpl implements GameService {
     if (gameMatch?.checkWin()) {
       this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'win' }));
       await gameMatch.stopGame();
+      await this.removeMatch(gameMatch, socketP1, socketP2);
       return true;
     }
     if (gameMatch?.checkLose()) {
       this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'lose' }));
       await gameMatch.stopGame();
+      await this.removeMatch(gameMatch, socketP1, socketP2);
       return true;
     }
     return false;
@@ -280,19 +288,19 @@ class GameServiceImpl implements GameService {
 
   private async removeMatch(
     gameMatch: Match | undefined,
-    socketP1: WebSocket,
+    socketP1: WebSocket | undefined,
     socketP2: WebSocket | undefined
   ): Promise<void> {
     this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'end game' }));
-    socketP1.close();
+    socketP1?.close();
     socketP2?.close();
     if (!gameMatch) return;
     this.matches.delete(gameMatch.getId());
     this.removeConnection(gameMatch.getHost());
     this.removeConnection(gameMatch.getGuest());
-    redis.hdel(`users:${gameMatch.getHost()}`, 'match');
-    redis.hdel(`users:${gameMatch.getGuest()}`, 'match');
-    redis.del(`matches:${gameMatch.getId()}`);
+    this.userRepository.updateUser(gameMatch.getHost(), { matchId: '' });
+    this.userRepository.updateUser(gameMatch.getGuest(), { matchId: '' });
+    this.matchRepository.removeMatch(gameMatch.getId());
     return;
   }
 
@@ -350,7 +358,6 @@ class GameServiceImpl implements GameService {
   }
 
   private rotatePlayer(player: Player, direction: string): PlayerMove | UpdateEnemy {
-    logger.info(`Rotating player ${player.getId()} to ${direction}`);
     switch (direction) {
       case 'up':
         return player.changeOrientation('up');

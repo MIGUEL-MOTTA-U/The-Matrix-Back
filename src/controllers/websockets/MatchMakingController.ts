@@ -2,17 +2,19 @@ import type { FastifyRequest } from 'fastify';
 import type { WebSocket } from 'ws';
 import WebsocketService from '../../app/lobbies/services/WebSocketServiceImpl.js';
 import MatchError from '../../errors/MatchError.js';
+import type MatchRepository from '../../schemas/MatchRepository.js';
+import MatchRepositoryRedis from '../../schemas/MatchRepositoryRedis.js';
+import type UserRepository from '../../schemas/UserRepository.js';
+import UserRepositoryRedis from '../../schemas/UserRepositoryRedis.js';
 import {
   type ErrorMatch,
   type Info,
   type MatchDetails,
   validateErrorMatch,
   validateInfo,
-  validateMatchDetails,
   validateString,
 } from '../../schemas/zod.js';
-import { logger, redis } from '../../server.js';
-const websocketService = WebsocketService.getInstance();
+import { logger } from '../../server.js';
 /**
  * @class MatchMakingController
  * This class handles the errors different way a rest controller does.
@@ -22,6 +24,9 @@ const websocketService = WebsocketService.getInstance();
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 export default class MatchMakingController {
+  private readonly websocketService = WebsocketService.getInstance();
+  private readonly matchRepository: MatchRepository = MatchRepositoryRedis.getInstance();
+  private readonly userRepository: UserRepository = UserRepositoryRedis.getInstance();
   // Singleton instace
   private static instance: MatchMakingController;
   private constructor() {}
@@ -42,20 +47,19 @@ export default class MatchMakingController {
     try {
       const match = await this.validateMatch(request.params);
       if (match.started) throw new MatchError(MatchError.MATCH_ALREADY_STARTED);
-      websocketService.registerConnection(match.host, socket);
+      this.websocketService.registerConnection(match.host, socket);
       this.sendMessage(socket, validateInfo({ message: 'Connected and looking for a match...' }));
-      websocketService.matchMaking(match);
+      this.websocketService.matchMaking(match);
       this.extendExpiration(match.id, match.host);
       logger.info(`Matchmaking from ${match.host}: looking for Match: ${JSON.stringify(match)}`);
 
       socket.on('message', (_message: Buffer) => {
-        socket.send(JSON.stringify({ message: 'Matchmaking in progress...' }));
         this.sendMessage(socket, validateInfo({ message: 'Matchmaking in progress...' }));
         this.extendExpiration(match.id, match.host);
       });
 
       socket.on('close', () => {
-        websocketService.removeConnection(match.host);
+        this.websocketService.removeConnection(match.host);
       });
 
       socket.on('error', (error: Error) => {
@@ -70,8 +74,8 @@ export default class MatchMakingController {
   }
 
   private async extendExpiration(matchId: string, userId: string): Promise<void> {
-    await redis.expire(`matches:${matchId}`, 10 * 60);
-    await redis.expire(`users:${userId}`, 10 * 60);
+    await this.matchRepository.extendSession(matchId, 10);
+    await this.userRepository.extendSession(userId, 10);
   }
 
   private logError(error: unknown): void {
@@ -86,7 +90,7 @@ export default class MatchMakingController {
   private async validateMatch(data: unknown): Promise<MatchDetails> {
     const { matchId } = data as { matchId: string };
     const matchIdParsed = validateString(matchId);
-    const match = validateMatchDetails(await redis.hgetall(`matches:${matchIdParsed}`));
+    const match = await this.matchRepository.getMatchById(matchIdParsed);
     return match;
   }
 }

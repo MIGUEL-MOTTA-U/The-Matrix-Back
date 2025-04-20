@@ -20,6 +20,7 @@ import type Fruit from './Fruit.js';
  */
 abstract class Board {
   protected FRUIT_TYPE: string[] = [];
+  protected FRUITS_CONTAINER: string[] = [];
   protected readonly mutex = new Mutex();
   protected readonly ROWS: number;
   protected readonly COLS: number;
@@ -111,6 +112,15 @@ abstract class Board {
    */
   public getBoard(): Cell[][] {
     return this.board;
+  }
+
+  /**
+   * Retrieves the types of fruits available on the board.
+   *
+   * @return {string[]} An array of fruit types.
+   */
+  public getFruitTypes(): string[] {
+    return this.FRUITS_CONTAINER;
   }
 
   /**

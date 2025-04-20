@@ -103,9 +103,7 @@ interface MatchDetails {
 }
 interface BoardDTO {
   enemiesNumber: number;
-  enemiesCoordinates: number[][];
   fruitsNumber: number;
-  fruitsCoordinates: number[][];
   playersStartCoordinates: number[][];
   cells: CellDTO[];
 }
@@ -134,6 +132,7 @@ interface MatchDTO {
   hostId: string;
   guestId: string;
   board: BoardDTO;
+  typeFruits: string[];
 }
 interface GameMessageOutput {
   type:
@@ -187,6 +186,7 @@ interface UpdateAll {
 interface UserQueue {
   id: string;
   matchId: string;
+  color?: string;
 }
 
 interface UpdateFruits {

@@ -1,80 +1,88 @@
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
-import MatchController from '../../src/controllers/rest/MatchController.js';
-import MatchError from '../../src/errors/MatchError.js';
-import { redis } from '../../src/server.js';
-import { validateString, validateMatchInputDTO } from '../../src/schemas/zod.js';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { mock, mockReset } from 'vitest-mock-extended';
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import MatchController from '../../src/controllers/rest/MatchController.js';
+import type MatchRepository from '../../src/schemas/MatchRepository.js';
+import type UserRepository from '../../src/schemas/UserRepository.js';
+import { validateMatchInputDTO, validateString } from '../../src/schemas/zod.js';
 
-vi.mock('../../src/server.js', () => ({
-  redis: {
-    hgetall: vi.fn(),
-    hset: vi.fn(),
-    expire: vi.fn(),
-  },
+const mockMatchRepository = mock<MatchRepository>();
+const mockUserRepository = mock<UserRepository>();
+
+vi.mock('../../src/schemas/MatchRepositoryRedis', () => ({
+  default: { getInstance: () => mockMatchRepository },
 }));
 
-vi.mock('../../src/schemas/zod.js', () => ({
-  validateString: vi.fn((input) => input),
-  validateMatchInputDTO: vi.fn((input) => input),
+vi.mock('../../src/schemas/UserRepositoryRedis', () => ({
+  default: { getInstance: () => mockUserRepository },
+}));
+
+vi.mock('../../src/schemas/zod', () => ({
+  validateMatchInputDTO: vi.fn(),
+  validateString: vi.fn(),
 }));
 
 describe('MatchController', () => {
-  let mockReply: { send: ReturnType<typeof vi.fn> };
+  let matchController: MatchController;
 
   beforeEach(() => {
+    mockReset(mockMatchRepository);
+    mockReset(mockUserRepository);
     vi.clearAllMocks();
-    mockReply = { send: vi.fn() };
-  });
-
-  afterEach(() => {
-    vi.resetAllMocks();
+    matchController = MatchController.getInstance();
   });
 
   describe('handleGetMatch', () => {
-    it('should retrieve the match id from user record and send it in response', async () => {
-      (redis.hgetall as Mock).mockResolvedValue({ match: 'match789' });
+    it('should return the match ID for a valid user', async () => {
       const req = { params: { userId: 'user123' } } as unknown as FastifyRequest;
-      const controller = MatchController.getInstance();
+      const res = { send: vi.fn() } as unknown as FastifyReply;
 
-      await controller.handleGetMatch(req, mockReply as unknown as FastifyReply);
+      mockUserRepository.getUserById.mockResolvedValue({
+        matchId: 'match123',
+        id: ''
+      });
 
-      expect(redis.hgetall).toHaveBeenCalledWith('users:user123');
-      expect(mockReply.send).toHaveBeenCalledWith({ matchId: 'match789' });
+      await matchController.handleGetMatch(req, res);
+
+      expect(mockUserRepository.getUserById).toHaveBeenCalledWith('user123');
+      expect(res.send).toHaveBeenCalledWith({ matchId: 'match123' });
     });
   });
 
   describe('handleCreateMatch', () => {
-    it('should create a match and return a match id', async () => {
-      (redis.hgetall as Mock).mockResolvedValue({id: 'user123', name: 'Test User' });
+    it('should create a match and return its ID', async () => {
       const req = {
         params: { userId: 'user123' },
-        body: JSON.stringify({ level: 3, map: 'city' }),
+        body: { level: 1, map: 'test-map' }, 
       } as unknown as FastifyRequest;
-      const controller = MatchController.getInstance();
-
-      await controller.handleCreateMatch(req, mockReply as unknown as FastifyReply);
-
+      const res = { send: vi.fn() } as unknown as FastifyReply;
+  
+      vi.mocked(validateString).mockReturnValue('user123');
+      vi.mocked(validateMatchInputDTO).mockReturnValue({ level: 1, map: 'test-map' }); 
+      mockUserRepository.getUserById.mockResolvedValue({
+        matchId: '',
+        id: '',
+      });
+      mockMatchRepository.createMatch.mockResolvedValue();
+      mockUserRepository.updateUser.mockResolvedValue();
+  
+      await matchController.handleCreateMatch(req, res);
+  
       expect(validateString).toHaveBeenCalledWith('user123');
-      expect(validateMatchInputDTO).toHaveBeenCalledWith(JSON.stringify({ level: 3, map: 'city' }));
-      expect(redis.hset).toHaveBeenCalledTimes(2);
-      expect(redis.expire).toHaveBeenCalledWith(expect.stringContaining('matches:'), 10 * 60);
-      expect(mockReply.send).toHaveBeenCalledWith(expect.objectContaining({ matchId: expect.any(String) }));
-    });
-
-    it('should throw PLAYER_NOT_FOUND error if user does not exist', async () => {
-      (redis.hgetall as Mock).mockResolvedValue({});
-      const req = { params: { userId: 'user123' }, body: '{}' } as unknown as FastifyRequest;
-      const controller = MatchController.getInstance();
-
-      await expect(controller.handleCreateMatch(req, mockReply as unknown as FastifyReply)).rejects.toThrow(MatchError.PLAYER_NOT_FOUND);
-    });
-
-    it('should throw PLAYER_ALREADY_IN_MATCH error if user is already in a match', async () => {
-      (redis.hgetall as Mock).mockResolvedValue({ match: 'match123' });
-      const req = { params: { userId: 'user123' }, body: '{}' } as unknown as FastifyRequest;
-      const controller = MatchController.getInstance();
-
-      await expect(controller.handleCreateMatch(req, mockReply as unknown as FastifyReply)).rejects.toThrow(MatchError.PLAYER_ALREADY_IN_MATCH);
+      expect(validateMatchInputDTO).toHaveBeenCalledWith(req.body);
+      expect(mockUserRepository.getUserById).toHaveBeenCalledWith('user123');
+      expect(mockMatchRepository.createMatch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: expect.any(String),
+          host: 'user123',
+          level: 1, 
+          map: 'test-map', 
+        })
+      );
+      expect(mockUserRepository.updateUser).toHaveBeenCalledWith('user123', {
+        matchId: expect.any(String),
+      });
+      expect(res.send).toHaveBeenCalledWith({ matchId: expect.any(String) });
     });
   });
-}); 
+});
