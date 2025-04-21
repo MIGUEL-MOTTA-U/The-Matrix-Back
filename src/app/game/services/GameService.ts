@@ -2,6 +2,7 @@ import type { WebSocket } from 'ws';
 import type {
   MatchDetails,
   PlayerMove,
+  PlayerState,
   UpdateAll,
   UpdateEnemy,
   UpdateFruits,
@@ -25,6 +26,6 @@ export default interface GameService {
     matchId: string,
     hostId: string,
     guestId: string,
-    data: UpdateEnemy | PlayerMove | UpdateFruits
+    data: UpdateEnemy | PlayerMove | UpdateFruits | PlayerState
   ): Promise<void>;
 }

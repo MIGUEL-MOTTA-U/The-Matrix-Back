@@ -21,7 +21,7 @@ class Player extends Character {
    * @param {string | null} idItem The ID of the item consumed by the player, or null if none.
    * @return {PlayerMove} The player's updated state and position.
    */
-  protected getCharacterUpdate(idItem: string | null): PlayerMove {
+  public getCharacterUpdate(idItem: string | null): PlayerMove {
     const idItemConsumed = idItem ? idItem : undefined;
     const numberOfFruits = idItemConsumed ? this.board.getFruitsNumber() : undefined;
     return validatePlayerMove({
@@ -64,9 +64,12 @@ class Player extends Character {
 
   /**
    * Executes the logic when the player dies, marking them as not alive.
+   *
+   * @return {boolean} True, indicating the player has died.
    */
-  die(): void {
+  die(): boolean {
     this.alive = false;
+    return true;
   }
 
   /**
@@ -94,15 +97,6 @@ class Player extends Character {
    */
   public isAlive(): boolean {
     return this.alive;
-  }
-
-  /**
-   * Retrieves the current state of the player.
-   *
-   * @return {'alive' | 'dead'} The state of the player, either "alive" or "dead".
-   */
-  public getState(): 'alive' | 'dead' {
-    return this.alive ? 'alive' : 'dead';
   }
 
   /**

@@ -1,4 +1,4 @@
-import type { MatchDetails } from 'src/schemas/zod.js';
+import type { MatchDetails } from '../../../schemas/zod.js';
 
 interface MatchMakingService {
   searchMatch: (match: MatchDetails) => Promise<void>;

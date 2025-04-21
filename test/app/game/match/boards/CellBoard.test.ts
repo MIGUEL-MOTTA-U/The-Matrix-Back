@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import Cell from '../../../../../src/app/game/match/boards/CellBoard.js';
 import BoardDifficulty1 from '../../../../../src/app/game/match/boards/BoardDifficulty1.js';
 import Fruit from '../../../../../src/app/game/match/boards/Fruit.js';
@@ -6,6 +6,14 @@ import Troll from '../../../../../src/app/game/characters/enemies/Troll.js';
 import { mockDeep, mockReset } from 'vitest-mock-extended';
 import { beforeEach } from 'node:test';
 import type Match from '../../../../../src/app/game/match/Match.js';
+
+vi.mock('../../../../../src/server.js', () => ({
+    logger: {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+    },
+}));
 
 
 describe('Cell', () => {

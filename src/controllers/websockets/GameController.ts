@@ -6,8 +6,6 @@ import { ZodError } from 'zod';
 import type GameService from '../../app/game/services/GameService.js';
 import GameServiceImpl from '../../app/game/services/GameServiceImpl.js';
 import GameError from '../../errors/GameError.js';
-import MatchRepositoryRedis from '../../schemas/MatchRepositoryRedis.js';
-import UserRepositoryRedis from '../../schemas/UserRepositoryRedis.js';
 import { type MatchDetails, validateErrorMatch, validateString } from '../../schemas/zod.js';
 import { logger } from '../../server.js';
 /**
@@ -20,20 +18,28 @@ import { logger } from '../../server.js';
  * Santiago Avellaneda, Andres Serrato, and Miguel Motta
  */
 export default class GameController {
-  private readonly matchRepository: MatchRepository = MatchRepositoryRedis.getInstance();
-  private readonly userRepository: UserRepository = UserRepositoryRedis.getInstance();
+  private readonly matchRepository: MatchRepository;
+  private readonly userRepository: UserRepository;
   private static instance: GameController;
-  private gameService: GameService = GameServiceImpl.getInstance();
+  private readonly gameService: GameService;
 
-  private constructor() {}
+  private constructor(matchRepository: MatchRepository, userRepository: UserRepository) {
+    this.gameService = GameServiceImpl.getInstance(matchRepository, userRepository);
+    this.matchRepository = matchRepository;
+    this.userRepository = userRepository;
+  }
 
   /**
    * Retrieves the singleton instance of the GameController class.
    *
    * @return {GameController} The singleton instance of GameController.
    */
-  public static getInstance(): GameController {
-    if (!GameController.instance) GameController.instance = new GameController();
+  public static getInstance(
+    matchRepository: MatchRepository,
+    userRepository: UserRepository
+  ): GameController {
+    if (!GameController.instance)
+      GameController.instance = new GameController(matchRepository, userRepository);
     return GameController.instance;
   }
 

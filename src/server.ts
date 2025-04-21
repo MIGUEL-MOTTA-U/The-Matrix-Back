@@ -44,7 +44,7 @@ process.on('SIGINT', () => closeGracefully('SIGINT'));
 process.on('SIGTERM', () => closeGracefully('SIGTERM'));
 
 // Start the server if it's the main thread
-if (isMainThread && server.config.NODE_ENV !== 'test') {
+if (isMainThread) {
   start();
 }
 // Instead of console.log, use server logger.

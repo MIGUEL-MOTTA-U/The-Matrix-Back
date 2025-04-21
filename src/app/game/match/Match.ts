@@ -89,10 +89,12 @@ class Match {
   /**
    * Sends updates to the players, such as enemy movement, player movement, or fruit updates.
    *
-   * @param {UpdateEnemy | PlayerMove | UpdateFruits} data The data to be sent to the players.
+   * @param {UpdateEnemy | PlayerMove | UpdateFruits | PlayerState} data The data to be sent to the players.
    * @return {Promise<void>} A promise that resolves when the players are notified.
    */
-  public async notifyPlayers(data: UpdateEnemy | PlayerMove | UpdateFruits): Promise<void> {
+  public async notifyPlayers(
+    data: UpdateEnemy | PlayerMove | UpdateFruits | PlayerState
+  ): Promise<void> {
     this.gameService.updatePlayers(this.id, this.host, this.guest, data);
   }
 

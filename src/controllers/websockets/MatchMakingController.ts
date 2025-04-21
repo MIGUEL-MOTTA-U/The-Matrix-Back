@@ -1,11 +1,9 @@
 import type { FastifyRequest } from 'fastify';
 import type { WebSocket } from 'ws';
-import WebsocketService from '../../app/lobbies/services/WebSocketServiceImpl.js';
+import type WebSocketService from '../../app/lobbies/services/WebSocketService.js';
 import MatchError from '../../errors/MatchError.js';
 import type MatchRepository from '../../schemas/MatchRepository.js';
-import MatchRepositoryRedis from '../../schemas/MatchRepositoryRedis.js';
 import type UserRepository from '../../schemas/UserRepository.js';
-import UserRepositoryRedis from '../../schemas/UserRepositoryRedis.js';
 import {
   type ErrorMatch,
   type Info,
@@ -24,15 +22,31 @@ import { logger } from '../../server.js';
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 export default class MatchMakingController {
-  private readonly websocketService = WebsocketService.getInstance();
-  private readonly matchRepository: MatchRepository = MatchRepositoryRedis.getInstance();
-  private readonly userRepository: UserRepository = UserRepositoryRedis.getInstance();
+  private readonly websocketService: WebSocketService;
+  private readonly matchRepository: MatchRepository;
+  private readonly userRepository: UserRepository;
   // Singleton instace
   private static instance: MatchMakingController;
-  private constructor() {}
-  public static getInstance(): MatchMakingController {
+  private constructor(
+    webSocketService: WebSocketService,
+    matchRepository: MatchRepository,
+    userRepository: UserRepository
+  ) {
+    this.websocketService = webSocketService;
+    this.matchRepository = matchRepository;
+    this.userRepository = userRepository;
+  }
+  public static getInstance(
+    webSocketService: WebSocketService,
+    matchRepository: MatchRepository,
+    userRepository: UserRepository
+  ): MatchMakingController {
     if (!MatchMakingController.instance)
-      MatchMakingController.instance = new MatchMakingController();
+      MatchMakingController.instance = new MatchMakingController(
+        webSocketService,
+        matchRepository,
+        userRepository
+      );
     return MatchMakingController.instance;
   }
 

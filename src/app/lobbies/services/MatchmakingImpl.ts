@@ -1,40 +1,58 @@
-import type AsyncQueueInterface from 'src/utils/AsyncQueueInterface.js';
 import type MatchRepository from '../../../schemas/MatchRepository.js';
-import MatchRepositoryRedis from '../../../schemas/MatchRepositoryRedis.js';
 import type UserRepository from '../../../schemas/UserRepository.js';
-import UserRepositoryRedis from '../../../schemas/UserRepositoryRedis.js';
 import { type MatchDetails, type UserQueue, validateUserQueue } from '../../../schemas/zod.js';
 import { logger } from '../../../server.js';
 import AsyncQueue from '../../../utils/AsyncQueue.js';
+import type AsyncQueueInterface from '../../../utils/AsyncQueueInterface.js';
 import type Match from '../../game/match/Match.js';
 import type GameService from '../../game/services/GameService.js';
 import GameServiceImpl from '../../game/services/GameServiceImpl.js';
-import type MatchMakingInterface from '../../lobbies/services/MatchMakingService.js';
-import type WebSocketService from './WebSocketServiceImpl.js';
+import type MatchMakingService from '../../lobbies/services/MatchMakingService.js';
+import type WebSocketService from './WebSocketService.js';
+import WebSocketServiceImpl from './WebSocketServiceImpl.js';
 /**
  * @class MatchMaking
  * This class is responsible for managing the matchmaking process.
  * It uses a thread-safety queue to manage users looking for a match.
- * @see {@link MatchMakingInterface}
+ * @see {@link MatchMakingService}
  * @since 18/04/2025
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
-class MatchMaking implements MatchMakingInterface {
-  private readonly matchRepository: MatchRepository = MatchRepositoryRedis.getInstance();
-  private readonly userRepository: UserRepository = UserRepositoryRedis.getInstance();
-  private queue: AsyncQueueInterface<UserQueue>;
-  private gameService: GameService;
-  private webSocketService: WebSocketService;
+class MatchMaking implements MatchMakingService {
+  private readonly matchRepository: MatchRepository;
+  private readonly userRepository: UserRepository;
+  private readonly webSocketService: WebSocketService;
+  private readonly queue: AsyncQueueInterface<UserQueue>;
+  private readonly gameService: GameService;
 
   // Singleton instance
   private static instance: MatchMaking;
-  private constructor(webSocketService: WebSocketService) {
+  private constructor(
+    matchRepository: MatchRepository,
+    userRepository: UserRepository,
+    webSocketService?: WebSocketService,
+    gameService?: GameService
+  ) {
+    this.matchRepository = matchRepository;
+    this.userRepository = userRepository;
     this.queue = new AsyncQueue<UserQueue>();
-    this.gameService = GameServiceImpl.getInstance(); // Manual dependency injection
-    this.webSocketService = webSocketService;
+    this.gameService = gameService || GameServiceImpl.getInstance(matchRepository, userRepository);
+    this.webSocketService =
+      webSocketService || WebSocketServiceImpl.getInstance(this, matchRepository);
   }
-  public static getInstance(webSocketService: WebSocketService): MatchMaking {
-    if (!MatchMaking.instance) MatchMaking.instance = new MatchMaking(webSocketService);
+  public static getInstance(
+    matchRepository: MatchRepository,
+    userRepository: UserRepository,
+    webSocketService?: WebSocketService,
+    gameService?: GameService
+  ): MatchMaking {
+    if (!MatchMaking.instance)
+      MatchMaking.instance = new MatchMaking(
+        matchRepository,
+        userRepository,
+        webSocketService,
+        gameService
+      );
     return MatchMaking.instance;
   }
 

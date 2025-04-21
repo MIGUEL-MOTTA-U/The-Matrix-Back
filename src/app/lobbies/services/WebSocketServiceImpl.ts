@@ -1,11 +1,11 @@
 import type { WebSocket } from 'ws';
 import type MatchRepository from '../../../schemas/MatchRepository.js';
-import MatchRepositoryRedis from '../../../schemas/MatchRepositoryRedis.js';
 import type { MatchDetails } from '../../../schemas/zod.js';
 import { logger } from '../../../server.js';
 import type Match from '../../game/match/Match.js';
 import type MatchMakingService from './MatchMakingService.js';
-import MatchMaking from './MatchmakingImpl.js';
+import type WebsocketService from './WebSocketService.js';
+
 /**
  * @class WebsocketService
  * This class is responsible for managing WebSocket connections and matchmaking.
@@ -13,29 +13,34 @@ import MatchMaking from './MatchmakingImpl.js';
  * @since 18/04/2025
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
-export default class WebsocketService {
-  private readonly matchRepository: MatchRepository = MatchRepositoryRedis.getInstance();
-  private static instance: WebsocketService;
-  private connections: Map<string, WebSocket>;
-  private matchMakingService: MatchMakingService;
+export default class WebsocketServiceImpl implements WebsocketService {
+  private readonly matchRepository: MatchRepository;
+  private static instance: WebsocketServiceImpl;
+  private readonly connections: Map<string, WebSocket>;
+  private readonly matchMakingService: MatchMakingService;
 
   /**
    * This method is used to get the singleton instance of the WebsocketService class.
    *
-   * @return {WebsocketService} Singleton instance of WebsocketService.
+   * @return {WebsocketServiceImpl} Singleton instance of WebsocketService.
    */
-  public static getInstance(): WebsocketService {
-    if (!WebsocketService.instance) WebsocketService.instance = new WebsocketService();
-    return WebsocketService.instance;
+  public static getInstance(
+    matchMakingService: MatchMakingService,
+    matchRepository: MatchRepository
+  ): WebsocketServiceImpl {
+    if (!WebsocketServiceImpl.instance)
+      WebsocketServiceImpl.instance = new WebsocketServiceImpl(matchMakingService, matchRepository);
+    return WebsocketServiceImpl.instance;
   }
 
   /**
    * Creates a new instance of WebsocketService.
    * Initializes the connections map and the matchmaking service.
    */
-  private constructor() {
-    this.connections = new Map(); // --> This should be a database (Redis)
-    this.matchMakingService = MatchMaking.getInstance(this);
+  private constructor(matchMakingService: MatchMakingService, matchRepository: MatchRepository) {
+    this.matchRepository = matchRepository;
+    this.connections = new Map();
+    this.matchMakingService = matchMakingService;
   }
 
   /**

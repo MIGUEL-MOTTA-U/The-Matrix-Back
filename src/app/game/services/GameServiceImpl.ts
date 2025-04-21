@@ -2,12 +2,11 @@ import { WebSocket } from 'ws';
 import GameError from '../../../errors/GameError.js';
 import MatchError from '../../../errors/MatchError.js';
 import type MatchRepository from '../../../schemas/MatchRepository.js';
-import MatchRepositoryRedis from '../../../schemas/MatchRepositoryRedis.js';
 import type UserRepository from '../../../schemas/UserRepository.js';
-import UserRepositoryRedis from '../../../schemas/UserRepositoryRedis.js';
 import {
   type MatchDetails,
   type PlayerMove,
+  type PlayerState,
   type UpdateAll,
   type UpdateEnemy,
   type UpdateFruits,
@@ -29,8 +28,8 @@ import type Player from '../characters/players/Player.js';
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 class GameServiceImpl implements GameService {
-  private readonly userRepository: UserRepository = UserRepositoryRedis.getInstance();
-  private readonly matchRepository: MatchRepository = MatchRepositoryRedis.getInstance();
+  private readonly userRepository: UserRepository;
+  private readonly matchRepository: MatchRepository;
   private readonly matches: Map<string, Match>;
   private readonly connections: Map<string, WebSocket>;
   private static instance: GameServiceImpl;
@@ -59,12 +58,18 @@ class GameServiceImpl implements GameService {
    *
    * @return {GameServiceImpl} The singleton instance.
    */
-  public static getInstance(): GameServiceImpl {
-    if (!GameServiceImpl.instance) GameServiceImpl.instance = new GameServiceImpl();
+  public static getInstance(
+    matchRepository: MatchRepository,
+    userRepository: UserRepository
+  ): GameServiceImpl {
+    if (!GameServiceImpl.instance)
+      GameServiceImpl.instance = new GameServiceImpl(matchRepository, userRepository);
     return GameServiceImpl.instance;
   }
 
-  private constructor() {
+  private constructor(matchRepository: MatchRepository, userRepository: UserRepository) {
+    this.matchRepository = matchRepository;
+    this.userRepository = userRepository;
     this.matches = new Map<string, Match>();
     this.connections = new Map();
   }
@@ -186,7 +191,7 @@ class GameServiceImpl implements GameService {
     matchId: string,
     hostId: string,
     guestId: string,
-    data: UpdateEnemy | PlayerMove | UpdateFruits
+    data: UpdateEnemy | PlayerMove | UpdateFruits | PlayerState
   ): Promise<void> {
     const gameMatch = this.matches.get(matchId);
     if (!gameMatch) throw new MatchError(MatchError.MATCH_NOT_FOUND);

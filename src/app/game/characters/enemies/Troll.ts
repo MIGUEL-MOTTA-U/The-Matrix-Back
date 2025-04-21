@@ -1,5 +1,5 @@
 import CharacterError from '../../../../errors/CharacterError.js';
-import type { BoardItemDTO } from '../../../../schemas/zod.js';
+import { type BoardItemDTO, validatePlayerState } from '../../../../schemas/zod.js';
 import type Cell from '../../match/boards/CellBoard.js';
 import type Character from '../Character.js';
 import Enemy from './Enemy.js';
@@ -36,7 +36,8 @@ export default class Troll extends Enemy {
     cellUp.setCharacter(this);
     this.cell = cellUp;
     if (character && !character.kill()) {
-      character.die(); // If it's a player, it dies.
+      const died = character.die();
+      if (died) this.board.notifyPlayers(validatePlayerState(character.getCharacterState()));
     }
     return null; // The Troll doesn't consume anything.
   }

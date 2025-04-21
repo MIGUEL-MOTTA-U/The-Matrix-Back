@@ -6,7 +6,12 @@ import {
   type UpdateFruits,
   validateUpdateFruits,
 } from '../../../../schemas/zod.js';
-import type { CellCoordinates } from '../../../../schemas/zod.js';
+import type {
+  CellCoordinates,
+  PlayerMove,
+  PlayerState,
+  UpdateEnemy,
+} from '../../../../schemas/zod.js';
 import type Enemy from '../../characters/enemies/Enemy.js';
 import type Player from '../../characters/players/Player.js';
 import type Match from '../Match.js';
@@ -103,6 +108,10 @@ abstract class Board {
       currentRound: this.currentRound,
       nextFruitType: nextFruitType,
     });
+  }
+
+  public async notifyPlayers(data: PlayerMove | UpdateEnemy | PlayerState): Promise<void> {
+    this.match.notifyPlayers(data);
   }
 
   /**
