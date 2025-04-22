@@ -17,6 +17,7 @@ vi.mock('../../src/server.js', () => ({
     hset: vi.fn(() => Promise.resolve()),
     hgetall: vi.fn(() => Promise.resolve({ id: 'fixed-uuid', name: 'Test User' })),
     expire: vi.fn(() => Promise.resolve()),
+    keys: vi.fn(() => Promise.resolve(['fixed-uuid'])),
   },
 }));
 describe('UserController', () => {
@@ -63,6 +64,18 @@ describe('UserController', () => {
       const instance1 = UserController.getInstance();
       const instance2 = UserController.getInstance();
       expect(instance1).toBe(instance2);
+    });
+  });
+
+  describe('handleGetUsers', () => {
+    it('should retrieve all users from Redis and send the user list', async () => {
+      req = {
+        params: {},
+      } as unknown as FastifyRequest;
+
+      await controller.handleGetUsers(req, res);
+
+      expect(res.send).toHaveBeenCalledWith([{ id: 'fixed-uuid', name: 'Test User' }]);
     });
   });
 });

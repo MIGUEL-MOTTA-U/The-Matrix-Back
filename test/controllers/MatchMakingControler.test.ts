@@ -1,27 +1,25 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import MatchMakingController from '../../src/controllers/websockets/MatchMakingController.js';
-import WebsocketService from '../../src/app/WebSocketServiceImpl.js';
-import { validateString, validateMatchDetails, validateMatchInputDTO } from '../../src/schemas/zod.js';
-import type { FastifyRequest, FastifyReply } from 'fastify';
+import WebsocketService from '../../src/app/lobbies/services/WebSocketServiceImpl.js';
+import { validateString, validateMatchDetails, } from '../../src/schemas/zod.js';
+import type { FastifyRequest } from 'fastify';
 import type { WebSocket } from 'ws';
-import { redis } from '../../src/server.js';
+import { mockDeep } from 'vitest-mock-extended';
+import type UserRepository from '../../src/schemas/UserRepository.js';
+import type MatchRepository from '../../src/schemas/MatchRepository.js';
+import type MatchMakingService from '../../src/app/lobbies/services/MatchMakingService.js';
+import { logger } from '../../src/server.js';
 
-vi.mock('../../src/server.js', () => {
-  return {
-    logger: {
-      info: vi.fn(),
-      warn: vi.fn(),
-      error: vi.fn(),
-    },
-    redis: {
-      hgetall: vi.fn(),
-      hset: vi.fn(),
-      expire: vi.fn(),
-    },
-  };
-});
 
-vi.mock('../../src/app/WebSocketServiceImpl.js', () => {
+vi.mock('../../src/server.js', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
+vi.mock('../../src/app/lobbies/services/WebSocketServiceImpl.js', () => {
   const mockInstance = {
     registerConnection: vi.fn(),
     matchMaking: vi.fn(),
@@ -37,11 +35,21 @@ vi.mock('../../src/app/WebSocketServiceImpl.js', () => {
 vi.mock('../../src/schemas/zod.js', () => ({
   validateString: vi.fn((input) => input),
   validateMatchDetails: vi.fn((input) => input),
-  validateMatchInputDTO: vi.fn((input) => input),
+  validateInfo: vi.fn((input) => input),
+  validateErrorMatch: vi.fn((input) => input),
 }));
 
+const userRepository = mockDeep<UserRepository>();
+const matchRepository = mockDeep<MatchRepository>();
+const matchMakingService = mockDeep<MatchMakingService>();
+const mockWebSocketService = WebsocketService.getInstance(matchMakingService, matchRepository);
+const controller = MatchMakingController.getInstance(
+  mockWebSocketService,
+  matchRepository,
+  userRepository
+);
+
 describe('MatchMakingController', () => {
-  const mockWebSocketService = WebsocketService.getInstance();
   type MockWebSocket = {
     send: ReturnType<typeof vi.fn>;
     on: ReturnType<typeof vi.fn>;
@@ -50,7 +58,6 @@ describe('MatchMakingController', () => {
 
   let mockSocket: MockWebSocket;
   let mockRequest: FastifyRequest;
-  let mockReply: FastifyReply;
   let messageHandler: ((message: Buffer) => void) | undefined;
   let closeHandler: (() => void) | undefined;
 
@@ -60,6 +67,7 @@ describe('MatchMakingController', () => {
     guest: null,
     level: 2,
     map: 'desert',
+    started: false,
   };
 
   beforeEach(() => {
@@ -78,15 +86,10 @@ describe('MatchMakingController', () => {
     };
 
     mockRequest = {
-      params: { matchId: 'user123' },
+      params: { matchId: 'match123' },
     } as unknown as FastifyRequest;
 
-    mockReply = {
-      send: vi.fn(),
-    } as unknown as FastifyReply;
-
-    (redis.hgetall as Mock).mockResolvedValue(validMatchDetails);
-
+    matchRepository.getMatchById.mockResolvedValue(validMatchDetails);
   });
 
   afterEach(() => {
@@ -95,21 +98,19 @@ describe('MatchMakingController', () => {
 
   describe('getInstance', () => {
     it('should return a singleton instance', () => {
-      const instance1 = MatchMakingController.getInstance();
-      const instance2 = MatchMakingController.getInstance();
+      const instance1 = MatchMakingController.getInstance(mockWebSocketService, matchRepository, userRepository);
+      const instance2 = MatchMakingController.getInstance(mockWebSocketService, matchRepository, userRepository);
       expect(instance1).toBe(instance2);
     });
   });
 
   describe('handleMatchMaking', () => {
-    it('should register connection, send initial message and setup event listeners', async () => {
-      const controller = MatchMakingController.getInstance();
+    it('should register connection, send initial message, and setup event listeners', async () => {
       await controller.handleMatchMaking(mockSocket as unknown as WebSocket, mockRequest);
-      
-      expect(validateString).toHaveBeenCalledWith('user123');
-      expect(validateMatchDetails).toHaveBeenCalled();
+
+      expect(validateString).toHaveBeenCalledWith('match123');
       expect(mockWebSocketService.registerConnection).toHaveBeenCalledWith('user123', mockSocket);
-      expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({ message: 'Connected and looking for a match...'}));
+      expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({ message: 'Connected and looking for a match...' }));
       expect(mockWebSocketService.matchMaking).toHaveBeenCalledWith(validMatchDetails);
       expect(mockSocket.on).toHaveBeenCalledWith('message', expect.any(Function));
       expect(mockSocket.on).toHaveBeenCalledWith('close', expect.any(Function));
@@ -117,26 +118,27 @@ describe('MatchMakingController', () => {
     });
 
     it('should handle errors and close socket when exception occurs', async () => {
-      (validateString as Mock).mockImplementation(() => { throw new Error('Invalid'); });
-      const controller = MatchMakingController.getInstance();
+      matchRepository.getMatchById.mockRejectedValue(new Error('Database error'));
       await controller.handleMatchMaking(mockSocket as unknown as WebSocket, mockRequest);
-      expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({message: 'Internal server error'}));
+
+      expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({ error: 'Internal server error' }));
+      expect(mockSocket.close).toHaveBeenCalled();
     });
 
     it('should respond with progress message on message event', async () => {
-      const controller = MatchMakingController.getInstance();
       await controller.handleMatchMaking(mockSocket as unknown as WebSocket, mockRequest);
+
       if (messageHandler) {
         messageHandler(Buffer.from('any message'));
-        expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({message:'Matchmaking in progress...'}));
+        expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({ message: 'Matchmaking in progress...' }));
       } else {
         throw new Error('Message handler not registered');
       }
     });
 
     it('should remove connection on close event', async () => {
-      const controller = MatchMakingController.getInstance();
       await controller.handleMatchMaking(mockSocket as unknown as WebSocket, mockRequest);
+
       if (closeHandler) {
         closeHandler();
         expect(mockWebSocketService.removeConnection).toHaveBeenCalledWith('user123');
@@ -144,36 +146,26 @@ describe('MatchMakingController', () => {
         throw new Error('Close handler not registered');
       }
     });
-  });
 
-  describe('handleCreateMatch', () => {
-    it('should create a match and return a match id', async () => {
-      const matchInput = { level: 3, map: 'city' };
-      const req = {
-        params: { userId: 'user123' },
-        body: JSON.stringify(matchInput),
-      } as unknown as FastifyRequest;
-      const controller = MatchMakingController.getInstance();
-      await controller.handleCreateMatch(req, mockReply);
-      expect(validateString).toHaveBeenCalledWith('user123');
-      expect(validateMatchInputDTO).toHaveBeenCalledWith(JSON.stringify(matchInput));
-      expect(redis.hset).toHaveBeenCalled();
-      expect(redis.expire).toHaveBeenCalled();
-      const sentArg = (mockReply.send as Mock).mock.calls[0][0];
-      expect(typeof sentArg).toBe('object');
-      expect(sentArg.matchId.length).toBe(8);
+    it('should log error on socket error event', async () => {
+      await controller.handleMatchMaking(mockSocket as unknown as WebSocket, mockRequest);
+
+      const error = new Error('Socket error');
+      if (closeHandler) {
+        mockSocket.on.mock.calls.find(([event]) => event === 'error')?.[1](error);
+        expect(vi.mocked(logger.error)).toHaveBeenCalledWith(error);
+      } else {
+        throw new Error('Error handler not registered');
+      }
     });
-  });
 
-  describe('handleGetMatch', () => {
-    it('should retrieve the match id from user record and send it in response', async () => {
-      (redis.hgetall as Mock).mockResolvedValue({ match: 'match789' });
-      const req = {
-        params: { userId: 'user123' },
-      } as unknown as FastifyRequest;
-      const controller = MatchMakingController.getInstance();
-      await controller.handleGetMatch(req, mockReply);
-      expect(mockReply.send).toHaveBeenCalledWith({ matchId: 'match789' });
+    it('should throw MatchError if match is already started', async () => {
+      matchRepository.getMatchById.mockResolvedValue({ ...validMatchDetails, started: true });
+
+      await controller.handleMatchMaking(mockSocket as unknown as WebSocket, mockRequest);
+
+      expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({ error: 'Internal server error' }));
+      expect(mockSocket.close).toHaveBeenCalled();
     });
   });
 });

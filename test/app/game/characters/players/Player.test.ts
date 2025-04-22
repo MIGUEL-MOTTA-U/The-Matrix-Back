@@ -6,7 +6,27 @@ import CharacterError from '../../../../../src/errors/CharacterError.js';
 import { mockDeep, mockReset } from 'vitest-mock-extended';
 import type Match from '../../../../../src/app/game/match/Match.js';
 import { beforeEach } from 'node:test';
-
+import { config, logger } from '../../../../../src/server.js';
+vi.mock('../../../../../src/server.js', () => {
+    return {
+        logger: {
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+        },
+        config: {
+            game: {
+                board: {
+                    rows: 5,
+                    cols: 5,
+                },
+                fruits: {
+                    number: 3,
+                },
+            },
+        },
+    };
+});
 describe('Player', () => {
     const match = mockDeep<Match>();
     
@@ -35,7 +55,7 @@ describe('Player', () => {
         const cell = new Cell(1, 1);
         const player = new Player(cell, board, 'id-player-test-3');
         player.die();
-        expect(player.die()).toBeFalsy();
+        expect(player.die()).toBeTruthy();
     });
 
     it('player should move left',async () => {

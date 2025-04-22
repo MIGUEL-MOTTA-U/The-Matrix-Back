@@ -6,14 +6,26 @@ import {
   type UpdateFruits,
   validateUpdateFruits,
 } from '../../../../schemas/zod.js';
-import type { CellCoordinates } from '../../../../schemas/zod.js';
+import type {
+  CellCoordinates,
+  PlayerMove,
+  PlayerState,
+  UpdateEnemy,
+} from '../../../../schemas/zod.js';
 import type Enemy from '../../characters/enemies/Enemy.js';
 import type Player from '../../characters/players/Player.js';
 import type Match from '../Match.js';
 import type Cell from './CellBoard.js';
 import type Fruit from './Fruit.js';
+/**
+ * @abstract class Board
+ * Abstract class representing a game board.
+ * @since 18/04/2025
+ * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
+ */
 abstract class Board {
   protected FRUIT_TYPE: string[] = [];
+  protected FRUITS_CONTAINER: string[] = [];
   protected readonly mutex = new Mutex();
   protected readonly ROWS: number;
   protected readonly COLS: number;
@@ -54,11 +66,21 @@ abstract class Board {
     this.setUpEnemies();
     this.setUpInmovableObjects();
   }
-
+  /**
+   * Sets up the fruits on the board after it is generated.
+   *
+   * @return {Promise<void>} A promise that resolves when the fruits are set up.
+   */
   public async initialize(): Promise<void> {
     await this.setUpFruits();
   }
 
+  /**
+   * Removes a fruit from the board at the specified coordinates.
+   *
+   * @param {CellCoordinates} coordinates The coordinates of the fruit to be removed.
+   * @return {Promise<void>} A promise that resolves when the fruit is removed.
+   */
   public async removeFruit({ x, y }: CellCoordinates): Promise<void> {
     await this.mutex.runExclusive(async () => {
       this.board[x][y].setItem(null);
@@ -72,20 +94,49 @@ abstract class Board {
     });
   }
 
+  /**
+   * Retrieves the updated information about the fruits on the board.
+   *
+   * @return {UpdateFruits} An object containing the updated fruit information.
+   */
   protected getUpdateFruits(): UpdateFruits {
     const nextFruitType = this.FRUIT_TYPE[0] ? this.FRUIT_TYPE[0] : null;
     return validateUpdateFruits({
-      fruits: this.fruitsNumber,
-      board: this.cellsBoardDTO().filter((cell: CellDTO) => cell.item !== null),
       fruitType: this.currentFruitType,
+      fruitsNumber: this.fruitsNumber,
+      cells: this.cellsBoardDTO().filter((cell: CellDTO) => cell.item !== null),
       currentRound: this.currentRound,
       nextFruitType: nextFruitType,
     });
   }
 
+  public async notifyPlayers(data: PlayerMove | UpdateEnemy | PlayerState): Promise<void> {
+    this.match.notifyPlayers(data);
+  }
+
+  /**
+   * Returns the matrix of cells representing the board.
+   *
+   * @return {Cell[][]} The matrix of cells of the board.
+   */
   public getBoard(): Cell[][] {
     return this.board;
   }
+
+  /**
+   * Retrieves the types of fruits available on the board.
+   *
+   * @return {string[]} An array of fruit types.
+   */
+  public getFruitTypes(): string[] {
+    return this.FRUITS_CONTAINER;
+  }
+
+  /**
+   * Converts the board's cells into an array of CellDTO objects.
+   *
+   * @return {CellDTO[]} An array of CellDTO objects representing the board's cells.
+   */
   public cellsBoardDTO(): CellDTO[] {
     return this.board.flatMap(
       (row) =>
@@ -94,27 +145,61 @@ abstract class Board {
           .filter((cellDTO): cellDTO is CellDTO => cellDTO !== null) // Filtra celdas nulas
     );
   }
+
+  /**
+   * Retrieves the current number of fruits on the board.
+   *
+   * @return {number} The number of fruits on the board.
+   */
   public getFruitsNumber(): number {
     return this.fruitsNumber;
   }
+
+  /**
+   * Retrieves the enemies present on the board.
+   *
+   * @return {Map<string, Enemy>} A map of enemies on the board.
+   */
   public getEnemies(): Map<string, Enemy> {
     return this.enemies;
   }
+  /**
+   * Retrieves the host player of the match.
+   *
+   * @return {Player | null} The host player, or null if not set.
+   */
   public getHost(): Player | null {
     return this.host;
   }
 
+  /**
+   * Retrieves the guest player of the match.
+   *
+   * @return {Player | null} The guest player, or null if not set.
+   */
   public getGuest(): Player | null {
     return this.guest;
   }
 
   public abstract checkWin(): boolean;
   public abstract checkLose(): boolean;
+  /**
+   * Starts the game by setting up players and initializing enemies.
+   *
+   * @param {string} host The ID of the host player.
+   * @param {string} guest The ID of the guest player.
+   * @return {Promise<void>} A promise that resolves when the game starts.
+   */
   public async startGame(host: string, guest: string): Promise<void> {
     this.setUpPlayers(host, guest);
     await this.startEnemies();
   }
 
+  /**
+   * Stops the game by terminating all worker threads.
+   *
+   * @return {Promise<void>} A promise that resolves when the game stops.
+   */
   public async stopGame(): Promise<void> {
     for (const worker of this.workers) {
       await worker.terminate();

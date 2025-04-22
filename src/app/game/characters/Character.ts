@@ -1,20 +1,58 @@
 import { Mutex } from 'async-mutex';
-import type { PlayerMove, UpdateEnemy } from '../../../schemas/zod.js';
+import type { PlayerMove, PlayerState, UpdateEnemy } from '../../../schemas/zod.js';
 import { BoardItem } from '../match/boards/BoardItem.js';
 import type Cell from '../match/boards/CellBoard.js';
 
 /**
- * This class represents the behaviour and the properties
+ * @abstract class Character
+ * This abstract class represents the behaviour and the properties
  * of a character in the game of bad-ice-cream. (Player or Enemy)
+ * @since 18/04/2025
+ * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 abstract class Character extends BoardItem {
   protected readonly mutex = new Mutex();
   protected alive = true;
   protected color: string | null = null;
   protected orientation: 'down' | 'up' | 'left' | 'right' = 'down';
+
+  /**
+   * Sets the color of the character.
+   *
+   * @param {string} color - The color to set for the character.
+   */
   public setColor(color: string): void {
     this.color = color;
   }
+
+  /**
+   * Retrieves the current state of the character.
+   *
+   * @return {'alive' | 'dead'} The state of the character, either "alive" or "dead".
+   */
+  public getState(): 'alive' | 'dead' {
+    return this.alive ? 'alive' : 'dead';
+  }
+
+  /**
+   * Retrieves the current state of the character including its ID, state, and color.
+   *
+   * @return {PlayerState} The state of the character.
+   */
+  public getCharacterState(): PlayerState {
+    const color = this.color ? this.color : undefined;
+    return {
+      id: this.id,
+      state: this.getState(),
+      color,
+    };
+  }
+
+  /**
+   * Moves the character up in the game board.
+   *
+   * @return {Promise<PlayerMove | UpdateEnemy>} A promise resolving to the updated state of the character.
+   */
   async moveUp(): Promise<PlayerMove | UpdateEnemy> {
     const idItemBOard = await this.mutex.runExclusive(async () => {
       const cellUp = this.cell.getUpCell();
@@ -26,6 +64,12 @@ abstract class Character extends BoardItem {
     return this.getCharacterUpdate(idItemBOard);
   }
 
+  /**
+   * Changes the orientation of the character.
+   *
+   * @param {'down' | 'up' | 'left' | 'right'} orientation - The new orientation of the character.
+   * @return {PlayerMove | UpdateEnemy} The updated state of the character.
+   */
   public changeOrientation(
     orientation: 'down' | 'up' | 'left' | 'right'
   ): PlayerMove | UpdateEnemy {
@@ -33,6 +77,11 @@ abstract class Character extends BoardItem {
     return this.getCharacterUpdate(null);
   }
 
+  /**
+   * Moves the character down in the game board.
+   *
+   * @return {Promise<PlayerMove | UpdateEnemy>} A promise resolving to the updated state of the character.
+   */
   async moveDown(): Promise<PlayerMove | UpdateEnemy> {
     const idItemBoard = await this.mutex.runExclusive(async () => {
       const cellDown = this.cell.getDownCell();
@@ -44,6 +93,11 @@ abstract class Character extends BoardItem {
     return this.getCharacterUpdate(idItemBoard);
   }
 
+  /**
+   * Moves the character left in the game board.
+   *
+   * @return {Promise<PlayerMove | UpdateEnemy>} A promise resolving to the updated state of the character.
+   */
   async moveLeft(): Promise<PlayerMove | UpdateEnemy> {
     const idItemBoard = await this.mutex.runExclusive(async () => {
       const cellLeft = this.cell.getLeftCell();
@@ -55,6 +109,11 @@ abstract class Character extends BoardItem {
     return this.getCharacterUpdate(idItemBoard);
   }
 
+  /**
+   * Moves the character right in the game board.
+   *
+   * @return {Promise<PlayerMove | UpdateEnemy>} A promise resolving to the updated state of the character.
+   */
   async moveRight(): Promise<PlayerMove | UpdateEnemy> {
     const idItemBoard = await this.mutex.runExclusive(async () => {
       const cellRight = this.cell.getRightCell();
@@ -66,25 +125,39 @@ abstract class Character extends BoardItem {
     return this.getCharacterUpdate(idItemBoard);
   }
 
+  /**
+   * Retrieves the current orientation of the character.
+   *
+   * @return {'down' | 'up' | 'left' | 'right'} The current orientation of the character.
+   */
   public getOrientation(): 'down' | 'up' | 'left' | 'right' {
     return this.orientation;
   }
 
   abstract execPower(): void;
-  abstract die(): void;
+  abstract die(): boolean;
   abstract kill(): boolean;
   abstract reborn(): void;
   protected abstract move(cell: Cell, character: Character | null): Promise<string | null>;
   protected abstract validateMove(cell: Cell | null): { character: Character | null; cell: Cell };
-  protected abstract getCharacterUpdate(idItemConsumed: string | null): PlayerMove | UpdateEnemy;
+  public abstract getCharacterUpdate(idItemConsumed: string | null): PlayerMove | UpdateEnemy;
 
-  // The characters can't block the cell
+  /**
+   * Determines if the character blocks the cell.
+   *
+   * @return {boolean} Always returns false, as characters cannot block cells.
+   */
   public blocked(): boolean {
     return false;
   }
 
+  /**
+   * Picks up the character. This method is not implemented for characters.
+   *
+   * @return {Promise<undefined>} Always resolves to undefined.
+   */
   public async pick(): Promise<undefined> {
     return undefined;
-  } // The characters can't be picked up
+  }
 }
 export default Character;

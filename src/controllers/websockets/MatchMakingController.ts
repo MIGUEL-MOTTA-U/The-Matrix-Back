@@ -1,111 +1,110 @@
-import type { FastifyReply, FastifyRequest } from 'fastify';
-import { v4 as uuidv4 } from 'uuid';
+import type { FastifyRequest } from 'fastify';
 import type { WebSocket } from 'ws';
-import WebsocketService from '../../app/WebSocketServiceImpl.js';
+import type WebSocketService from '../../app/lobbies/services/WebSocketService.js';
 import MatchError from '../../errors/MatchError.js';
+import type MatchRepository from '../../schemas/MatchRepository.js';
+import type UserRepository from '../../schemas/UserRepository.js';
 import {
+  type ErrorMatch,
+  type Info,
   type MatchDetails,
-  validateMatchDetails,
-  validateMatchInputDTO,
+  validateErrorMatch,
+  validateInfo,
   validateString,
 } from '../../schemas/zod.js';
-import { logger, redis } from '../../server.js';
-const websocketService = WebsocketService.getInstance();
+import { logger } from '../../server.js';
 /**
+ * @class MatchMakingController
  * This class handles the errors different way a rest controller does.
  * It is responsible for managing WebSocket connections and handling messages.
  * It also provides matchmaking services for players looking for a match.
+ * @since 18/04/2025
+ * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 export default class MatchMakingController {
+  private readonly websocketService: WebSocketService;
+  private readonly matchRepository: MatchRepository;
+  private readonly userRepository: UserRepository;
   // Singleton instace
   private static instance: MatchMakingController;
-  private constructor() {}
-  public static getInstance(): MatchMakingController {
+  private constructor(
+    webSocketService: WebSocketService,
+    matchRepository: MatchRepository,
+    userRepository: UserRepository
+  ) {
+    this.websocketService = webSocketService;
+    this.matchRepository = matchRepository;
+    this.userRepository = userRepository;
+  }
+  public static getInstance(
+    webSocketService: WebSocketService,
+    matchRepository: MatchRepository,
+    userRepository: UserRepository
+  ): MatchMakingController {
     if (!MatchMakingController.instance)
-      MatchMakingController.instance = new MatchMakingController();
+      MatchMakingController.instance = new MatchMakingController(
+        webSocketService,
+        matchRepository,
+        userRepository
+      );
     return MatchMakingController.instance;
   }
 
-  public async handleMatchMaking(socket: WebSocket, request: FastifyRequest) {
+  /**
+   * This method handles the matchmaking process for a player.
+   * @param {WebSocket} socket The socket connection to the client
+   * @param {FastifyRequest} request The request object containing the match details
+   * @returns {Promise<void>} A promise that resolves when the matchmaking process is complete
+   * @throws {MatchError} if the match is already started or if there is an internal server error
+   */
+  public async handleMatchMaking(socket: WebSocket, request: FastifyRequest): Promise<void> {
     try {
-      const { matchId } = request.params as { matchId: string };
-      const matchIdParsed = validateString(matchId);
-
-      const match = validateMatchDetails(await redis.hgetall(`matches:${matchIdParsed}`));
-
+      const match = await this.validateMatch(request.params);
       if (match.started) throw new MatchError(MatchError.MATCH_ALREADY_STARTED);
-
-      websocketService.registerConnection(match.host, socket);
-
-      socket.send(JSON.stringify({ message: 'Connected and looking for a match...' }));
-
-      websocketService.matchMaking(match);
-
+      this.websocketService.registerConnection(match.host, socket);
+      this.sendMessage(socket, validateInfo({ message: 'Connected and looking for a match...' }));
+      this.websocketService.matchMaking(match);
+      this.extendExpiration(match.id, match.host);
       logger.info(`Matchmaking from ${match.host}: looking for Match: ${JSON.stringify(match)}`);
 
-      // Extend the expiration time of the match and user in Redis
       socket.on('message', (_message: Buffer) => {
-        socket.send(JSON.stringify({ message: 'Matchmaking in progress...' }));
-        redis.expire(`matches:${matchIdParsed}`, 10 * 60);
-        redis.expire(`users:${match.host}`, 10 * 60);
+        this.sendMessage(socket, validateInfo({ message: 'Matchmaking in progress...' }));
+        this.extendExpiration(match.id, match.host);
       });
 
       socket.on('close', () => {
-        websocketService.removeConnection(match.host);
+        this.websocketService.removeConnection(match.host);
       });
 
       socket.on('error', (error: Error) => {
-        logger.warn('An error occurred on web scoket controller...');
-        logger.error(error);
+        this.logError(error);
       });
     } catch (error) {
-      logger.warn('An error occurred on web scoket controller...');
-      logger.error(error);
-      socket.send(JSON.stringify({ message: 'Internal server error' }));
+      this.logError(error);
+      this.sendMessage(socket, validateErrorMatch({ error: 'Internal server error' }));
       socket.close();
       return;
     }
   }
 
-  public async handleCreateMatch(req: FastifyRequest, res: FastifyReply): Promise<void> {
-    const { userId } = req.params as { userId: string };
-    const userIdParsed = validateString(userId);
-    const user = await redis.hgetall(`users:${userIdParsed}`);
-    if (Object.keys(user).length === 0) {
-      throw new MatchError(MatchError.PLAYER_NOT_FOUND);
-    }
-    if (user.match && Object.keys(user.match).length !== 0) {
-      throw new MatchError(MatchError.PLAYER_ALREADY_IN_MATCH);
-    }
-    const matchInputDTO = validateMatchInputDTO(req.body as string);
-    const matchDetails: MatchDetails = {
-      id: uuidv4().replace(/-/g, '').slice(0, 8),
-      host: userIdParsed,
-      ...matchInputDTO,
-    };
-
-    redis.hset(
-      `matches:${matchDetails.id}`,
-      'id',
-      matchDetails.id,
-      'host',
-      matchDetails.host,
-      'guest',
-      '',
-      'level',
-      matchDetails.level,
-      'map',
-      matchDetails.map
-    );
-
-    redis.expire(`matches:${matchDetails.id}`, 10 * 60);
-    redis.hset(`users:${userIdParsed}`, 'match', matchDetails.id);
-    return res.send({ matchId: matchDetails.id });
+  private async extendExpiration(matchId: string, userId: string): Promise<void> {
+    await this.matchRepository.extendSession(matchId, 10);
+    await this.userRepository.extendSession(userId, 10);
   }
 
-  public async handleGetMatch(req: FastifyRequest, res: FastifyReply): Promise<void> {
-    const { userId } = req.params as { userId: string };
-    const match = await redis.hgetall(`users:${userId}`);
-    return res.send({ matchId: match.match });
+  private logError(error: unknown): void {
+    logger.warn('An error occurred on web scoket controller...');
+    logger.error(error);
+  }
+
+  private sendMessage(socket: WebSocket, message: ErrorMatch | Info): void {
+    socket.send(JSON.stringify(message));
+  }
+
+  private async validateMatch(data: unknown): Promise<MatchDetails> {
+    const { matchId } = data as { matchId: string };
+    const matchIdParsed = validateString(matchId);
+    const match = await this.matchRepository.getMatchById(matchIdParsed);
+    return match;
   }
 }

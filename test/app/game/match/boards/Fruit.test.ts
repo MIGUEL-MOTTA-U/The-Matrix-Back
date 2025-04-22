@@ -1,9 +1,29 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import Fruit from "../../../../../src/app/game/match/boards/Fruit.js";
 import Cell from "../../../../../src/app/game/match/boards/CellBoard.js";
 import type BoardDifficulty1 from "../../../../../src/app/game/match/boards/BoardDifficulty1.js";
 import { mockDeep, mockReset } from "vitest-mock-extended";
 
+vi.mock('../../../../../src/server.js', () => {
+    return {
+        logger: {
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+        },
+        config: {
+            game: {
+                board: {
+                    rows: 5,
+                    cols: 5,
+                },
+                fruits: {
+                    number: 3,
+                },
+            },
+        },
+    };
+});
 
 describe('Fruit', () => {
     const board = mockDeep<BoardDifficulty1>();

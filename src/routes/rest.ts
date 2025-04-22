@@ -1,8 +1,8 @@
 import type { FastifyInstance } from 'fastify';
+import MatchController from '../controllers/rest/MatchController.js';
 import UserController from '../controllers/rest/UserController.js';
-import MatchMakingController from '../controllers/websockets/MatchMakingController.js';
 const userController = UserController.getInstance();
-const matchMakingController = MatchMakingController.getInstance();
+const matchController = MatchController.getInstance();
 export async function restRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.post('/users', async (req, res) => {
     await userController.handleCreateUser(req, res);
@@ -17,10 +17,10 @@ export async function restRoutes(fastify: FastifyInstance): Promise<void> {
   });
 
   fastify.post('/users/:userId/matches', async (req, res) => {
-    await matchMakingController.handleCreateMatch(req, res);
+    await matchController.handleCreateMatch(req, res);
   });
 
   fastify.get('/users/:userId/matches', async (req, res) => {
-    await matchMakingController.handleGetMatch(req, res);
+    await matchController.handleGetMatch(req, res);
   });
 }
