@@ -6,10 +6,8 @@ import AsyncQueue from '../../../utils/AsyncQueue.js';
 import type AsyncQueueInterface from '../../../utils/AsyncQueueInterface.js';
 import type Match from '../../game/match/Match.js';
 import type GameService from '../../game/services/GameService.js';
-import GameServiceImpl from '../../game/services/GameServiceImpl.js';
 import type MatchMakingService from '../../lobbies/services/MatchMakingService.js';
 import type WebSocketService from './WebSocketService.js';
-import WebSocketServiceImpl from './WebSocketServiceImpl.js';
 /**
  * @class MatchMaking
  * This class is responsible for managing the matchmaking process.
@@ -26,34 +24,17 @@ class MatchMaking implements MatchMakingService {
   private readonly gameService: GameService;
 
   // Singleton instance
-  private static instance: MatchMaking;
-  private constructor(
+  constructor(
     matchRepository: MatchRepository,
     userRepository: UserRepository,
-    webSocketService?: WebSocketService,
-    gameService?: GameService
+    webSocketService: WebSocketService,
+    gameService: GameService
   ) {
     this.matchRepository = matchRepository;
     this.userRepository = userRepository;
     this.queue = new AsyncQueue<UserQueue>();
-    this.gameService = gameService || GameServiceImpl.getInstance(matchRepository, userRepository);
-    this.webSocketService =
-      webSocketService || WebSocketServiceImpl.getInstance(this, matchRepository);
-  }
-  public static getInstance(
-    matchRepository: MatchRepository,
-    userRepository: UserRepository,
-    webSocketService?: WebSocketService,
-    gameService?: GameService
-  ): MatchMaking {
-    if (!MatchMaking.instance)
-      MatchMaking.instance = new MatchMaking(
-        matchRepository,
-        userRepository,
-        webSocketService,
-        gameService
-      );
-    return MatchMaking.instance;
+    this.gameService = gameService;
+    this.webSocketService = webSocketService;
   }
 
   /**

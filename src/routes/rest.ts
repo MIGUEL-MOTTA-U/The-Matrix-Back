@@ -1,9 +1,9 @@
 import type { FastifyInstance } from 'fastify';
-import MatchController from '../controllers/rest/MatchController.js';
-import UserController from '../controllers/rest/UserController.js';
-const userController = UserController.getInstance();
-const matchController = MatchController.getInstance();
+import type MatchController from '../controllers/rest/MatchController.js';
+import type UserController from '../controllers/rest/UserController.js';
 export async function restRoutes(fastify: FastifyInstance): Promise<void> {
+  const userController = fastify.diContainer.resolve<UserController>('userController');
+  const matchController = fastify.diContainer.resolve<MatchController>('matchController');
   fastify.post('/users', async (req, res) => {
     await userController.handleCreateUser(req, res);
   });

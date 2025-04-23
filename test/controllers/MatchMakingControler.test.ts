@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import MatchMakingController from '../../src/controllers/websockets/MatchMakingController.js';
-import WebsocketService from '../../src/app/lobbies/services/WebSocketServiceImpl.js';
+import WebsocketServiceImpl from '../../src/app/lobbies/services/WebSocketServiceImpl.js';
 import { validateString, validateMatchDetails, } from '../../src/schemas/zod.js';
 import type { FastifyRequest } from 'fastify';
 import type { WebSocket } from 'ws';
@@ -9,6 +9,7 @@ import type UserRepository from '../../src/schemas/UserRepository.js';
 import type MatchRepository from '../../src/schemas/MatchRepository.js';
 import type MatchMakingService from '../../src/app/lobbies/services/MatchMakingService.js';
 import { logger } from '../../src/server.js';
+import type WebSocketService from '../../src/app/lobbies/services/WebSocketService.js';
 
 
 vi.mock('../../src/server.js', () => ({
@@ -19,18 +20,6 @@ vi.mock('../../src/server.js', () => ({
   },
 }));
 
-vi.mock('../../src/app/lobbies/services/WebSocketServiceImpl.js', () => {
-  const mockInstance = {
-    registerConnection: vi.fn(),
-    matchMaking: vi.fn(),
-    removeConnection: vi.fn(),
-  };
-  return {
-    default: {
-      getInstance: vi.fn(() => mockInstance),
-    },
-  };
-});
 
 vi.mock('../../src/schemas/zod.js', () => ({
   validateString: vi.fn((input) => input),
@@ -42,8 +31,12 @@ vi.mock('../../src/schemas/zod.js', () => ({
 const userRepository = mockDeep<UserRepository>();
 const matchRepository = mockDeep<MatchRepository>();
 const matchMakingService = mockDeep<MatchMakingService>();
-const mockWebSocketService = WebsocketService.getInstance(matchMakingService, matchRepository);
-const controller = MatchMakingController.getInstance(
+const mockWebSocketService:WebSocketService = new WebsocketServiceImpl(matchRepository)//WebsocketService.getInstance(matchMakingService, matchRepository);
+mockWebSocketService.setMatchMakingService(matchMakingService);
+mockWebSocketService.registerConnection = vi.fn();
+mockWebSocketService.matchMaking = vi.fn();
+mockWebSocketService.removeConnection = vi.fn();
+const controller = new MatchMakingController(
   mockWebSocketService,
   matchRepository,
   userRepository
@@ -96,13 +89,6 @@ describe('MatchMakingController', () => {
     vi.resetAllMocks();
   });
 
-  describe('getInstance', () => {
-    it('should return a singleton instance', () => {
-      const instance1 = MatchMakingController.getInstance(mockWebSocketService, matchRepository, userRepository);
-      const instance2 = MatchMakingController.getInstance(mockWebSocketService, matchRepository, userRepository);
-      expect(instance1).toBe(instance2);
-    });
-  });
 
   describe('handleMatchMaking', () => {
     it('should register connection, send initial message, and setup event listeners', async () => {

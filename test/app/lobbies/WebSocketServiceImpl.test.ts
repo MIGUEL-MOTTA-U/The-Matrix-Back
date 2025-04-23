@@ -14,7 +14,8 @@ vi.mock('../../../src/server.js', () => ({
 
 const matchRepository = mockDeep<MatchRepository>();
 const matchMakingService = mockDeep<MatchMakingService>();
-const webSocketServiceImpl = WebSocketServiceImpl.getInstance(matchMakingService, matchRepository);
+const webSocketServiceImpl = new WebSocketServiceImpl(matchRepository);
+webSocketServiceImpl.setMatchMakingService(matchMakingService);
 describe('WebSocketServiceImpl', () => {
     beforeEach(() => {
         mockReset(matchRepository);

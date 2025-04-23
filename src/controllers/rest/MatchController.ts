@@ -2,9 +2,7 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 import { v4 as uuidv4 } from 'uuid';
 import MatchError from '../../errors/MatchError.js';
 import type MatchRepository from '../../schemas/MatchRepository.js';
-import MatchRepositoryRedis from '../../schemas/MatchRepositoryRedis.js';
 import type UserRepository from '../../schemas/UserRepository.js';
-import UserRepositoryRedis from '../../schemas/UserRepositoryRedis.js';
 import { type MatchDetails, validateMatchInputDTO, validateString } from '../../schemas/zod.js';
 /**
  * @class MatchController
@@ -13,19 +11,11 @@ import { type MatchDetails, validateMatchInputDTO, validateString } from '../../
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 export default class MatchController {
-  private static instance: MatchController;
-  private readonly matchRepository: MatchRepository = MatchRepositoryRedis.getInstance();
-  private readonly userRepository: UserRepository = UserRepositoryRedis.getInstance();
-  private constructor() {}
-
-  /**
-   * Retrieves the singleton instance of the MatchController class.
-   *
-   * @return {MatchController} The singleton instance of MatchController.
-   */
-  public static getInstance(): MatchController {
-    if (!MatchController.instance) MatchController.instance = new MatchController();
-    return MatchController.instance;
+  private readonly matchRepository: MatchRepository;
+  private readonly userRepository: UserRepository;
+  constructor(userRepository: UserRepository, matchRepository: MatchRepository) {
+    this.userRepository = userRepository;
+    this.matchRepository = matchRepository;
   }
 
   /**
@@ -65,5 +55,17 @@ export default class MatchController {
     this.matchRepository.createMatch(matchDetails);
     this.userRepository.updateUser(userIdParsed, { matchId: matchDetails.id });
     return res.send({ matchId: matchDetails.id });
+  }
+
+  /**
+   * Handles the request to join a match.
+   *
+   * @param {FastifyRequest} req The request from the client.
+   * @param {FastifyReply} res The response to be sent to the client.
+   * @return {Promise<void>} A promise that resolves when the user joins the match.
+   * @throws {MatchError} If the user is not found, the match is not found, or the user is already in a match.
+   */
+  public async handleJoinMatch(_req: FastifyRequest, _res: FastifyReply): Promise<void> {
+    // TODO
   }
 }

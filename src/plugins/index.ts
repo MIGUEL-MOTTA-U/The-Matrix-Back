@@ -1,5 +1,6 @@
 import fastifyCors from '@fastify/cors';
 import type { FastifyInstance } from 'fastify';
+import { configureDI } from './di.js';
 import { configureEnv } from './env.js';
 import { handleError } from './errorsHandler.js';
 import { configureRedis } from './redis.js';
@@ -28,4 +29,6 @@ export async function registerPlugins(server: FastifyInstance): Promise<void> {
   if (server.config.NODE_ENV !== 'test') {
     await configureRedis(server);
   }
+  // Set up dependency injection
+  await configureDI(server);
 }

@@ -21,7 +21,7 @@ vi.mock('../../../../src/server.js', () => {
 
 const matchRepository = mockDeep<MatchRepository>();
 const userRepository = mockDeep<UserRepository>();
-const gameServiceImpl = GameServiceImpl.getInstance(matchRepository, userRepository);
+const gameServiceImpl = new GameServiceImpl(matchRepository, userRepository);
 beforeEach(() => {
   vi.clearAllMocks();
 });

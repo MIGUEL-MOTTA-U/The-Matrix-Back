@@ -21,7 +21,8 @@ describe('MatchMaking', () => {
     let matchMaking: MatchMaking;
   
     beforeEach(() => {
-      matchMaking = MatchMaking.getInstance(matchRepository, userRepository, webSocketService, gameService);
+      matchMaking = new MatchMaking(
+        matchRepository,userRepository, webSocketService, gameService)
     });
   
     it('should enqueue a user if no match is found', async () => {
