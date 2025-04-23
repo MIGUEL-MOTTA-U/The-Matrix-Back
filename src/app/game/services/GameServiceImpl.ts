@@ -32,7 +32,6 @@ class GameServiceImpl implements GameService {
   private readonly matchRepository: MatchRepository;
   private readonly matches: Map<string, Match>;
   private readonly connections: Map<string, WebSocket>;
-  private static instance: GameServiceImpl;
 
   /**
    * Updates the time of a match and notifies the players.
@@ -53,21 +52,7 @@ class GameServiceImpl implements GameService {
       return this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'lose' }));
   }
 
-  /**
-   * Retrieves the singleton instance of the GameServiceImpl class.
-   *
-   * @return {GameServiceImpl} The singleton instance.
-   */
-  public static getInstance(
-    matchRepository: MatchRepository,
-    userRepository: UserRepository
-  ): GameServiceImpl {
-    if (!GameServiceImpl.instance)
-      GameServiceImpl.instance = new GameServiceImpl(matchRepository, userRepository);
-    return GameServiceImpl.instance;
-  }
-
-  private constructor(matchRepository: MatchRepository, userRepository: UserRepository) {
+  constructor(matchRepository: MatchRepository, userRepository: UserRepository) {
     this.matchRepository = matchRepository;
     this.userRepository = userRepository;
     this.matches = new Map<string, Match>();

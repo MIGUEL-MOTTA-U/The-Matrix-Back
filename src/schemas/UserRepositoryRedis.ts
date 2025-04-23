@@ -4,14 +4,6 @@ import type UserRepository from './UserRepository.js';
 import type { UserQueue } from './zod.js';
 
 export default class UserRepositoryRedis implements UserRepository {
-  private static instance: UserRepositoryRedis;
-  private constructor() {}
-  public static getInstance(): UserRepositoryRedis {
-    if (!UserRepositoryRedis.instance) {
-      UserRepositoryRedis.instance = new UserRepositoryRedis();
-    }
-    return UserRepositoryRedis.instance;
-  }
   public async userExists(userId: string): Promise<boolean> {
     return (await redis.exists(`users:${userId}`)) === 1;
   }

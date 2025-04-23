@@ -4,8 +4,6 @@ import type MatchRepository from './MatchRepository.js';
 import { type MatchDetails, validateMatchDetails } from './zod.js';
 
 export default class MatchRepositoryRedis implements MatchRepository {
-  private static instance: MatchRepositoryRedis;
-  private constructor() {}
   public async getMatchById(matchId: string): Promise<MatchDetails> {
     return validateMatchDetails(await redis.hgetall(`matches:${matchId}`));
   }
@@ -22,12 +20,6 @@ export default class MatchRepositoryRedis implements MatchRepository {
     }
     await redis.hset(`matches:${matchId}`, matchData);
     await redis.expire(`matches:${matchId}`, 10 * 60);
-  }
-  public static getInstance(): MatchRepositoryRedis {
-    if (!MatchRepositoryRedis.instance) {
-      MatchRepositoryRedis.instance = new MatchRepositoryRedis();
-    }
-    return MatchRepositoryRedis.instance;
   }
   public async matchExists(matchId: string): Promise<boolean> {
     return (await redis.exists(`matches:${matchId}`)) === 1;

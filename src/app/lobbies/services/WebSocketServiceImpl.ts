@@ -1,4 +1,5 @@
 import type { WebSocket } from 'ws';
+import WebSocketError from '../../../errors/WebSocketError.js';
 import type MatchRepository from '../../../schemas/MatchRepository.js';
 import type { MatchDetails } from '../../../schemas/zod.js';
 import { logger } from '../../../server.js';
@@ -15,31 +16,24 @@ import type WebsocketService from './WebSocketService.js';
  */
 export default class WebsocketServiceImpl implements WebsocketService {
   private readonly matchRepository: MatchRepository;
-  private static instance: WebsocketServiceImpl;
   private readonly connections: Map<string, WebSocket>;
-  private readonly matchMakingService: MatchMakingService;
-
-  /**
-   * This method is used to get the singleton instance of the WebsocketService class.
-   *
-   * @return {WebsocketServiceImpl} Singleton instance of WebsocketService.
-   */
-  public static getInstance(
-    matchMakingService: MatchMakingService,
-    matchRepository: MatchRepository
-  ): WebsocketServiceImpl {
-    if (!WebsocketServiceImpl.instance)
-      WebsocketServiceImpl.instance = new WebsocketServiceImpl(matchMakingService, matchRepository);
-    return WebsocketServiceImpl.instance;
-  }
+  private matchMakingService?: MatchMakingService;
 
   /**
    * Creates a new instance of WebsocketService.
    * Initializes the connections map and the matchmaking service.
    */
-  private constructor(matchMakingService: MatchMakingService, matchRepository: MatchRepository) {
+  constructor(matchRepository: MatchRepository) {
     this.matchRepository = matchRepository;
     this.connections = new Map();
+  }
+
+  /**
+   * This method is used to set the matchmaking service.
+   *
+   * @param {MatchMakingService} matchMakingService The matchmaking service to set.
+   */
+  public setMatchMakingService(matchMakingService: MatchMakingService): void {
     this.matchMakingService = matchMakingService;
   }
 
@@ -70,6 +64,9 @@ export default class WebsocketServiceImpl implements WebsocketService {
    * @return {Promise<void>} A promise that resolves when the matchmaking request is queued.
    */
   public async matchMaking(match: MatchDetails): Promise<void> {
+    if (!this.matchMakingService) {
+      throw new WebSocketError(WebSocketError.MATCHMAKING_SERVICE_NOT_INITIALIZED);
+    }
     this.matchMakingService.searchMatch(match);
   }
 

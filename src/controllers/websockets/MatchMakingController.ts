@@ -25,9 +25,7 @@ export default class MatchMakingController {
   private readonly websocketService: WebSocketService;
   private readonly matchRepository: MatchRepository;
   private readonly userRepository: UserRepository;
-  // Singleton instace
-  private static instance: MatchMakingController;
-  private constructor(
+  constructor(
     webSocketService: WebSocketService,
     matchRepository: MatchRepository,
     userRepository: UserRepository
@@ -35,19 +33,6 @@ export default class MatchMakingController {
     this.websocketService = webSocketService;
     this.matchRepository = matchRepository;
     this.userRepository = userRepository;
-  }
-  public static getInstance(
-    webSocketService: WebSocketService,
-    matchRepository: MatchRepository,
-    userRepository: UserRepository
-  ): MatchMakingController {
-    if (!MatchMakingController.instance)
-      MatchMakingController.instance = new MatchMakingController(
-        webSocketService,
-        matchRepository,
-        userRepository
-      );
-    return MatchMakingController.instance;
   }
 
   /**

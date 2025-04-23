@@ -29,7 +29,7 @@ describe('MatchController', () => {
     mockReset(mockMatchRepository);
     mockReset(mockUserRepository);
     vi.clearAllMocks();
-    matchController = MatchController.getInstance();
+    matchController = new MatchController(mockUserRepository, mockMatchRepository);
   });
 
   describe('handleGetMatch', () => {
