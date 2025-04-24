@@ -89,6 +89,11 @@ const validateInfo = (data: unknown): Info => {
   return schema.parse(data);
 };
 
+const validateCustomMapKey = (data: unknown): CustomMapKey => {
+  const schema = objects.customMapKeySchema;
+  return schema.parse(data);
+};
+
 interface MatchInputDTO {
   level: number;
   map: string;
@@ -197,6 +202,11 @@ interface UpdateFruits {
   nextFruitType: string | null;
 }
 
+interface CustomMapKey {
+  map: string;
+  level: number;
+}
+
 export type {
   MatchInputDTO,
   MatchDetails,
@@ -218,6 +228,7 @@ export type {
   UpdateAll,
   UpdateFruits,
   Info,
+  CustomMapKey,
 };
 export {
   validateString,
@@ -238,4 +249,5 @@ export {
   validateBoardItemDTO,
   validateUpdateFruits,
   validateInfo,
+  validateCustomMapKey,
 };

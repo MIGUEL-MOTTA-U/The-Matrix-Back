@@ -126,6 +126,11 @@ const userQueueSchema = z.object({
   matchId: z.string().nonempty(),
   color: z.string().optional(),
 });
+
+const customMapKeySchema = z.object({
+  map: z.string().nonempty(),
+  level: z.number().nonnegative(),
+});
 export {
   stringSchema,
   matchInputDTOSchema,
@@ -145,4 +150,5 @@ export {
   userQueueSchema,
   fruitsSchema,
   infoSchema,
+  customMapKeySchema,
 };
