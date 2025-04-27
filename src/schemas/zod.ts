@@ -94,6 +94,16 @@ const validateCustomMapKey = (data: unknown): CustomMapKey => {
   return schema.parse(data);
 };
 
+const validatePathResult = (data: unknown): PathResult => {
+  const schema = objects.pathResultSchema;
+  return schema.parse(data);
+};
+
+const validatePathResultWithDirection = (data: unknown): PathResultWithDirection => {
+  const schema = objects.PathResultWithDirectionSchema;
+  return schema.parse(data);
+};
+
 interface MatchInputDTO {
   level: number;
   map: string;
@@ -152,7 +162,7 @@ interface GameMessageOutput {
 }
 interface GameMessageInput {
   type: 'movement' | 'exec-power' | 'rotate' | 'set-color';
-  payload: 'up' | 'down' | 'left' | 'right' | string;
+  payload: Direction | string;
 }
 interface PlayerState {
   id: string;
@@ -165,12 +175,12 @@ interface EndMatch {
 interface UpdateEnemy {
   enemyId: string;
   coordinates: CellCoordinates;
-  direction: 'up' | 'down' | 'left' | 'right';
+  direction: Direction;
 }
 interface PlayerMove {
   id: string;
   coordinates: CellCoordinates;
-  direction: 'up' | 'down' | 'left' | 'right';
+  direction: Direction;
   state: 'alive' | 'dead';
   idItemConsumed?: string;
   numberOfFruits?: number;
@@ -207,6 +217,16 @@ interface CustomMapKey {
   level: number;
 }
 
+interface PathResult {
+  distance: number;
+  path: CellCoordinates[];
+}
+
+interface PathResultWithDirection extends PathResult {
+  direction: Direction;
+}
+
+type Direction = 'up' | 'down' | 'left' | 'right';
 export type {
   MatchInputDTO,
   MatchDetails,
@@ -229,6 +249,9 @@ export type {
   UpdateFruits,
   Info,
   CustomMapKey,
+  Direction,
+  PathResult,
+  PathResultWithDirection,
 };
 export {
   validateString,
@@ -250,4 +273,6 @@ export {
   validateUpdateFruits,
   validateInfo,
   validateCustomMapKey,
+  validatePathResult,
+  validatePathResultWithDirection,
 };

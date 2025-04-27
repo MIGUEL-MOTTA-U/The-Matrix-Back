@@ -3,6 +3,8 @@ const stringSchema = z.string().nonempty().min(1);
 const infoSchema = z.object({
   message: stringSchema,
 });
+
+const directionSchema = z.enum(['up', 'down', 'left', 'right']);
 const matchInputDTOSchema = z.object({
   level: z.number().nonnegative(),
   map: z.string().nonempty(),
@@ -45,7 +47,7 @@ const EndMatchSchema = z.object({
 const updateEnemySchema = z.object({
   enemyId: z.string().nonempty(),
   coordinates: cellCordinatesSchema,
-  direction: z.enum(['up', 'down', 'left', 'right']),
+  direction: directionSchema,
 });
 
 const playerMoveSchema = z.object({
@@ -54,7 +56,7 @@ const playerMoveSchema = z.object({
     x: z.number().nonnegative(),
     y: z.number().nonnegative(),
   }),
-  direction: z.enum(['up', 'down', 'left', 'right']),
+  direction: directionSchema,
   state: z.enum(['alive', 'dead']),
   idItemConsumed: z.string().optional(),
   numberOfFruits: z.number().optional(),
@@ -77,7 +79,7 @@ const updateAllSchema = z.object({
 
 const gameMessageInputSchema = z.object({
   type: z.enum(['movement', 'exec-power', 'rotate', 'set-color']),
-  payload: z.union([z.enum(['up', 'down', 'left', 'right']), z.string()]),
+  payload: z.union([directionSchema, z.string()]),
 });
 
 const gameMessageOutputSchema = z.object({
@@ -131,6 +133,15 @@ const customMapKeySchema = z.object({
   map: z.string().nonempty(),
   level: z.number().nonnegative(),
 });
+
+const pathResultSchema = z.object({
+  distance: z.number().nonnegative(),
+  path: z.array(cellCordinatesSchema),
+});
+
+const PathResultWithDirectionSchema = pathResultSchema.extend({
+  direction: directionSchema,
+});
 export {
   stringSchema,
   matchInputDTOSchema,
@@ -151,4 +162,6 @@ export {
   fruitsSchema,
   infoSchema,
   customMapKeySchema,
+  pathResultSchema,
+  PathResultWithDirectionSchema,
 };

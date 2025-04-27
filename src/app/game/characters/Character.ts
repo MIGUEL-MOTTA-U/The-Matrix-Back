@@ -1,5 +1,15 @@
 import { Mutex } from 'async-mutex';
-import type { PlayerMove, PlayerState, UpdateEnemy } from '../../../schemas/zod.js';
+import {
+  type CellCoordinates,
+  type Direction,
+  type PathResult,
+  type PathResultWithDirection,
+  type PlayerMove,
+  type PlayerState,
+  type UpdateEnemy,
+  validatePathResultWithDirection,
+} from '../../../schemas/zod.js';
+import type { Graph } from '../../../utils/Graph.js';
 import { BoardItem } from '../match/boards/BoardItem.js';
 import type Cell from '../match/boards/CellBoard.js';
 
@@ -14,8 +24,7 @@ abstract class Character extends BoardItem {
   protected readonly mutex = new Mutex();
   protected alive = true;
   protected color: string | null = null;
-  protected orientation: 'down' | 'up' | 'left' | 'right' = 'down';
-
+  protected orientation: Direction = 'down';
   /**
    * Sets the color of the character.
    *
@@ -23,6 +32,32 @@ abstract class Character extends BoardItem {
    */
   public setColor(color: string): void {
     this.color = color;
+  }
+
+  /**
+   * Returns the shortest path to the target cell with the given mapped graph of the board.
+   *
+   * @param {Cell} targetCell - The target cell to reach.
+   * @param {Graph} mappedGraph - The graph representing the board.
+   * @return {Direction} The direction to move towards the target cell.
+   */
+  public getShortestPath(
+    targetCell: Cell,
+    mappedGraph: Graph<CellCoordinates>
+  ): PathResultWithDirection | null {
+    const shortestPath: PathResult = mappedGraph.shortestPathDijkstra(
+      this.cell.getCoordinates(),
+      targetCell.getCoordinates()
+    );
+    if (shortestPath.distance > 0) {
+      const direction: Direction | null = this.cell.getDirection(shortestPath.path[0]);
+      return validatePathResultWithDirection({
+        distance: shortestPath.distance,
+        path: shortestPath.path,
+        direction,
+      });
+    }
+    return null;
   }
 
   /**
@@ -70,9 +105,7 @@ abstract class Character extends BoardItem {
    * @param {'down' | 'up' | 'left' | 'right'} orientation - The new orientation of the character.
    * @return {PlayerMove | UpdateEnemy} The updated state of the character.
    */
-  public changeOrientation(
-    orientation: 'down' | 'up' | 'left' | 'right'
-  ): PlayerMove | UpdateEnemy {
+  public changeOrientation(orientation: Direction): PlayerMove | UpdateEnemy {
     this.orientation = orientation;
     return this.getCharacterUpdate(null);
   }
@@ -128,9 +161,9 @@ abstract class Character extends BoardItem {
   /**
    * Retrieves the current orientation of the character.
    *
-   * @return {'down' | 'up' | 'left' | 'right'} The current orientation of the character.
+   * @return {Direction} The current orientation of the character.
    */
-  public getOrientation(): 'down' | 'up' | 'left' | 'right' {
+  public getOrientation(): Direction {
     return this.orientation;
   }
 
