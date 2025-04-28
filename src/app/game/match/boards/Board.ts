@@ -7,14 +7,7 @@ import {
   type UpdateFruits,
   validateUpdateFruits,
 } from '../../../../schemas/zod.js';
-import type {
-  GameMessageOutput,
-  CellCoordinates,
-  Direction,
-  PlayerMove,
-  PlayerState,
-  UpdateEnemy,
-} from '../../../../schemas/zod.js';
+import type { CellCoordinates, Direction, GameMessageOutput } from '../../../../schemas/zod.js';
 import { Graph } from '../../../../utils/Graph.js';
 import type Enemy from '../../characters/enemies/Enemy.js';
 import Player from '../../characters/players/Player.js';
