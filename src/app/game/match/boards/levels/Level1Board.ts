@@ -69,12 +69,13 @@ export default class Level1Board extends Board {
   protected async startEnemies(): Promise<void> {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
+    const enemiesSpeed = config.ENEMIES_SPEED_MS;
     const fileName =
-      config.NODE_ENV === 'development' || config.NODE_ENV === 'test'
-        ? resolve(__dirname, '../../../../../dist/src/workers/Enemies.worker.js')
-        : resolve(__dirname, '../../../../workers/Enemies.worker.js');
+      config.NODE_ENV === 'development'
+        ? resolve(__dirname, '../../../../../../dist/src/workers/Enemies.worker.js')
+        : resolve(__dirname, '../../../../../workers/Enemies.worker.js');
     for (const enemy of this.enemies.values()) {
-      const worker = new Worker(fileName);
+      const worker = new Worker(fileName, { workerData: { enemiesSpeed } });
       this.workers.push(worker);
       worker.on('message', async (_message) => {
         if (this.checkLose() || this.match.checkWin()) {

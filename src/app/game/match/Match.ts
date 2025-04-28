@@ -230,11 +230,12 @@ class Match {
   private async startTimeMatch(): Promise<void> {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
+    const timerSpeed = config.TIMER_SPEED_MS;
     const fileName =
       config.NODE_ENV === 'development'
         ? resolve(__dirname, '../../../../dist/src/workers/clock.js')
         : resolve(__dirname, '../../../workers/clock.js');
-    this.worker = new Worker(fileName);
+    this.worker = new Worker(fileName, { workerData: { timerSpeed } });
 
     this.worker.on('message', async (_message) => {
       if (this.timeSeconds <= 0) {

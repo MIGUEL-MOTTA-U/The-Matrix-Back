@@ -1,12 +1,12 @@
-import { parentPort } from 'node:worker_threads';
-import { config } from '../server.js';
+import { parentPort, workerData } from 'node:worker_threads';
 
 if (!parentPort) {
   throw new Error('This script should be executed as a parent thread');
 }
+const { timerSpeed } = workerData as { timerSpeed: number };
 
 const updateMatch = async () => {
   parentPort?.postMessage(1);
 };
 
-setInterval(updateMatch, config.TIMER_SPEED_MS);
+setInterval(updateMatch, timerSpeed);
