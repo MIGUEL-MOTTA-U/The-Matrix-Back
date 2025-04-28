@@ -5,7 +5,7 @@ import MatchError from '../../errors/MatchError.js';
 import type MatchRepository from '../../schemas/MatchRepository.js';
 import type UserRepository from '../../schemas/UserRepository.js';
 import {
-  type ErrorMatch,
+  type GameMessageOutput,
   type Info,
   type MatchDetails,
   validateErrorMatch,
@@ -66,7 +66,12 @@ export default class MatchMakingController {
       });
     } catch (error) {
       this.logError(error);
-      this.sendMessage(socket, validateErrorMatch({ error: 'Internal server error' }));
+      const errorMatch = validateErrorMatch({ error: 'Internal server error' });
+      const messageOutput: GameMessageOutput = {
+        type: 'error',
+        payload: errorMatch,
+      };
+      this.sendMessage(socket, messageOutput);
       socket.close();
       return;
     }
@@ -82,7 +87,7 @@ export default class MatchMakingController {
     logger.error(error);
   }
 
-  private sendMessage(socket: WebSocket, message: ErrorMatch | Info): void {
+  private sendMessage(socket: WebSocket, message: GameMessageOutput | Info): void {
     socket.send(JSON.stringify(message));
   }
 

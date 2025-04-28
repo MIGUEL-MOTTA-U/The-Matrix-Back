@@ -142,8 +142,17 @@ interface GameMessageOutput {
     | 'update-move'
     | 'update-time'
     | 'error'
-    | 'update-all';
-  payload: PlayerMove | EndMatch | UpdateEnemy | UpdateTime | ErrorMatch | UpdateAll;
+    | 'update-all'
+    | 'update-fruits';
+  payload:
+    | PlayerMove
+    | EndMatch
+    | UpdateEnemy
+    | UpdateTime
+    | ErrorMatch
+    | UpdateAll
+    | UpdateFruits
+    | PlayerState;
 }
 interface GameMessageInput {
   type: 'movement' | 'exec-power' | 'rotate' | 'set-color';

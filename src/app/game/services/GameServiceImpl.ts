@@ -4,17 +4,15 @@ import MatchError from '../../../errors/MatchError.js';
 import type MatchRepository from '../../../schemas/MatchRepository.js';
 import type UserRepository from '../../../schemas/UserRepository.js';
 import {
+  type GameMessageOutput,
   type MatchDetails,
   type PlayerMove,
-  type PlayerState,
   type UpdateAll,
   type UpdateEnemy,
-  type UpdateFruits,
   type UpdateTime,
   validateEndMatch,
   validateErrorMatch,
   validateGameMesssageInput,
-  validatePlayerMove,
   validatePlayerState,
 } from '../../../schemas/zod.js';
 import { logger } from '../../../server.js';
@@ -45,11 +43,17 @@ class GameServiceImpl implements GameService {
     if (!match) throw new MatchError(MatchError.MATCH_NOT_FOUND);
     const socketP1 = this.connections.get(match.getHost());
     const socketP2 = this.connections.get(match.getGuest());
-    this.notifyPlayers(socketP1, socketP2, time);
+    this.notifyPlayers(socketP1, socketP2, { type: 'update-time', payload: time });
     if (match.checkWin())
-      return this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'win' }));
+      return this.notifyPlayers(socketP1, socketP2, {
+        type: 'end',
+        payload: validateEndMatch({ result: 'win' }),
+      });
     if (match.checkLose())
-      return this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'lose' }));
+      return this.notifyPlayers(socketP1, socketP2, {
+        type: 'end',
+        payload: validateEndMatch({ result: 'lose' }),
+      });
   }
 
   constructor(matchRepository: MatchRepository, userRepository: UserRepository) {
@@ -125,23 +129,31 @@ class GameServiceImpl implements GameService {
     // }
     if (!player.isAlive())
       return socketP1.send(
-        this.parseToString(validatePlayerState({ id: player.getId(), state: 'dead' }))
+        this.parseToString({
+          type: 'update-state',
+          payload: validatePlayerState({ id: player.getId(), state: 'dead' }),
+        })
       );
 
     switch (type) {
       case 'movement':
         try {
           const playerUpdate = await this.movePlayer(player, payload);
-          this.notifyPlayers(socketP1, socketP2, playerUpdate);
+          this.notifyPlayers(socketP1, socketP2, { type: 'update-move', payload: playerUpdate });
         } catch (error) {
-          socketP1.send(this.parseToString(validateErrorMatch({ error: 'Invalid move' })));
+          socketP1.send(
+            this.parseToString({
+              type: 'error',
+              payload: validateErrorMatch({ error: 'Invalid move' }),
+            })
+          );
           logger.warn(`An error occurred while trying to move player ${userId} ${payload}`);
           logger.error(error);
         }
         break;
       case 'rotate': {
         const rotatedPlayer = this.rotatePlayer(player, payload);
-        this.notifyPlayers(socketP1, socketP2, validatePlayerMove(rotatedPlayer));
+        this.notifyPlayers(socketP1, socketP2, { type: 'update-move', payload: rotatedPlayer });
         break;
       }
       case 'exec-power':
@@ -150,11 +162,10 @@ class GameServiceImpl implements GameService {
       case 'set-color':
         player.setColor(payload);
         await this.userRepository.updateUser(userId, { color: payload });
-        this.notifyPlayers(
-          socketP1,
-          socketP2,
-          validatePlayerState({ id: player.getId(), state: 'alive', color: payload })
-        );
+        this.notifyPlayers(socketP1, socketP2, {
+          type: 'update-state',
+          payload: validatePlayerState({ id: player.getId(), state: 'alive', color: payload }),
+        });
         break;
       default:
         throw new MatchError(MatchError.INVALID_MESSAGE_TYPE);
@@ -169,14 +180,14 @@ class GameServiceImpl implements GameService {
    * @param {string} matchId The ID of the match to update.
    * @param {string} hostId The ID of the host player.
    * @param {string} guestId The ID of the guest player.
-   * @param {UpdateEnemy | PlayerMove | UpdateFruits} data The data to update the players with.
+   * @param {GameMessageOutput} data The data to update the players with.
    * @return {Promise<void>} A promise that resolves when the players are updated.
    */
   public async updatePlayers(
     matchId: string,
     hostId: string,
     guestId: string,
-    data: UpdateEnemy | PlayerMove | UpdateFruits | PlayerState
+    data: GameMessageOutput
   ): Promise<void> {
     const gameMatch = this.matches.get(matchId);
     if (!gameMatch) throw new MatchError(MatchError.MATCH_NOT_FOUND);
@@ -262,13 +273,19 @@ class GameServiceImpl implements GameService {
   ): Promise<boolean> {
     if (gameMatch && !gameMatch.isRunning()) return true;
     if (gameMatch?.checkWin()) {
-      this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'win' }));
+      this.notifyPlayers(socketP1, socketP2, {
+        type: 'end',
+        payload: validateEndMatch({ result: 'win' }),
+      });
       await gameMatch.stopGame();
       await this.removeMatch(gameMatch, socketP1, socketP2);
       return true;
     }
     if (gameMatch?.checkLose()) {
-      this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'lose' }));
+      this.notifyPlayers(socketP1, socketP2, {
+        type: 'end',
+        payload: validateEndMatch({ result: 'lose' }),
+      });
       await gameMatch.stopGame();
       await this.removeMatch(gameMatch, socketP1, socketP2);
       return true;
@@ -281,7 +298,10 @@ class GameServiceImpl implements GameService {
     socketP1: WebSocket | undefined,
     socketP2: WebSocket | undefined
   ): Promise<void> {
-    this.notifyPlayers(socketP1, socketP2, validateEndMatch({ result: 'end game' }));
+    this.notifyPlayers(socketP1, socketP2, {
+      type: 'end',
+      payload: validateEndMatch({ result: 'end game' }),
+    });
     socketP1?.close();
     socketP2?.close();
     if (!gameMatch) return;
@@ -365,7 +385,7 @@ class GameServiceImpl implements GameService {
   private notifyPlayers(
     socketP1: WebSocket | undefined,
     socketP2: WebSocket | undefined,
-    dataDTO: unknown
+    dataDTO: GameMessageOutput
   ): void {
     if (socketP1 && socketP1.readyState === WebSocket.OPEN)
       socketP1.send(this.parseToString(dataDTO));
@@ -373,7 +393,7 @@ class GameServiceImpl implements GameService {
       socketP2.send(this.parseToString(dataDTO));
   }
 
-  private parseToString(data: unknown): string {
+  private parseToString(data: GameMessageOutput): string {
     return JSON.stringify(data);
   }
 }

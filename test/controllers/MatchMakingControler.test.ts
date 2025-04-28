@@ -107,7 +107,7 @@ describe('MatchMakingController', () => {
       matchRepository.getMatchById.mockRejectedValue(new Error('Database error'));
       await controller.handleMatchMaking(mockSocket as unknown as WebSocket, mockRequest);
 
-      expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({ error: 'Internal server error' }));
+      expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({ type: 'error', payload: { error: 'Internal server error' } }));
       expect(mockSocket.close).toHaveBeenCalled();
     });
 
@@ -150,7 +150,7 @@ describe('MatchMakingController', () => {
 
       await controller.handleMatchMaking(mockSocket as unknown as WebSocket, mockRequest);
 
-      expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({ error: 'Internal server error' }));
+      expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({ type: 'error', payload: { error: 'Internal server error' } }));
       expect(mockSocket.close).toHaveBeenCalled();
     });
   });
