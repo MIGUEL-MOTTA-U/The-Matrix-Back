@@ -6,10 +6,8 @@ import type GameService from '../../../../../src/app/game/services/GameService.j
 import type Player from '../../../../../src/app/game/characters/players/Player.js';
 import type {
   CellDTO,
-  PlayerMove,
+  GameMessageOutput,
   PlayerState,
-  UpdateEnemy,
-  UpdateFruits,
 } from '../../../../../src/schemas/zod.js';
 
 vi.mock('../../../../../src/server.js', () => ({
@@ -106,7 +104,7 @@ describe('Match', () => {
   it('should notify players with updates', async () => {
     const updateData = { type: 'update' };
     await match.notifyPlayers(
-      updateData as unknown as UpdateEnemy | PlayerMove | UpdateFruits | PlayerState
+      updateData as unknown as GameMessageOutput
     );
     expect(gameServiceMock.updatePlayers).toHaveBeenCalledWith(
       'match-id',

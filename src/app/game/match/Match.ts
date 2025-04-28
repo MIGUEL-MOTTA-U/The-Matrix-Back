@@ -2,12 +2,10 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
 import {
+  type GameMessageOutput,
   type MatchDTO,
-  type PlayerMove,
   type PlayerState,
   type UpdateAll,
-  type UpdateEnemy,
-  type UpdateFruits,
   type UpdateTime,
   validatePlayerState,
   validateUpdateAll,
@@ -89,12 +87,10 @@ class Match {
   /**
    * Sends updates to the players, such as enemy movement, player movement, or fruit updates.
    *
-   * @param {UpdateEnemy | PlayerMove | UpdateFruits | PlayerState} data The data to be sent to the players.
+   * @param {GameMessageOutput} data The data to be sent to the players.
    * @return {Promise<void>} A promise that resolves when the players are notified.
    */
-  public async notifyPlayers(
-    data: UpdateEnemy | PlayerMove | UpdateFruits | PlayerState
-  ): Promise<void> {
+  public async notifyPlayers(data: GameMessageOutput): Promise<void> {
     this.gameService.updatePlayers(this.id, this.host, this.guest, data);
   }
 

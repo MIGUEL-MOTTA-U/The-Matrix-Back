@@ -105,10 +105,10 @@ describe('GameServiceImpl', () => {
 
       expect(mockPlayer.moveUp).toHaveBeenCalled();
       expect(mockSocketP1.send).toHaveBeenCalledWith(
-        JSON.stringify({ id: 'host1', position: { x: 0, y: 1 } })
+        JSON.stringify({ type: 'update-move', payload: { id: 'host1', position: { x: 0, y: 1 } }})
       );
       expect(mockSocketP2.send).toHaveBeenCalledWith(
-        JSON.stringify({ id: 'host1', position: { x: 0, y: 1 } })
+        JSON.stringify({ type: 'update-move', payload: { id: 'host1', position: { x: 0, y: 1 } }})
       );
     });
 
@@ -142,10 +142,10 @@ describe('GameServiceImpl', () => {
 
       expect(mockPlayer.moveDown).toHaveBeenCalled();
       expect(mockSocketP1.send).toHaveBeenCalledWith(
-        JSON.stringify({ id: 'host1', position: { x: 0, y: 1 } })
+        JSON.stringify({ type: 'update-move', payload: { id: 'host1', position: { x: 0, y: 1 } }})
       );
       expect(mockSocketP2.send).toHaveBeenCalledWith(
-        JSON.stringify({ id: 'host1', position: { x: 0, y: 1 } })
+        JSON.stringify({ type: 'update-move', payload: { id: 'host1', position: { x: 0, y: 1 } }})
       );
     });
 
@@ -179,10 +179,10 @@ describe('GameServiceImpl', () => {
 
       expect(mockPlayer.moveRight).toHaveBeenCalled();
       expect(mockSocketP1.send).toHaveBeenCalledWith(
-        JSON.stringify({ id: 'host1', position: { x: 0, y: 1 } })
+        JSON.stringify({type: 'update-move', payload: { id: 'host1', position: { x: 0, y: 1 } }})
       );
       expect(mockSocketP2.send).toHaveBeenCalledWith(
-        JSON.stringify({ id: 'host1', position: { x: 0, y: 1 } })
+        JSON.stringify({type: 'update-move', payload: { id: 'host1', position: { x: 0, y: 1 } }})
       );
     });
 
@@ -216,10 +216,10 @@ describe('GameServiceImpl', () => {
 
       expect(mockPlayer.moveLeft).toHaveBeenCalled();
       expect(mockSocketP1.send).toHaveBeenCalledWith(
-        JSON.stringify({ id: 'host1', position: { x: 0, y: 1 } })
+        JSON.stringify({ type: 'update-move', payload: { id: 'host1', position: { x: 0, y: 1 } }})
       );
       expect(mockSocketP2.send).toHaveBeenCalledWith(
-        JSON.stringify({ id: 'host1', position: { x: 0, y: 1 } })
+        JSON.stringify({ type: 'update-move', payload: { id: 'host1', position: { x: 0, y: 1 } }})
       );
     });
 
@@ -467,10 +467,10 @@ describe('GameServiceImpl', () => {
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['connections'].set(guestId, mockSocketP2 as unknown as WebSocket);
 
-      await gameServiceImpl.updatePlayers(matchId, hostId, guestId, data);
+      await gameServiceImpl.updatePlayers(matchId, hostId, guestId, { type: 'update-enemy', payload: data });
 
-      expect(mockSocketP1.send).toHaveBeenCalledWith(JSON.stringify(data));
-      expect(mockSocketP2.send).toHaveBeenCalledWith(JSON.stringify(data));
+      expect(mockSocketP1.send).toHaveBeenCalledWith(JSON.stringify({ type: 'update-enemy', payload: data }));
+      expect(mockSocketP2.send).toHaveBeenCalledWith(JSON.stringify({ type: 'update-enemy', payload: data }));
     });
 
     it('should throw an error if match is not found', async () => {
@@ -483,7 +483,7 @@ describe('GameServiceImpl', () => {
         direction: 'up',
       };
 
-      await expect(gameServiceImpl.updatePlayers(matchId, hostId, guestId, data)).rejects.toThrow(
+      await expect(gameServiceImpl.updatePlayers(matchId, hostId, guestId, {type: 'update-enemy' , payload: data})).rejects.toThrow(
         'The requested match was not found'
       );
     });

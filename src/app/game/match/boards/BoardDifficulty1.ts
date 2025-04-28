@@ -199,7 +199,7 @@ export default class BoardDifficulty1 extends Board {
         }
         await enemy.calculateMovement();
         const enemyDTO = enemy.getCharacterUpdate(null);
-        await this.match.notifyPlayers(enemyDTO);
+        await this.match.notifyPlayers({ type: 'update-enemy', payload: enemyDTO });
       });
 
       worker.on('error', (error) => {

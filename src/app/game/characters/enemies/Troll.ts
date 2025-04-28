@@ -37,7 +37,11 @@ export default class Troll extends Enemy {
     this.cell = cellUp;
     if (character && !character.kill()) {
       const died = character.die();
-      if (died) this.board.notifyPlayers(validatePlayerState(character.getCharacterState()));
+      if (died)
+        this.board.notifyPlayers({
+          type: 'update-state',
+          payload: validatePlayerState(character.getCharacterState()),
+        });
     }
     return null; // The Troll doesn't consume anything.
   }

@@ -6,12 +6,7 @@ import {
   type UpdateFruits,
   validateUpdateFruits,
 } from '../../../../schemas/zod.js';
-import type {
-  CellCoordinates,
-  PlayerMove,
-  PlayerState,
-  UpdateEnemy,
-} from '../../../../schemas/zod.js';
+import type { CellCoordinates, GameMessageOutput } from '../../../../schemas/zod.js';
 import type Enemy from '../../characters/enemies/Enemy.js';
 import type Player from '../../characters/players/Player.js';
 import type Match from '../Match.js';
@@ -88,7 +83,7 @@ abstract class Board {
       this.fruits.delete({ x, y });
       if (this.fruitsNumber === 0 && this.FRUIT_TYPE.length > 0) {
         await this.setUpFruits();
-        await this.match.notifyPlayers(this.getUpdateFruits());
+        await this.match.notifyPlayers({ type: 'update-fruits', payload: this.getUpdateFruits() });
       }
       return;
     });
@@ -110,7 +105,7 @@ abstract class Board {
     });
   }
 
-  public async notifyPlayers(data: PlayerMove | UpdateEnemy | PlayerState): Promise<void> {
+  public async notifyPlayers(data: GameMessageOutput): Promise<void> {
     this.match.notifyPlayers(data);
   }
 
