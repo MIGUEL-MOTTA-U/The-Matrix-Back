@@ -83,7 +83,7 @@ export default class Level1Board extends Board {
         }
         await enemy.calculateMovement();
         const enemyDTO = enemy.getCharacterUpdate(null);
-        await this.match.notifyPlayers(enemyDTO);
+        await this.match.notifyPlayers({ type: 'update-enemy', payload: enemyDTO });
       });
 
       worker.on('error', (error) => {

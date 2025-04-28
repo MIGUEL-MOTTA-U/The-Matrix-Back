@@ -1,11 +1,8 @@
 import type { WebSocket } from 'ws';
 import type {
+  GameMessageOutput,
   MatchDetails,
-  PlayerMove,
-  PlayerState,
   UpdateAll,
-  UpdateEnemy,
-  UpdateFruits,
   UpdateTime,
 } from '../../../schemas/zod.js';
 import type Match from '../match/Match.js';
@@ -26,6 +23,6 @@ export default interface GameService {
     matchId: string,
     hostId: string,
     guestId: string,
-    data: UpdateEnemy | PlayerMove | UpdateFruits | PlayerState
+    data: GameMessageOutput
   ): Promise<void>;
 }

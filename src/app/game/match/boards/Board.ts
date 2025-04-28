@@ -8,6 +8,7 @@ import {
   validateUpdateFruits,
 } from '../../../../schemas/zod.js';
 import type {
+  GameMessageOutput,
   CellCoordinates,
   Direction,
   PlayerMove,
@@ -131,7 +132,7 @@ abstract class Board {
       this.fruitsNumber--;
       if (this.fruitsNumber === 0 && this.FRUIT_TYPE.length > 0) {
         await this.setUpFruits();
-        await this.match.notifyPlayers(this.getUpdateFruits());
+        await this.match.notifyPlayers({ type: 'update-fruits', payload: this.getUpdateFruits() });
       }
       return;
     });
@@ -153,7 +154,7 @@ abstract class Board {
     });
   }
 
-  public async notifyPlayers(data: PlayerMove | UpdateEnemy | PlayerState): Promise<void> {
+  public async notifyPlayers(data: GameMessageOutput): Promise<void> {
     this.match.notifyPlayers(data);
   }
 

@@ -83,8 +83,9 @@ export default class WebsocketServiceImpl implements WebsocketService {
       const hostSocket = this.connections.get(match.getHost());
       const guestSocket = this.connections.get(match.getGuest());
       if (hostSocket && guestSocket) {
-        hostSocket.send(JSON.stringify({ message: 'match-found', match: match.getMatchDTO() }));
-        guestSocket.send(JSON.stringify({ message: 'match-found', match: match.getMatchDTO() }));
+        const message = { message: 'match-found', match: match.getMatchDTO() };
+        hostSocket.send(JSON.stringify(message));
+        guestSocket.send(JSON.stringify(message));
         this.connections.get(match.getGuest())?.close();
         this.connections.get(match.getHost())?.close();
         this.removeConnection(match.getHost());
