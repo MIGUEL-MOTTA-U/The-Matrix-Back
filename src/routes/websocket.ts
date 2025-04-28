@@ -1,11 +1,12 @@
 import type { FastifyInstance } from 'fastify';
-import GameController from '../controllers/websockets/GameController.js';
-import MatchMakingController from '../controllers/websockets/MatchMakingController.js';
-
-const matchMakingController: MatchMakingController = MatchMakingController.getInstance();
-const gameController: GameController = GameController.getInstance();
+import type GameController from '../controllers/websockets/GameController.js';
+import type MatchMakingController from '../controllers/websockets/MatchMakingController.js';
+import { container } from '../plugins/diContainer.js';
 
 export async function websocketRoutes(fastify: FastifyInstance): Promise<void> {
+  const matchMakingController: MatchMakingController =
+    fastify.diContainer.resolve<MatchMakingController>('matchMakingController');
+  const gameController: GameController = container.resolve<GameController>('gameController');
   /**
    * This method works then i am looking for a matchmaking (no teamate)
    */

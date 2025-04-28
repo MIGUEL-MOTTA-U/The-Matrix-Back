@@ -1,12 +1,15 @@
 import { z } from 'zod';
 const stringSchema = z.string().nonempty().min(1);
+const infoSchema = z.object({
+  message: stringSchema,
+});
 const matchInputDTOSchema = z.object({
   level: z.number().nonnegative(),
   map: z.string().nonempty(),
 });
 const boardItemSchema = z.object({
   type: z.string().nonempty(),
-  id: z.string().optional(),
+  id: z.string(),
   orientation: z.string().optional(),
   color: z.string().optional(),
 });
@@ -16,8 +19,7 @@ const cellCordinatesSchema = z.object({
 });
 
 const cellDTOSchema = z.object({
-  x: z.number().nonnegative(),
-  y: z.number().nonnegative(),
+  coordinates: cellCordinatesSchema,
   item: boardItemSchema.nullable(),
   character: boardItemSchema.nullable(),
 });
@@ -28,16 +30,21 @@ const playerStateSchema = z.object({
   color: z.string().optional(),
 });
 
+const fruitsSchema = z.object({
+  fruitType: z.string().nonempty(),
+  fruitsNumber: z.number().nonnegative(),
+  cells: z.array(cellDTOSchema),
+  currentRound: z.number().nonnegative(),
+  nextFruitType: z.string().nullable(),
+});
+
 const EndMatchSchema = z.object({
-  result: z.enum(['win', 'lose']),
+  result: z.enum(['win', 'lose', 'end game']),
 });
 
 const updateEnemySchema = z.object({
   enemyId: z.string().nonempty(),
-  coordinates: z.object({
-    x: z.number().nonnegative(),
-    y: z.number().nonnegative(),
-  }),
+  coordinates: cellCordinatesSchema,
   direction: z.enum(['up', 'down', 'left', 'right']),
 });
 
@@ -50,6 +57,7 @@ const playerMoveSchema = z.object({
   direction: z.enum(['up', 'down', 'left', 'right']),
   state: z.enum(['alive', 'dead']),
   idItemConsumed: z.string().optional(),
+  numberOfFruits: z.number().optional(),
 });
 
 const updateTimeSchema = z.object({
@@ -63,7 +71,7 @@ const errorMatchSchema = z.object({
 
 const updateAllSchema = z.object({
   players: z.array(playerStateSchema),
-  board: z.array(cellDTOSchema),
+  cells: z.array(cellDTOSchema),
   time: updateTimeSchema,
 });
 
@@ -116,6 +124,7 @@ const matchDetailsSchema = z.object({
 const userQueueSchema = z.object({
   id: z.string().nonempty(),
   matchId: z.string().nonempty(),
+  color: z.string().optional(),
 });
 export {
   stringSchema,
@@ -134,4 +143,6 @@ export {
   gameMessageOutputSchema,
   gameMessageInputSchema,
   userQueueSchema,
+  fruitsSchema,
+  infoSchema,
 };

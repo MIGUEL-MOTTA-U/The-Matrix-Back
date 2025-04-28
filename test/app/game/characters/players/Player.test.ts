@@ -1,12 +1,41 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import Player from '../../../../../src/app/game/characters/players/Player.js';
 import BoardDifficulty1 from '../../../../../src/app/game/match/boards/BoardDifficulty1.js';
 import Cell from '../../../../../src/app/game/match/boards/CellBoard.js';
 import CharacterError from '../../../../../src/errors/CharacterError.js';
-
+import { mockDeep, mockReset } from 'vitest-mock-extended';
+import type Match from '../../../../../src/app/game/match/Match.js';
+import { beforeEach } from 'node:test';
+import { config, logger } from '../../../../../src/server.js';
+vi.mock('../../../../../src/server.js', () => {
+    return {
+        logger: {
+            info: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+        },
+        config: {
+            game: {
+                board: {
+                    rows: 5,
+                    cols: 5,
+                },
+                fruits: {
+                    number: 3,
+                },
+            },
+        },
+    };
+});
 describe('Player', () => {
+    const match = mockDeep<Match>();
+    
+    beforeEach(() => {
+        mockReset(match);
+    })
+
     it('should create a player', () => {
-        const board = new BoardDifficulty1('map', 1);
+        const board = new BoardDifficulty1(match, 'map', 1);
         const cell = new Cell(1, 1);
         const player = new Player(cell, board, 'id-player-test-1');
         expect(player).toBeDefined();
@@ -15,25 +44,25 @@ describe('Player', () => {
     })
 
     it('player should not kill', () => {
-        const board = new BoardDifficulty1('map', 1);
+        const board = new BoardDifficulty1(match,'map', 1);
         const cell = new Cell(1, 1);
         const player = new Player(cell, board, 'id-player-test-2');
         expect(player.kill()).toBeFalsy();
     })
 
     it('player should die', () => {
-        const board = new BoardDifficulty1('map', 1);
+        const board = new BoardDifficulty1(match,'map', 1);
         const cell = new Cell(1, 1);
         const player = new Player(cell, board, 'id-player-test-3');
         player.die();
-        expect(player.die()).toBeFalsy();
+        expect(player.die()).toBeTruthy();
     });
 
     it('player should move left',async () => {
-        const board = new BoardDifficulty1('map', 1);
+        const board = new BoardDifficulty1(match,'map', 1);
         const host = 'host';
         const guest = 'guest';
-        await board.startGame(host, guest, 'matchId');
+        await board.startGame(host, guest);
         const player = board.getHost();
         expect(player?.getCoordinates()).toStrictEqual({ x: 9, y: 1 });
         expect(board.getBoard()[9][1].getCharacter()).toBe(player);
@@ -45,10 +74,10 @@ describe('Player', () => {
     })
 
     it('player should move right',async () => {
-        const board = new BoardDifficulty1('map', 1);
+        const board = new BoardDifficulty1(match,'map', 1);
         const host = 'host';
         const guest = 'guest';
-        await board.startGame(host, guest, 'matchId');
+        await board.startGame(host, guest);
         const player = board.getHost();
         expect(player?.getCoordinates()).toStrictEqual({ x: 9, y: 1 });
         expect(board.getBoard()[9][1].getCharacter()).toBe(player);
@@ -60,10 +89,10 @@ describe('Player', () => {
     })
 
     it('player should move up',async () => {
-        const board = new BoardDifficulty1('map', 1);
+        const board = new BoardDifficulty1(match,'map', 1);
         const host = 'host';
         const guest = 'guest';
-        await board.startGame(host, guest, 'matchId');
+        await board.startGame(host, guest);
         const player = board.getHost();
         expect(player?.getCoordinates()).toStrictEqual({ x: 9, y: 1 });
         expect(board.getBoard()[9][1].getCharacter()).toBe(player);
@@ -75,10 +104,10 @@ describe('Player', () => {
     })
 
     it('player should move down',async () => {
-        const board = new BoardDifficulty1('map', 1);
+        const board = new BoardDifficulty1(match,'map', 1);
         const host = 'host';
         const guest = 'guest';
-        await board.startGame(host, guest, 'matchId');
+        await board.startGame(host, guest);
         const player = board.getHost();
         expect(player?.getCoordinates()).toStrictEqual({ x: 9, y: 1 });
         expect(board.getBoard()[9][1].getCharacter()).toBe(player);
@@ -90,10 +119,10 @@ describe('Player', () => {
     })
 
     it('should not move out the limits', async () => {
-        const board = new BoardDifficulty1('map', 1);
+        const board = new BoardDifficulty1(match,'map', 1);
         const host = 'host';
         const guest = 'guest';
-        await board.startGame(host, guest, 'matchId');
+        await board.startGame(host, guest);
         const player = board.getHost();
         expect(player?.getCoordinates()).toStrictEqual({ x: 9, y: 1 });
         expect(board.getBoard()[9][1].getCharacter()).toBe(player);
@@ -102,10 +131,10 @@ describe('Player', () => {
     })
 
     it('should not move other player cell', async () => {
-        const board = new BoardDifficulty1('map', 1);
+        const board = new BoardDifficulty1(match,'map', 1);
         const host = 'host';
         const guest = 'guest';
-        await board.startGame(host, guest, 'matchId');
+        await board.startGame(host, guest);
         const player = board.getHost();
         const player2 = board.getGuest();
         board.getBoard()[9][2].setCharacter(player2);

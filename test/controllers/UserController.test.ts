@@ -1,15 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { FastifyRequest, FastifyReply } from 'fastify';
-import type { FastifyRedis } from '@fastify/redis';
 import UserController from '../../src/controllers/rest/UserController.js';
 import { v4 as uuidv4 } from 'uuid';
+import { mockDeep } from 'vitest-mock-extended';
+import type UserRepository from '../../src/schemas/UserRepository.js';
 vi.mock('uuid', () => ({
   v4: vi.fn(() => 'fixed-uuid'),
 }));
 
 
 
-vi.mock('src/schemas/zod.js', () => ({
+vi.mock('../../src/schemas/zod.js', () => ({
   validateString: vi.fn((str: string) => str),
 }));
 vi.mock('../../src/server.js', () => ({
@@ -17,8 +18,10 @@ vi.mock('../../src/server.js', () => ({
     hset: vi.fn(() => Promise.resolve()),
     hgetall: vi.fn(() => Promise.resolve({ id: 'fixed-uuid', name: 'Test User' })),
     expire: vi.fn(() => Promise.resolve()),
+    keys: vi.fn(() => Promise.resolve(['fixed-uuid'])),
   },
 }));
+const userRepository = mockDeep<UserRepository>();
 describe('UserController', () => {
   let req: FastifyRequest;
   let res: FastifyReply;
@@ -34,14 +37,15 @@ describe('UserController', () => {
     res = {
       send: vi.fn(),
     } as unknown as FastifyReply;
-
-    controller = UserController.getInstance();
+    
+    controller = new UserController(userRepository);
   });
 
   describe('handleCreateUser', () => {
     
 
     it('should create a user and send the generated userId', async () => {
+      userRepository.createUser.mockResolvedValue(undefined);
       await controller.handleCreateUser(req, res);
 
       expect(uuidv4).toHaveBeenCalled();
@@ -52,17 +56,30 @@ describe('UserController', () => {
 
   describe('handleGetUser', () => {
     it('should validate the userId, retrieve the user from Redis and send the user object', async () => {
+      userRepository.getUserById.mockResolvedValue({
+        id: 'fixed-uuid',
+        matchId: 'matchId',
+      });
+      
       await controller.handleGetUser(req, res);
 
-      expect(res.send).toHaveBeenCalledWith({ id: 'fixed-uuid', name: 'Test User' });
+      expect(res.send).toHaveBeenCalledWith({ id: 'fixed-uuid', matchId: 'matchId' });
     });
   });
 
-  describe('singleton', () => {
-    it('should always return the same instance', () => {
-      const instance1 = UserController.getInstance();
-      const instance2 = UserController.getInstance();
-      expect(instance1).toBe(instance2);
+  describe('handleGetUsers', () => {
+    it('should retrieve all users from Redis and send the user list', async () => {
+      req = {
+        params: {},
+      } as unknown as FastifyRequest;
+
+      userRepository.getAllUsers.mockResolvedValue([{
+      id: 'fixed-uuid',
+      matchId: 'fixed-match-id'
+      }]);
+      await controller.handleGetUsers(req, res);
+
+      expect(res.send).toHaveBeenCalledWith([{ id: 'fixed-uuid', matchId: 'fixed-match-id' }]);
     });
   });
 });
