@@ -1,3 +1,4 @@
+import { config } from '../../../../../server.js';
 import Cow from '../../../characters/enemies/Cow.js';
 import type Match from '../../Match.js';
 import Board from '../Board.js';
@@ -56,14 +57,14 @@ export default class Level2Board extends Board {
     ];
     this.rocksCoordinates = [
       ...this.getRowCoordinatesInRange(5, 1, 4),
-      ...this.getRowCoordinatesInRange(4, 11, 14),
+      ...this.getRowCoordinatesInRange(5, 11, 14),
 
       ...Array.from({ length: 4 }, (_, i) => i + 6).flatMap((row) =>
         this.getRowCoordinatesInRange(row, 6, 9)
       ),
 
       ...this.getRowCoordinatesInRange(10, 1, 4),
-      ...this.getRowCoordinatesInRange(11, 11, 14),
+      ...this.getRowCoordinatesInRange(10, 11, 14),
     ];
     this.ROCKS = this.rocksCoordinates.length;
     this.FRUITS = this.fruitsCoordinates.length;
@@ -71,8 +72,6 @@ export default class Level2Board extends Board {
     this.FRUITS_CONTAINER = [...this.FRUIT_TYPE];
     this.ENEMIES = this.enemiesCoordinates.length;
     this.fruitsRounds = this.FRUIT_TYPE.length;
-  }
-  protected startEnemies(): Promise<void> {
-    throw new Error('Method not implemented.');
+    this.ENEMIES_SPEED = config.ENEMIES_SPEED_MS;
   }
 }

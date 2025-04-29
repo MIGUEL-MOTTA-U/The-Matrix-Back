@@ -117,10 +117,10 @@ class Cell {
    */
   public getDirection(cell: CellCoordinates): Direction | null {
     if (cell.x === this.xPosition && cell.y === this.yPosition) return null;
-    if (cell.x === this.xPosition && cell.y < this.yPosition) return 'up';
-    if (cell.x === this.xPosition && cell.y > this.yPosition) return 'down';
-    if (cell.x < this.xPosition && cell.y === this.yPosition) return 'left';
-    if (cell.x > this.xPosition && cell.y === this.yPosition) return 'right';
+    if (cell.x === this.xPosition && cell.y < this.yPosition) return 'left';
+    if (cell.x === this.xPosition && cell.y > this.yPosition) return 'right';
+    if (cell.x < this.xPosition && cell.y === this.yPosition) return 'up';
+    if (cell.x > this.xPosition && cell.y === this.yPosition) return 'down';
     return null;
   }
 

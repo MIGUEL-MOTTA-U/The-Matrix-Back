@@ -1,13 +1,17 @@
-import type { Worker } from 'node:worker_threads';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { Worker } from 'node:worker_threads';
 import { Mutex } from 'async-mutex';
 import BoardError from '../../../../errors/BoardError.js';
 import {
   type BoardDTO,
   type CellDTO,
+  parseCoordinatesToString,
   type UpdateFruits,
   validateUpdateFruits,
 } from '../../../../schemas/zod.js';
 import type { CellCoordinates, Direction, GameMessageOutput } from '../../../../schemas/zod.js';
+import { config, logger } from '../../../../server.js';
 import { Graph } from '../../../../utils/Graph.js';
 import type Enemy from '../../characters/enemies/Enemy.js';
 import Player from '../../characters/players/Player.js';
@@ -45,12 +49,12 @@ abstract class Board {
   protected fruitsCoordinates: number[][] = [];
   protected playersStartCoordinates: number[][] = [];
   protected rocksCoordinates: number[][] = [];
+  protected ENEMIES_SPEED = 1000; // Milliseconds
 
   //protected abstract generateBoard(): void;
   protected abstract setUpEnemies(): void;
   protected abstract setUpInmovableObjects(): void;
   protected abstract loadContext(): void;
-  protected abstract startEnemies(): Promise<void>;
 
   constructor(match: Match, map: string, level: number) {
     this.match = match;
@@ -240,23 +244,26 @@ abstract class Board {
     return null;
   }
 
-  private getMappedGraph(canKillPlayers: boolean): Graph<CellCoordinates> {
-    const graph = new Graph<CellCoordinates>();
+  private getMappedGraph(canWalkOverPlayers: boolean): Graph {
+    const graph = new Graph();
     for (let i = 0; i < this.ROWS; i++) {
       for (let j = 0; j < this.COLS; j++) {
         const cell = this.board[i][j];
-        graph.addNode(cell.getCoordinates());
-        if (cell.getItem()?.blocked() === false) {
+        graph.addNode(parseCoordinatesToString(cell.getCoordinates()))
+        if (!cell.blocked()) {
           const neighbors: Cell[] = cell.getNeighbors();
           for (const neighbor of neighbors) {
-            // The neighbor exists, is not blocked, and does not have an enemy
+            // The neighbor exists, is not blocked
+            const blocked = neighbor.blocked();
+            const possibleCharacter = neighbor.getCharacter();
             if (
-              neighbor !== null &&
-              (neighbor.getCharacter() === null ||
-                neighbor.getCharacter()?.kill() === canKillPlayers) &&
-              neighbor.getItem()?.blocked() === false
+              !blocked &&
+              (possibleCharacter === null || possibleCharacter?.kill() === canWalkOverPlayers)
             ) {
-              graph.addEdge(cell.getCoordinates(), neighbor.getCoordinates());
+              graph.addEdge(
+                parseCoordinatesToString(cell.getCoordinates()),
+                parseCoordinatesToString(neighbor.getCoordinates()),
+              );
             }
           }
         }
@@ -319,6 +326,41 @@ abstract class Board {
   }
 
   /**
+   * This method starts the enemies in the board
+   */
+  protected async startEnemies(): Promise<void> {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const enemiesSpeed = this.ENEMIES_SPEED;
+    const fileName =
+      config.NODE_ENV === 'development'
+        ? resolve(__dirname, '../../../../../dist/src/workers/Enemies.worker.js')
+        : resolve(__dirname, '../../../../workers/Enemies.worker.js');
+    for (const enemy of this.enemies.values()) {
+      const worker = new Worker(fileName, { workerData: { enemiesSpeed } });
+      this.workers.push(worker);
+      worker.on('message', async (_message) => {
+        if (this.checkLose() || this.match.checkWin()) {
+          await this.stopGame();
+          return;
+        }
+        await enemy.calculateMovement();
+        const enemyDTO = enemy.getCharacterUpdate(null);
+        await this.match.notifyPlayers({ type: 'update-enemy', payload: enemyDTO });
+      });
+
+      worker.on('error', (error) => {
+        logger.warn('An error occurred while running the enemies worker');
+        logger.error(error);
+      });
+      worker.on('exit', (code) => {
+        if (code !== 0) logger.warn(`Enemies worker stopped with exit code ${code}`);
+        else logger.info('Enemies worker finished');
+      });
+    }
+  }
+
+  /**
    * Method to set up the players in the board
    */
   protected setUpPlayers(host: string, guest: string): void {
@@ -354,6 +396,10 @@ abstract class Board {
     this.FRUIT_TYPE.shift();
     this.fruitsRounds--;
     this.currentRound++;
+  }
+
+  private getEnemiesSpeed(): number {
+    return this.ENEMIES_SPEED;
   }
 
   private getColCoordinatesInRange(col: number, start: number, end: number): number[][] {

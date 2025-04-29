@@ -9,16 +9,15 @@ type Edge<T> = { to: T; weight: number };
  * @since 25/04/2025
  * @author Your Name
  */
-export class Graph<T> {
-  private adj: Map<T, Edge<T>[]> = new Map();
-
+export class Graph {
+  private adj: Map<string, Edge<string>[]> = new Map();
   /**
    * Adds a node to the graph if it doesn't already exist.
    *
-   * @param {T} node The node to add to the graph.
+   * @param {string} node The node to add to the graph.
    * @return {void}
    */
-  public addNode(node: T): void {
+  public addNode(node: string): void {
     if (!this.adj.has(node)) {
       this.adj.set(node, []);
     }
@@ -28,13 +27,13 @@ export class Graph<T> {
    * Adds an edge between two nodes with a specified weight.
    * If the nodes don't exist, they are created automatically.
    *
-   * @param {T} from The starting node of the edge.
-   * @param {T} to The ending node of the edge.
+   * @param {string} from The starting node of the edge.
+   * @param {string} to The ending node of the edge.
    * @param {number} [weight=1] The weight of the edge, defaults to 1.
    * @param {boolean} [bidirectional=true] Whether the edge should be bidirectional, defaults to true.
    * @return {void}
    */
-  public addEdge(from: T, to: T, weight = 1, bidirectional = true): void {
+  public addEdge(from: string, to: string, weight = 1, bidirectional = true): void {
     this.addNode(from);
     this.addNode(to);
     const fromEdges = this.adj.get(from);
@@ -53,14 +52,14 @@ export class Graph<T> {
   /**
    * Finds the shortest path between two nodes using Dijkstra's algorithm.
    *
-   * @param {T} start The starting node.
-   * @param {T} end The destination node.
+   * @param {string} start The starting node.
+   * @param {string} end The destination node.
    * @return {{ distance: number; path: T[] }} An object containing the total distance and the array of nodes in the path.
    */
-  public shortestPathDijkstra(start: T, end: T): { distance: number; path: T[] } {
-    const dist: Map<T, number> = new Map();
-    const prev: Map<T, T | null> = new Map();
-    const pq = new MinPriorityQueue<T>();
+  public shortestPathDijkstra(start: string, end: string): { distance: number; path: string[] } {
+    const dist: Map<string, number> = new Map();
+    const prev: Map<string, string | null> = new Map();
+    const pq = new MinPriorityQueue<string>();
 
     this.adj.forEach((_, node) => {
       dist.set(node, Number.POSITIVE_INFINITY);
@@ -94,8 +93,8 @@ export class Graph<T> {
       }
     }
 
-    const path: T[] = [];
-    let u: T | null = end;
+    const path: string[] = [];
+    let u: string | null = end;
 
     if (u) {
       const prevU = prev.get(u);
@@ -135,7 +134,7 @@ class MinPriorityQueue<T> {
   /**
    * Adds an element to the priority queue with the specified priority.
    *
-   * @param {T} element The element to add.
+   * @param {string} element The element to add.
    * @param {number} priority The priority of the element (lower values have higher priority).
    * @return {void}
    */

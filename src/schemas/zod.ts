@@ -104,6 +104,15 @@ const validatePathResultWithDirection = (data: unknown): PathResultWithDirection
   return schema.parse(data);
 };
 
+const parseCoordinatesToString = (coordinates: CellCoordinates): string => {
+  return `${coordinates.x},${coordinates.y}`;
+};
+
+const parseStringToCoordinates = (coordinates: string): CellCoordinates => {
+  const [x, y] = coordinates.split(',').map(Number);
+  return { x, y };
+};
+
 interface MatchInputDTO {
   level: number;
   map: string;
@@ -284,4 +293,6 @@ export {
   validateCustomMapKey,
   validatePathResult,
   validatePathResultWithDirection,
+  parseCoordinatesToString,
+  parseStringToCoordinates,
 };

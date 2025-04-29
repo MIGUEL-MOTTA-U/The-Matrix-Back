@@ -1,7 +1,4 @@
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { Worker } from 'node:worker_threads';
-import { config, logger } from '../../../../../server.js';
+import { config } from '../../../../../server.js';
 import Troll from '../../../characters/enemies/Troll.js';
 import type Match from '../../Match.js';
 import Board from '../Board.js';
@@ -54,6 +51,7 @@ export default class Level1Board extends Board {
     this.FRUITS_CONTAINER = [...this.FRUIT_TYPE];
     this.ENEMIES = 4;
     this.fruitsRounds = this.FRUIT_TYPE.length;
+    this.ENEMIES_SPEED = config.ENEMIES_SPEED_MS;
   }
 
   /**
@@ -61,40 +59,5 @@ export default class Level1Board extends Board {
    */
   protected setUpInmovableObjects(): void {
     // TODO --> Priority 3 <-- Implement this method
-  }
-
-  /**
-   * This method starts the enemies in the board
-   */
-  protected async startEnemies(): Promise<void> {
-    const __filename = fileURLToPath(import.meta.url);
-    const __dirname = dirname(__filename);
-    const enemiesSpeed = config.ENEMIES_SPEED_MS;
-    const fileName =
-      config.NODE_ENV === 'development'
-        ? resolve(__dirname, '../../../../../../dist/src/workers/Enemies.worker.js')
-        : resolve(__dirname, '../../../../../workers/Enemies.worker.js');
-    for (const enemy of this.enemies.values()) {
-      const worker = new Worker(fileName, { workerData: { enemiesSpeed } });
-      this.workers.push(worker);
-      worker.on('message', async (_message) => {
-        if (this.checkLose() || this.match.checkWin()) {
-          await this.stopGame();
-          return;
-        }
-        await enemy.calculateMovement();
-        const enemyDTO = enemy.getCharacterUpdate(null);
-        await this.match.notifyPlayers({ type: 'update-enemy', payload: enemyDTO });
-      });
-
-      worker.on('error', (error) => {
-        logger.warn('An error occurred while running the enemies worker');
-        logger.error(error);
-      });
-      worker.on('exit', (code) => {
-        if (code !== 0) logger.warn(`Enemies worker stopped with exit code ${code}`);
-        else logger.info('Enemies worker finished');
-      });
-    }
   }
 }

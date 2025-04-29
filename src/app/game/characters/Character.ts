@@ -2,6 +2,8 @@ import { Mutex } from 'async-mutex';
 import {
   type CellCoordinates,
   type Direction,
+  parseCoordinatesToString,
+  parseStringToCoordinates,
   type PathResult,
   type PathResultWithDirection,
   type PlayerMove,
@@ -41,20 +43,28 @@ abstract class Character extends BoardItem {
    * @param {Graph} mappedGraph - The graph representing the board.
    * @return {Direction} The direction to move towards the target cell.
    */
-  public getShortestPath(
-    targetCell: Cell,
-    mappedGraph: Graph<CellCoordinates>
-  ): PathResultWithDirection | null {
-    const shortestPath: PathResult = mappedGraph.shortestPathDijkstra(
-      this.cell.getCoordinates(),
-      targetCell.getCoordinates()
+  public getShortestPath(targetCell: Cell, mappedGraph: Graph): PathResultWithDirection | null {
+    const shortestPathRaw = mappedGraph.shortestPathDijkstra(
+      parseCoordinatesToString(targetCell.getCoordinates()),
+      parseCoordinatesToString(this.cell.getCoordinates())
     );
+    const cellCoordinates: CellCoordinates[] = [];
+    for (const cell of shortestPathRaw.path) {
+      const coordinates = parseStringToCoordinates(cell);
+      cellCoordinates.push(coordinates);
+    }
+
+    const shortestPath: PathResult = {
+      distance: shortestPathRaw.distance,
+      path: cellCoordinates,
+    };
+
     if (shortestPath.distance > 0) {
-      const direction: Direction | null = this.cell.getDirection(shortestPath.path[0]);
+      const direction: Direction | null = targetCell.getDirection(shortestPath.path[1]);
       return validatePathResultWithDirection({
         distance: shortestPath.distance,
         path: shortestPath.path,
-        direction,
+        direction: direction || this.orientation,
       });
     }
     return null;
