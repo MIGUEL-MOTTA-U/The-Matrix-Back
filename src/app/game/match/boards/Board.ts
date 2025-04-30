@@ -6,8 +6,8 @@ import BoardError from '../../../../errors/BoardError.js';
 import {
   type BoardDTO,
   type CellDTO,
-  parseCoordinatesToString,
   type UpdateFruits,
+  parseCoordinatesToString,
   validateUpdateFruits,
 } from '../../../../schemas/zod.js';
 import type { CellCoordinates, Direction, GameMessageOutput } from '../../../../schemas/zod.js';
@@ -249,7 +249,7 @@ abstract class Board {
     for (let i = 0; i < this.ROWS; i++) {
       for (let j = 0; j < this.COLS; j++) {
         const cell = this.board[i][j];
-        graph.addNode(parseCoordinatesToString(cell.getCoordinates()))
+        graph.addNode(parseCoordinatesToString(cell.getCoordinates()));
         if (!cell.blocked()) {
           const neighbors: Cell[] = cell.getNeighbors();
           for (const neighbor of neighbors) {
@@ -262,7 +262,7 @@ abstract class Board {
             ) {
               graph.addEdge(
                 parseCoordinatesToString(cell.getCoordinates()),
-                parseCoordinatesToString(neighbor.getCoordinates()),
+                parseCoordinatesToString(neighbor.getCoordinates())
               );
             }
           }

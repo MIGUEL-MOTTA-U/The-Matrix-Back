@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { redis } from '../../src/server.js';
-import MatchRepositoryRedis from '../../src/schemas/MatchRepositoryRedis.js';
+import MatchRepositoryRedis from '../../src/schemas/repositories/MatchRepositoryRedis.js';
 import MatchError from '../../src/errors/MatchError.js';
 
 vi.mock('../../src/server.js', () => ({

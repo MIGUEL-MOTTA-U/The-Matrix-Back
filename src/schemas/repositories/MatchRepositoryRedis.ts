@@ -1,7 +1,7 @@
-import MatchError from '../errors/MatchError.js';
-import { redis } from '../server.js';
-import type MatchRepository from './MatchRepository.js';
-import { type MatchDetails, validateMatchDetails } from './zod.js';
+import MatchError from '../../errors/MatchError.js';
+import { redis } from '../../server.js';
+import type MatchRepository from '../MatchRepository.js';
+import { type MatchDetails, validateMatchDetails } from '../zod.js';
 
 export default class MatchRepositoryRedis implements MatchRepository {
   public async getMatchById(matchId: string): Promise<MatchDetails> {

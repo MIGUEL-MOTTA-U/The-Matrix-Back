@@ -10,8 +10,8 @@ import MatchController from '../controllers/rest/MatchController.js';
 import UserController from '../controllers/rest/UserController.js';
 import GameController from '../controllers/websockets/GameController.js';
 import MatchMakingController from '../controllers/websockets/MatchMakingController.js';
-import MatchRepositoryRedis from '../schemas/MatchRepositoryRedis.js';
 import UserRepositoryRedis from '../schemas/UserRepositoryRedis.js';
+import MatchRepositoryRedis from '../schemas/repositories/MatchRepositoryRedis.js';
 import { container } from './diContainer.js';
 const registerDependencies = () => {
   container.register({
