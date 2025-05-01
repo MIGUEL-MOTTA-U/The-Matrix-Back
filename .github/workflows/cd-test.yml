@@ -97,7 +97,7 @@ jobs:
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'bad-ice-cream-dev'
-          slot-name: 'Production-dev'
+          slot-name: 'Production'
           package: .
-          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_DEV }}
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_531D7E87F6B5438E9D0D6E90D087973B }}
           clean: true
