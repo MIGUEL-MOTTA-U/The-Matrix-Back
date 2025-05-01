@@ -1,3 +1,4 @@
+import MatchError from '../../../errors/MatchError.js';
 import type MatchRepository from '../../../schemas/MatchRepository.js';
 import type UserRepository from '../../../schemas/UserRepository.js';
 import {
@@ -71,6 +72,7 @@ class MatchMaking implements MatchMakingService {
       return;
     }
     const { id: hostId, matchId } = validateUserQueue(host);
+    if (!matchId) throw new MatchError(MatchError.MATCH_NOT_FOUND);
     logger.info(
       `Match found for guest:${guest} host: ${hostId} for map: ${matchDetails.map} level: ${matchDetails.level}`
     );
@@ -79,8 +81,8 @@ class MatchMaking implements MatchMakingService {
     matchDetails.guest = guest;
     matchDetails.id = matchId;
     const match = await this.createMatch(matchDetails);
-    this.updateUser(hostId, matchId);
-    this.updateMatch(matchId, hostId, guest);
+    await this.updateUser(hostId, matchId);
+    await this.updateMatch(matchId, hostId, guest);
     this.webSocketService.notifyMatchFound(match, ghostMatch);
   }
 
@@ -89,13 +91,13 @@ class MatchMaking implements MatchMakingService {
   }
 
   private async updateMatch(matchId: string, host: string, guest: string): Promise<void> {
-    this.matchRepository.updateMatch(matchId, { guest, host });
-    this.matchRepository.extendSession(matchId, 10);
+    await this.matchRepository.updateMatch(matchId, { guest, host });
+    await this.matchRepository.extendSession(matchId, 10);
   }
 
-  private async updateUser(userId: string, matchId: string): Promise<void> {
-    this.userRepository.updateUser(userId, { matchId });
-    this.userRepository.extendSession(userId, 10);
+  private async updateUser(userId: string, matchId: string | null): Promise<void> {
+    await this.userRepository.updateUser(userId, { matchId, role: 'GUEST' });
+    await this.userRepository.extendSession(userId, 10);
   }
   private async createMatch(match: MatchDetails): Promise<Match> {
     return this.gameService.createMatch(match);

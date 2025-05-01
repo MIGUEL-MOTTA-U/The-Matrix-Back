@@ -217,8 +217,9 @@ interface UpdateAll {
 }
 
 interface UserQueue {
+  role?: PlayerType;
   id: string;
-  matchId: string;
+  matchId: string | null;
   color?: string;
 }
 
@@ -245,6 +246,7 @@ interface PathResultWithDirection extends PathResult {
 }
 
 type Direction = 'up' | 'down' | 'left' | 'right';
+type PlayerType = 'HOST' | 'GUEST';
 export type {
   MatchInputDTO,
   MatchDetails,
@@ -270,6 +272,7 @@ export type {
   Direction,
   PathResult,
   PathResultWithDirection,
+  PlayerType,
 };
 export {
   validateString,

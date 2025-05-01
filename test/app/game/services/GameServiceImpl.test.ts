@@ -100,6 +100,8 @@ describe('GameServiceImpl', () => {
       gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
 
       await gameServiceImpl.handleGameMessage(userId, matchId, message);
 
@@ -137,6 +139,8 @@ describe('GameServiceImpl', () => {
       gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
 
       await gameServiceImpl.handleGameMessage(userId, matchId, message);
 
@@ -174,7 +178,8 @@ describe('GameServiceImpl', () => {
       gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
-
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
       await gameServiceImpl.handleGameMessage(userId, matchId, message);
 
       expect(mockPlayer.moveRight).toHaveBeenCalled();
@@ -211,7 +216,8 @@ describe('GameServiceImpl', () => {
       gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
-
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
       await gameServiceImpl.handleGameMessage(userId, matchId, message);
 
       expect(mockPlayer.moveLeft).toHaveBeenCalled();
@@ -254,7 +260,8 @@ describe('GameServiceImpl', () => {
       gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
-
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
       await gameServiceImpl.handleGameMessage(userId, matchId, message);
 
       expect(mockPlayer.changeOrientation).toHaveBeenCalled();
@@ -291,6 +298,8 @@ describe('GameServiceImpl', () => {
       gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
 
       await gameServiceImpl.handleGameMessage(userId, matchId, message);
 

@@ -4,7 +4,7 @@ import type MatchRepository from '../../../src/schemas/MatchRepository.js';
 import type UserRepository from '../../../src/schemas/UserRepository.js';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockDeep } from 'vitest-mock-extended';
-import type { MatchDetails } from '../../../src/schemas/zod.js';
+import type { MatchDetails, UserQueue } from '../../../src/schemas/zod.js';
 import type GameService from '../../../src/app/game/services/GameService.js';
 import AsyncQueue from '../../../src/utils/AsyncQueue.js';
 import type Match from '../../../src/app/game/match/Match.js';
@@ -57,8 +57,14 @@ describe('MatchMaking', () => {
           map: 'forest'
       };
       
-      const mockQueue = new AsyncQueue<{ id: string; matchId: string }>();
-      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({ id: 'user1', matchId: 'match2' });
+      // Corregir la definición para que coincida con UserQueue
+      const mockQueue = new AsyncQueue<UserQueue>();
+      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({ 
+        id: 'user1', 
+        matchId: 'match2',
+        role: 'HOST',
+        color: 'blue'
+      });
       
       // biome-ignore lint/complexity/useLiteralKeys: For Testing purposes
       vi.spyOn(matchMaking['queue'], 'get').mockReturnValue(mockQueue);
@@ -81,7 +87,13 @@ describe('MatchMaking', () => {
           map: 'snow'
       };
       
-      const mockQueue = new AsyncQueue<{ id: string; matchId: string }>();
+      const mockQueue = new AsyncQueue<UserQueue>();
+      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({ 
+        id: 'user1', 
+        matchId: 'match2',
+        role: 'HOST',
+        color: 'blue'
+      });
       vi.spyOn(mockQueue, 'dequeue').mockResolvedValue(undefined);
       vi.spyOn(mockQueue, 'enqueue').mockResolvedValue(undefined);
       
@@ -103,7 +115,13 @@ describe('MatchMaking', () => {
           level: 4,
           map: 'jungle'
       };
-      const mockQueue = new AsyncQueue<{ id: string; matchId: string }>();
+      const mockQueue = new AsyncQueue<UserQueue>();
+      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({ 
+        id: 'user1', 
+        matchId: 'match2',
+        role: 'HOST',
+        color: 'blue'
+      });
       vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({ id: 'user1', matchId: 'different-match' });
       vi.spyOn(mockQueue, 'enqueue').mockResolvedValue(undefined);
       
@@ -133,7 +151,7 @@ describe('MatchMaking', () => {
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       await matchMaking['updateUser']('user1', 'match1');
   
-      expect(userRepository.updateUser).toHaveBeenCalledWith('user1', { matchId: 'match1' });
+      expect(userRepository.updateUser).toHaveBeenCalledWith('user1', { matchId: 'match1', role: 'GUEST' });
       expect(userRepository.extendSession).toHaveBeenCalledWith('user1', 10);
     });
   
@@ -163,7 +181,13 @@ describe('MatchMaking', () => {
           map: 'cave'
       };
       
-      const mockQueue = new AsyncQueue<{ id: string; matchId: string }>();
+      const mockQueue = new AsyncQueue<UserQueue>();
+      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({ 
+        id: 'user1', 
+        matchId: 'match2',
+        role: 'HOST',
+        color: 'blue'
+      });
       vi.spyOn(mockQueue, 'dequeue').mockRejectedValue(new Error('Queue error'));
       
       // biome-ignore lint/complexity/useLiteralKeys: For Testing purposes
@@ -174,4 +198,4 @@ describe('MatchMaking', () => {
       expect(matchRepository.updateMatch).not.toHaveBeenCalled();
       expect(webSocketService.notifyMatchFound).not.toHaveBeenCalled();
     });
-  }); 
+  });

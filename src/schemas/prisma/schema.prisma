@@ -19,49 +19,28 @@ enum PlayerRole {
 }
 
 model User {
-  id       String    @id @default(cuid())
-  color    String    @default("coffee")
-  name     String    @default("Anonymous")
-  role     Role      @default(USER)
+  id         String     @id @default(cuid())
+  name       String     @default("Anonymous")
+  color      String     @default("coffee")
+  playerRole PlayerRole 
+  role       Role       @default(USER)
+  match      Match?     @relation(fields: [matchId], references: [id])
+  matchId    String?
 
-  // Time stamps
-  
-  // Relación para los juegos en los que participa
-  playerMatches PlayerMatch[]
-
-  createdAt DateTime @default(now())
-  expiredAt DateTime? // Fecha de expiración de la cuenta
-  updatedAt DateTime @updatedAt
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  expiredAt  DateTime?
 }
 
 model Match {
-  id        String       @id @default(cuid())
-  
-  
-  // Relación con los jugadores
-  players   PlayerMatch[]
-  
-  // Opcional: estado de la partida
-  status    String       @default("waiting") // waiting, active, finished
-  
-  // Time stamps
-  createdAt DateTime @default(now())
-  expiredAt DateTime? // Fecha de expiración de la cuenta
-  updatedAt DateTime @updatedAt
-}
+  id         String     @id @default(cuid())
+  level      Int        @default(1)
+  map        String     @default("desert")
+  started    Boolean    @default(false)
 
-model PlayerMatch {
-  id        String     @id @default(cuid())
-  user      User       @relation(fields: [userId], references: [id])
-  userId    String
-  match     Match      @relation(fields: [matchId], references: [id])
-  matchId   String
-  role      PlayerRole // HOST o GUEST
+  players    User[]
 
-  // Time stamps
-  createdAt DateTime @default(now())
-  expiredAt DateTime? // Fecha de expiración de la cuenta
-  updatedAt DateTime @updatedAt
-  
-  @@unique([userId, matchId])
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  expiredAt  DateTime?
 }

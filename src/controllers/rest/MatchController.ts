@@ -43,7 +43,7 @@ export default class MatchController {
     const { userId } = req.params as { userId: string };
     const userIdParsed = validateString(userId);
     const user = await this.userRepository.getUserById(userIdParsed);
-    if (user.matchId.length !== 0) {
+    if (user.matchId !== null) {
       throw new MatchError(MatchError.PLAYER_ALREADY_IN_MATCH);
     }
     const matchInputDTO = validateMatchInputDTO(req.body as string);
@@ -52,8 +52,8 @@ export default class MatchController {
       host: userIdParsed,
       ...matchInputDTO,
     };
-    this.matchRepository.createMatch(matchDetails);
-    this.userRepository.updateUser(userIdParsed, { matchId: matchDetails.id });
+    await this.matchRepository.createMatch(matchDetails);
+    await this.userRepository.updateUser(userIdParsed, { matchId: matchDetails.id });
     return res.send({ matchId: matchDetails.id });
   }
 

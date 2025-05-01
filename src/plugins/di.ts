@@ -1,5 +1,5 @@
 import { fastifyAwilixPlugin } from '@fastify/awilix';
-import { Lifetime, asClass } from 'awilix';
+import { Lifetime, asClass, asValue } from 'awilix';
 import type { FastifyInstance } from 'fastify';
 import GameServiceImpl from '../app/game/services/GameServiceImpl.js';
 import type MatchMakingService from '../app/lobbies/services/MatchMakingService.js';
@@ -10,13 +10,14 @@ import MatchController from '../controllers/rest/MatchController.js';
 import UserController from '../controllers/rest/UserController.js';
 import GameController from '../controllers/websockets/GameController.js';
 import MatchMakingController from '../controllers/websockets/MatchMakingController.js';
-import UserRepositoryRedis from '../schemas/UserRepositoryRedis.js';
-import MatchRepositoryRedis from '../schemas/repositories/MatchRepositoryRedis.js';
+import MatchRepositoryPostgres from '../schemas/repositories/MatchRepositoryPostgres.js';
+import UserRepositoryPostgres from '../schemas/repositories/UserRepositoryPostgres.js';
 import { container } from './diContainer.js';
-const registerDependencies = () => {
+const registerDependencies = (server: FastifyInstance) => {
   container.register({
-    userRepository: asClass(UserRepositoryRedis, { lifetime: Lifetime.SINGLETON }),
-    matchRepository: asClass(MatchRepositoryRedis, { lifetime: Lifetime.SINGLETON }),
+    prisma: asValue(server.prisma),
+    userRepository: asClass(UserRepositoryPostgres, { lifetime: Lifetime.SINGLETON }),
+    matchRepository: asClass(MatchRepositoryPostgres, { lifetime: Lifetime.SINGLETON }),
     webSocketService: asClass(WebsocketServiceImpl, { lifetime: Lifetime.SINGLETON }),
     matchMakingService: asClass(MatchMaking, { lifetime: Lifetime.SINGLETON }),
     gameService: asClass(GameServiceImpl, { lifetime: Lifetime.SINGLETON }),
@@ -32,7 +33,7 @@ const setupCircularDeps = () => {
   webSocketService.setMatchMakingService(matchMaking);
 };
 export async function configureDI(server: FastifyInstance): Promise<void> {
-  registerDependencies();
+  registerDependencies(server);
   setupCircularDeps();
   server.register(fastifyAwilixPlugin, {
     container,

@@ -3,7 +3,7 @@ const stringSchema = z.string().nonempty().min(1);
 const infoSchema = z.object({
   message: stringSchema,
 });
-
+const playersTypeSchema = z.enum(['HOST', 'GUEST']);
 const directionSchema = z.enum(['up', 'down', 'left', 'right']);
 const matchInputDTOSchema = z.object({
   level: z.number().nonnegative(),
@@ -125,8 +125,9 @@ const matchDetailsSchema = z.object({
 
 const userQueueSchema = z.object({
   id: z.string().nonempty(),
-  matchId: z.string().nonempty(),
+  matchId: z.string().nonempty().nullable(),
   color: z.string().optional(),
+  role: playersTypeSchema.optional(),
 });
 
 const customMapKeySchema = z.object({

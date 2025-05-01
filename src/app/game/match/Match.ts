@@ -184,9 +184,9 @@ class Match {
    */
   public async stopGame(): Promise<void> {
     if (this.running) {
+      this.running = false;
       await this.stopTime();
       await this.board.stopGame();
-      this.running = false;
     }
   }
 

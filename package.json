@@ -19,7 +19,7 @@
     "doc": "typedoc --out docs ./src --entryPointStrategy expand",
     "clear": "exec RMDIR dist/ coverage/ ",
     "prisma:generate": "prisma generate --schema=./src/schemas/prisma/schema.prisma",
-    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate": "prisma migrate dev --schema=./src/schemas/prisma/schema.prisma",
     "prisma:studio": "prisma studio"
   },
   "keywords": [],
