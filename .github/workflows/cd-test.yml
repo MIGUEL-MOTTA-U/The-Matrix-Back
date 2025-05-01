@@ -1,5 +1,5 @@
-# Build and deploy Node.js app to Azure Web App - bad-ice-cream-back
-name: CD Bad Ice Cream Dev
+# filepath: .github/workflows/test_cd-test.yml
+name: Test CD Bad Ice Cream Dev
 
 on:
   push:
@@ -28,14 +28,21 @@ jobs:
           node-version: '22.x'
           cache: 'pnpm'
 
-      - name: pnpm install, build, and test
+      #- name: Create .env file
+      #  run: |
+      #    echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
+      #    echo "REDIS_URL=${{ secrets.REDIS_URL }}" >> .env
+      #    cat .env
+
+      - name: pnpm install and Prisma setup
         run: |
           pnpm install
+          pnpm prisma:generate
           pnpm run build
           pnpm run test
 
       - name: Zip artifact for deployment
-        run: zip -r release.zip ./*
+        run: zip -r release.zip ./* 
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -58,6 +65,26 @@ jobs:
 
       - name: Unzip artifact for deployment
         run: unzip release.zip
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      #- name: Create .env file
+      #  run: |
+      #    echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
+      #    echo "REDIS_URL=${{ secrets.REDIS_URL }}" >> .env
+
+      - name: Run Prisma migrations
+        run: |
+          pnpm install --prod
+          pnpm prisma:migrate:deploy
       
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
