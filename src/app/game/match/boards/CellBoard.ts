@@ -1,4 +1,4 @@
-import type { CellDTO } from '../../../../schemas/zod.js';
+import type { CellCoordinates, CellDTO, Direction } from '../../../../schemas/zod.js';
 import type Character from '../../characters/Character.js';
 import type { BoardItem } from './BoardItem.js';
 
@@ -93,6 +93,35 @@ class Cell {
     this.down = cellDown;
     this.left = cellLeft;
     this.right = cellRight;
+  }
+
+  /**
+   * Returns the neighboring cells of the current cell.
+   *
+   * @returns {Cell[]} An array of neighboring cells.
+   */
+  public getNeighbors(): Cell[] {
+    const neighbors: Cell[] = [];
+    if (this.up) neighbors.push(this.up);
+    if (this.down) neighbors.push(this.down);
+    if (this.left) neighbors.push(this.left);
+    if (this.right) neighbors.push(this.right);
+    return neighbors;
+  }
+
+  /**
+   * Returns the direction of the given cell relative to the current cell.
+   *
+   * @param {CellCoordinates} cell The cell to compare with.
+   * @return {Direction | null } The direction of the given cell relative to the current cell.
+   */
+  public getDirection(cell: CellCoordinates): Direction | null {
+    if (cell.x === this.xPosition && cell.y === this.yPosition) return null;
+    if (cell.x === this.xPosition && cell.y < this.yPosition) return 'left';
+    if (cell.x === this.xPosition && cell.y > this.yPosition) return 'right';
+    if (cell.x < this.xPosition && cell.y === this.yPosition) return 'up';
+    if (cell.x > this.xPosition && cell.y === this.yPosition) return 'down';
+    return null;
   }
 
   /**

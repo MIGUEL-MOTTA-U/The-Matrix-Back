@@ -43,7 +43,7 @@ export default class MatchController {
     const { userId } = req.params as { userId: string };
     const userIdParsed = validateString(userId);
     const user = await this.userRepository.getUserById(userIdParsed);
-    if (user.matchId.length !== 0) {
+    if (user.matchId !== null) {
       throw new MatchError(MatchError.PLAYER_ALREADY_IN_MATCH);
     }
     const matchInputDTO = validateMatchInputDTO(req.body as string);
@@ -52,8 +52,8 @@ export default class MatchController {
       host: userIdParsed,
       ...matchInputDTO,
     };
-    this.matchRepository.createMatch(matchDetails);
-    this.userRepository.updateUser(userIdParsed, { matchId: matchDetails.id });
+    await this.matchRepository.createMatch(matchDetails);
+    await this.userRepository.updateUser(userIdParsed, { matchId: matchDetails.id });
     return res.send({ matchId: matchDetails.id });
   }
 
@@ -67,5 +67,14 @@ export default class MatchController {
    */
   public async handleJoinMatch(_req: FastifyRequest, _res: FastifyReply): Promise<void> {
     // TODO
+    // Search for the match by id
+    // Check if the match is already started
+    // Check if the user is already in a match
+    // If not, update the match with the user id and update the user with the match id
+    // Then start the match
+    // If the match is not found, throw an error
+    // If the user is not found, throw an error
+    // If the user is already in a match, throw an error
+    // If the match is already started, throw an error
   }
 }

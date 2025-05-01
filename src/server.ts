@@ -53,3 +53,5 @@ export const logger = server.log;
 export const redis = server.redis;
 // We can use the server config directly for enviroment variables.
 export const config = server.config;
+// We can use the server prisma client directly for database access.
+export const prisma = server.prisma;

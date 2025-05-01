@@ -1,5 +1,5 @@
 import Cell from '../../../../../src/app/game/match/boards/CellBoard.js';
-import BoardDifficulty1 from '../../../../../src/app/game/match/boards/BoardDifficulty1.js';
+import Level1Board from '../../../../../src/app/game/match/boards/levels/Level1Board.js';
 import Fruit from '../../../../../src/app/game/match/boards/Fruit.js';
 import { describe, it, expect, vi } from 'vitest';
 import Troll from '../../../../../src/app/game/characters/enemies/Troll.js';
@@ -34,7 +34,7 @@ describe('Board', () => {
   });
 
   it('should generate the board', async () => {
-    const board = new BoardDifficulty1(match, 'desert', 1);
+    const board = new Level1Board(match, 'desert', 1);
     await board.initialize();
     const cellsBoard = board.getBoard();
     expect(cellsBoard).toHaveLength(16);
@@ -47,7 +47,7 @@ describe('Board', () => {
   });
 
   it('should generate the enemies', async () => {
-    const board = new BoardDifficulty1(match, 'desert', 1);
+    const board = new Level1Board(match, 'desert', 1);
     await board.initialize();
     const enemies = board.getEnemies();
     expect(enemies).toHaveLength(4);
@@ -62,7 +62,7 @@ describe('Board', () => {
   });
 
   it('should remove a fruit', async () => {
-    const board = new BoardDifficulty1(match, 'desert', 1);
+    const board = new Level1Board(match, 'desert', 1);
     await board.initialize();
     expect(board.getBoard()[4][10].getItem()).toBeInstanceOf(Fruit);
     await board.removeFruit({ x: 4, y: 10 });
@@ -71,7 +71,7 @@ describe('Board', () => {
   });
 
   it('should set up players', async () => {
-    const board = new BoardDifficulty1(match, 'desert', 1);
+    const board = new Level1Board(match, 'desert', 1);
     await board.initialize();
     const host = 'host';
     const guest = 'guest';

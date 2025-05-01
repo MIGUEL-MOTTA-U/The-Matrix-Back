@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { v4 as uuidv4 } from 'uuid';
 import type UserRepository from '../../schemas/UserRepository.js';
-import { validateString } from '../../schemas/zod.js';
+import { validateString, validateUserQueue } from '../../schemas/zod.js';
 
 /**
  * @class UserController
@@ -24,7 +24,7 @@ export default class UserController {
    */
   public async handleCreateUser(_req: FastifyRequest, res: FastifyReply): Promise<void> {
     const userId: string = uuidv4();
-    await this.userRepository.createUser({ id: userId, matchId: '' });
+    await this.userRepository.createUser(validateUserQueue({ id: userId, matchId: null }));
     return res.send({ userId });
   }
 

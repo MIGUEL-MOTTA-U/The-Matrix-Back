@@ -1,7 +1,7 @@
-import MatchError from '../errors/MatchError.js';
-import { redis } from '../server.js';
-import type UserRepository from './UserRepository.js';
-import type { UserQueue } from './zod.js';
+import MatchError from '../../errors/MatchError.js';
+import { redis } from '../../server.js';
+import type UserRepository from '../UserRepository.js';
+import type { UserQueue } from '../zod.js';
 
 export default class UserRepositoryRedis implements UserRepository {
   public async userExists(userId: string): Promise<boolean> {
@@ -25,7 +25,8 @@ export default class UserRepositoryRedis implements UserRepository {
   }
   public async createUser(user: UserQueue): Promise<void> {
     const userId = user.id;
-    await redis.hset(`users:${userId}`, 'id', userId, 'matchId', user.matchId);
+    const matchId = user.matchId || '';
+    await redis.hset(`users:${userId}`, 'id', userId, 'matchId', matchId);
     await redis.expire(`users:${userId}`, 10 * 60); // 10 minutes expiration
   }
   public async getUserById(userId: string): Promise<UserQueue> {

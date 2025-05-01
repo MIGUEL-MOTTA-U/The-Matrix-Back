@@ -124,9 +124,7 @@ class GameServiceImpl implements GameService {
       message
     );
     const gameMatch = this.matches.get(matchId);
-    // if (await this.gameFinished(gameMatch, socketP1, socketP2)) {
-    //   await this.removeMatch(gameMatch, socketP1, socketP2);
-    // }
+    if (await this.gameFinished(gameMatch, socketP1, socketP2)) return;
     if (!player.isAlive())
       return socketP1.send(
         this.parseToString({
@@ -229,8 +227,8 @@ class GameServiceImpl implements GameService {
     );
     await gameMatch.initialize();
     this.matches.set(matchDetails.id, gameMatch);
-    this.userRepository.updateUser(matchDetails.host, { matchId: matchDetails.id });
-    this.userRepository.updateUser(matchDetails.guest, { matchId: matchDetails.id });
+    await this.userRepository.updateUser(matchDetails.host, { matchId: matchDetails.id });
+    await this.userRepository.updateUser(matchDetails.guest, { matchId: matchDetails.id });
     return gameMatch;
   }
 
@@ -308,8 +306,8 @@ class GameServiceImpl implements GameService {
     this.matches.delete(gameMatch.getId());
     this.removeConnection(gameMatch.getHost());
     this.removeConnection(gameMatch.getGuest());
-    this.userRepository.updateUser(gameMatch.getHost(), { matchId: '' });
-    this.userRepository.updateUser(gameMatch.getGuest(), { matchId: '' });
+    await this.userRepository.updateUser(gameMatch.getHost(), { matchId: null, role: 'HOST' });
+    await this.userRepository.updateUser(gameMatch.getGuest(), { matchId: null, role: 'HOST' });
     this.matchRepository.removeMatch(gameMatch.getId());
     return;
   }

@@ -15,7 +15,7 @@ import { config, logger } from '../../../server.js';
 import type Player from '../characters/players/Player.js';
 import type GameService from '../services/GameService.js';
 import type Board from './boards/Board.js';
-import BoardDifficulty1 from './boards/BoardDifficulty1.js';
+import BoardFactory from './boards/BoardFactory.js';
 /**
  * @class Match
  * Class representing a match between two players.
@@ -48,7 +48,7 @@ class Match {
     this.map = map;
     this.host = host;
     this.guest = guest;
-    this.board = new BoardDifficulty1(this, this.map, this.level);
+    this.board = BoardFactory.createBoard(this, this.map, this.level);
     this.started = false;
     this.timeSeconds = config.MATCH_TIME_SECONDS; // default time in seconds is 300
     this.running = true;
@@ -184,9 +184,9 @@ class Match {
    */
   public async stopGame(): Promise<void> {
     if (this.running) {
+      this.running = false;
       await this.stopTime();
       await this.board.stopGame();
-      this.running = false;
     }
   }
 
@@ -230,11 +230,12 @@ class Match {
   private async startTimeMatch(): Promise<void> {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
+    const timerSpeed = config.TIMER_SPEED_MS;
     const fileName =
       config.NODE_ENV === 'development'
         ? resolve(__dirname, '../../../../dist/src/workers/clock.js')
         : resolve(__dirname, '../../../workers/clock.js');
-    this.worker = new Worker(fileName);
+    this.worker = new Worker(fileName, { workerData: { timerSpeed } });
 
     this.worker.on('message', async (_message) => {
       if (this.timeSeconds <= 0) {

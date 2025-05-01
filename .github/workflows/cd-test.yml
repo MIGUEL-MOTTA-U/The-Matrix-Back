@@ -1,0 +1,97 @@
+# filepath: .github/workflows/test_cd-test.yml
+name: Test CD Bad Ice Cream Dev
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Set up Node.js version
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'pnpm'
+
+      #- name: Create .env file
+      #  run: |
+      #    echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
+      #    echo "REDIS_URL=${{ secrets.REDIS_URL }}" >> .env
+      #    cat .env
+
+      - name: pnpm install and Prisma setup
+        run: |
+          pnpm install
+          pnpm prisma:generate
+          pnpm run build
+          pnpm run test
+
+      - name: Zip artifact for deployment
+        run: zip -r release.zip ./* 
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-app
+          path: release.zip
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: node-app
+
+      - name: Unzip artifact for deployment
+        run: unzip release.zip
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      #- name: Create .env file
+      #  run: |
+      #    echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
+      #    echo "REDIS_URL=${{ secrets.REDIS_URL }}" >> .env
+
+      - name: Run Prisma migrations
+        run: |
+          pnpm install --prod
+          pnpm prisma:migrate:deploy
+      
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'bad-ice-cream-back-dev'
+          slot-name: 'Production-dev'
+          package: .
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_DEV }}
+          clean: true

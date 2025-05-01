@@ -89,6 +89,30 @@ const validateInfo = (data: unknown): Info => {
   return schema.parse(data);
 };
 
+const validateCustomMapKey = (data: unknown): CustomMapKey => {
+  const schema = objects.customMapKeySchema;
+  return schema.parse(data);
+};
+
+const validatePathResult = (data: unknown): PathResult => {
+  const schema = objects.pathResultSchema;
+  return schema.parse(data);
+};
+
+const validatePathResultWithDirection = (data: unknown): PathResultWithDirection => {
+  const schema = objects.PathResultWithDirectionSchema;
+  return schema.parse(data);
+};
+
+const parseCoordinatesToString = (coordinates: CellCoordinates): string => {
+  return `${coordinates.x},${coordinates.y}`;
+};
+
+const parseStringToCoordinates = (coordinates: string): CellCoordinates => {
+  const [x, y] = coordinates.split(',').map(Number);
+  return { x, y };
+};
+
 interface MatchInputDTO {
   level: number;
   map: string;
@@ -156,7 +180,7 @@ interface GameMessageOutput {
 }
 interface GameMessageInput {
   type: 'movement' | 'exec-power' | 'rotate' | 'set-color';
-  payload: 'up' | 'down' | 'left' | 'right' | string;
+  payload: Direction | string;
 }
 interface PlayerState {
   id: string;
@@ -169,12 +193,12 @@ interface EndMatch {
 interface UpdateEnemy {
   enemyId: string;
   coordinates: CellCoordinates;
-  direction: 'up' | 'down' | 'left' | 'right';
+  direction: Direction;
 }
 interface PlayerMove {
   id: string;
   coordinates: CellCoordinates;
-  direction: 'up' | 'down' | 'left' | 'right';
+  direction: Direction;
   state: 'alive' | 'dead';
   idItemConsumed?: string;
   numberOfFruits?: number;
@@ -193,8 +217,9 @@ interface UpdateAll {
 }
 
 interface UserQueue {
+  role?: PlayerType;
   id: string;
-  matchId: string;
+  matchId: string | null;
   color?: string;
 }
 
@@ -206,6 +231,22 @@ interface UpdateFruits {
   nextFruitType: string | null;
 }
 
+interface CustomMapKey {
+  map: string;
+  level: number;
+}
+
+interface PathResult {
+  distance: number;
+  path: CellCoordinates[];
+}
+
+interface PathResultWithDirection extends PathResult {
+  direction: Direction;
+}
+
+type Direction = 'up' | 'down' | 'left' | 'right';
+type PlayerType = 'HOST' | 'GUEST';
 export type {
   MatchInputDTO,
   MatchDetails,
@@ -227,6 +268,11 @@ export type {
   UpdateAll,
   UpdateFruits,
   Info,
+  CustomMapKey,
+  Direction,
+  PathResult,
+  PathResultWithDirection,
+  PlayerType,
 };
 export {
   validateString,
@@ -247,4 +293,9 @@ export {
   validateBoardItemDTO,
   validateUpdateFruits,
   validateInfo,
+  validateCustomMapKey,
+  validatePathResult,
+  validatePathResultWithDirection,
+  parseCoordinatesToString,
+  parseStringToCoordinates,
 };

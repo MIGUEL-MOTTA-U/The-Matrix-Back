@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import Player from '../../../../../src/app/game/characters/players/Player.js';
-import BoardDifficulty1 from '../../../../../src/app/game/match/boards/BoardDifficulty1.js';
+import Level1Board from '../../../../../src/app/game/match/boards/levels/Level1Board.js';
 import Cell from '../../../../../src/app/game/match/boards/CellBoard.js';
 import CharacterError from '../../../../../src/errors/CharacterError.js';
 import { mockDeep, mockReset } from 'vitest-mock-extended';
@@ -35,7 +35,7 @@ describe('Player', () => {
     })
 
     it('should create a player', () => {
-        const board = new BoardDifficulty1(match, 'map', 1);
+        const board = new Level1Board(match, 'map', 1);
         const cell = new Cell(1, 1);
         const player = new Player(cell, board, 'id-player-test-1');
         expect(player).toBeDefined();
@@ -44,14 +44,14 @@ describe('Player', () => {
     })
 
     it('player should not kill', () => {
-        const board = new BoardDifficulty1(match,'map', 1);
+        const board = new Level1Board(match,'map', 1);
         const cell = new Cell(1, 1);
         const player = new Player(cell, board, 'id-player-test-2');
         expect(player.kill()).toBeFalsy();
     })
 
     it('player should die', () => {
-        const board = new BoardDifficulty1(match,'map', 1);
+        const board = new Level1Board(match,'map', 1);
         const cell = new Cell(1, 1);
         const player = new Player(cell, board, 'id-player-test-3');
         player.die();
@@ -59,7 +59,7 @@ describe('Player', () => {
     });
 
     it('player should move left',async () => {
-        const board = new BoardDifficulty1(match,'map', 1);
+        const board = new Level1Board(match,'map', 1);
         const host = 'host';
         const guest = 'guest';
         await board.startGame(host, guest);
@@ -74,7 +74,7 @@ describe('Player', () => {
     })
 
     it('player should move right',async () => {
-        const board = new BoardDifficulty1(match,'map', 1);
+        const board = new Level1Board(match,'map', 1);
         const host = 'host';
         const guest = 'guest';
         await board.startGame(host, guest);
@@ -89,7 +89,7 @@ describe('Player', () => {
     })
 
     it('player should move up',async () => {
-        const board = new BoardDifficulty1(match,'map', 1);
+        const board = new Level1Board(match,'map', 1);
         const host = 'host';
         const guest = 'guest';
         await board.startGame(host, guest);
@@ -104,7 +104,7 @@ describe('Player', () => {
     })
 
     it('player should move down',async () => {
-        const board = new BoardDifficulty1(match,'map', 1);
+        const board = new Level1Board(match,'map', 1);
         const host = 'host';
         const guest = 'guest';
         await board.startGame(host, guest);
@@ -119,7 +119,7 @@ describe('Player', () => {
     })
 
     it('should not move out the limits', async () => {
-        const board = new BoardDifficulty1(match,'map', 1);
+        const board = new Level1Board(match,'map', 1);
         const host = 'host';
         const guest = 'guest';
         await board.startGame(host, guest);
@@ -131,7 +131,7 @@ describe('Player', () => {
     })
 
     it('should not move other player cell', async () => {
-        const board = new BoardDifficulty1(match,'map', 1);
+        const board = new Level1Board(match,'map', 1);
         const host = 'host';
         const guest = 'guest';
         await board.startGame(host, guest);

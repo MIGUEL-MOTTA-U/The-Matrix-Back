@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import Cell from '../../../../../src/app/game/match/boards/CellBoard.js';
-import BoardDifficulty1 from '../../../../../src/app/game/match/boards/BoardDifficulty1.js';
+import Level1Board from '../../../../../src/app/game/match/boards/levels/Level1Board.js';
 import Fruit from '../../../../../src/app/game/match/boards/Fruit.js';
 import Troll from '../../../../../src/app/game/characters/enemies/Troll.js';
 import { mockDeep, mockReset } from 'vitest-mock-extended';
@@ -13,12 +13,16 @@ vi.mock('../../../../../src/server.js', () => ({
         warn: vi.fn(),
         error: vi.fn(),
     },
+    config: {
+        ENEMIES_SPEED_MS: 1000,
+
+    }
 }));
 
 
 describe('Cell', () => {
     const match = mockDeep<Match>();
-    const board = new BoardDifficulty1(match, 'desert', 1);
+    const board = new Level1Board(match, 'desert', 1);
 
     
     beforeEach(() => {

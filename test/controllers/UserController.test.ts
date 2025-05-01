@@ -12,6 +12,7 @@ vi.mock('uuid', () => ({
 
 vi.mock('../../src/schemas/zod.js', () => ({
   validateString: vi.fn((str: string) => str),
+  validateUserQueue: vi.fn((user: { id: string; matchId: string | null }) => user),
 }));
 vi.mock('../../src/server.js', () => ({
   redis: {

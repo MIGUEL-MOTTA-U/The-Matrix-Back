@@ -78,6 +78,7 @@ export default class MatchMakingController {
   }
 
   private async extendExpiration(matchId: string, userId: string): Promise<void> {
+    logger.info(`Extending expiration for match: ${matchId} and user: ${userId}`);
     await this.matchRepository.extendSession(matchId, 10);
     await this.userRepository.extendSession(userId, 10);
   }

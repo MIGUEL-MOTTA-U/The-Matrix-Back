@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify';
 import { configureDI } from './di.js';
 import { configureEnv } from './env.js';
 import { handleError } from './errorsHandler.js';
+import prismaPlugin from './prisma.js';
 import { configureRedis } from './redis.js';
 import { configureStatic } from './static.js';
 import { configureWebSocket } from './websocket.js';
@@ -21,6 +22,8 @@ export async function registerPlugins(server: FastifyInstance): Promise<void> {
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     credentials: true,
   });
+  // Set up Prisma
+  await server.register(prismaPlugin);
   // Set up WebSocket
   await configureWebSocket(server);
   // Set up static files

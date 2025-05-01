@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Match from '../../../../../src/app/game/match/Match.js';
-import BoardDifficulty1 from '../../../../../src/app/game/match/boards/BoardDifficulty1.js';
+import Level1Board from '../../../../../src/app/game/match/boards/levels/Level1Board.js';
 import { mockDeep } from 'vitest-mock-extended';
 import type GameService from '../../../../../src/app/game/services/GameService.js';
 import type Player from '../../../../../src/app/game/characters/players/Player.js';
@@ -22,7 +22,7 @@ vi.mock('../../../../../src/server.js', () => ({
   },
 }));
 
-vi.mock('../../../../../src/app/game/match/boards/BoardDifficulty1.js', () => ({
+vi.mock('../../../../../src/app/game/match/boards/levels/Level1Board.js', () => ({
   default: vi.fn().mockImplementation(() => ({
     initialize: vi.fn(),
     startGame: vi.fn(),
@@ -48,7 +48,7 @@ describe('Match', () => {
 
   it('should initialize the match', async () => {
     await match.initialize();
-    expect(BoardDifficulty1).toHaveBeenCalledWith(match, 'map-1', 1);
+    expect(Level1Board).toHaveBeenCalledWith(match, 'map-1', 1);
     expect(match.isRunning()).toBe(true);
   });
 

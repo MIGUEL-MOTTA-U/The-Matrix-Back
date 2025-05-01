@@ -5,15 +5,14 @@ import MatchController from '../../src/controllers/rest/MatchController.js';
 import type MatchRepository from '../../src/schemas/MatchRepository.js';
 import type UserRepository from '../../src/schemas/UserRepository.js';
 import { validateMatchInputDTO, validateString } from '../../src/schemas/zod.js';
-
 const mockMatchRepository = mock<MatchRepository>();
 const mockUserRepository = mock<UserRepository>();
 
-vi.mock('../../src/schemas/MatchRepositoryRedis', () => ({
+vi.mock('../../src/schemas/repositories/MatchRepositoryRedis', () => ({
   default: { getInstance: () => mockMatchRepository },
 }));
 
-vi.mock('../../src/schemas/UserRepositoryRedis', () => ({
+vi.mock('../../src/schemas/repositories/UserRepositoryRedis', () => ({
   default: { getInstance: () => mockUserRepository },
 }));
 
@@ -60,7 +59,7 @@ describe('MatchController', () => {
       vi.mocked(validateString).mockReturnValue('user123');
       vi.mocked(validateMatchInputDTO).mockReturnValue({ level: 1, map: 'test-map' }); 
       mockUserRepository.getUserById.mockResolvedValue({
-        matchId: '',
+        matchId: null,
         id: '',
       });
       mockMatchRepository.createMatch.mockResolvedValue();
