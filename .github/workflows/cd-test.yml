@@ -76,7 +76,7 @@ jobs:
         with:
           version: 10
 
-      #- name: Create .env file
+      # - name: Create .env file
       #  run: |
       #    echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
       #    echo "REDIS_URL=${{ secrets.REDIS_URL }}" >> .env
