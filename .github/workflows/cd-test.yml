@@ -83,7 +83,7 @@ jobs:
 
       - name: Run Prisma migrations
         run: |
-          pnpm install --prod
+          pnpm install
           pnpm prisma:migrate:deploy
       
       - name: Deploy to Azure Web App
