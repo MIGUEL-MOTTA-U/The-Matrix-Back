@@ -28,15 +28,9 @@ jobs:
           node-version: '22.x'
           cache: 'pnpm'
 
-      #- name: Create .env file
-      #  run: |
-      #    echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
-      #    echo "REDIS_URL=${{ secrets.REDIS_URL }}" >> .env
-      #    cat .env
-
       - name: pnpm install and Prisma setup
         run: |
-          pnpm install
+          pnpm install --shamefully-hoist
           pnpm prisma:generate
           pnpm run build
           pnpm run test
@@ -100,4 +94,3 @@ jobs:
           slot-name: 'Production'
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_531D7E87F6B5438E9D0D6E90D087973B }}
-          clean: true
