@@ -60,32 +60,6 @@ jobs:
       - name: Unzip artifact for deployment
         run: unzip release.zip
       
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22.x'
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      # - name: Create .env file
-      #  run: |
-      #    echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
-      #    echo "REDIS_URL=${{ secrets.REDIS_URL }}" >> .env
-
-      - name: Run Prisma migrations
-        env:
-          DB_DIRECT_URL: ${{ secrets.DB_DIRECT_URL }}
-          DB_URI: ${{ secrets.DB_URI }}
-          DB_USER: ${{ secrets.DB_USER }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          DB_NAME: ${{ secrets.DB_NAME }}
-        run: |
-          pnpm install
-          pnpm prisma:migrate:deploy
-      
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v3
