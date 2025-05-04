@@ -56,25 +56,4 @@ export default class MatchController {
     await this.userRepository.updateUser(userIdParsed, { matchId: matchDetails.id });
     return res.send({ matchId: matchDetails.id });
   }
-
-  /**
-   * Handles the request to join a match.
-   *
-   * @param {FastifyRequest} req The request from the client.
-   * @param {FastifyReply} res The response to be sent to the client.
-   * @return {Promise<void>} A promise that resolves when the user joins the match.
-   * @throws {MatchError} If the user is not found, the match is not found, or the user is already in a match.
-   */
-  public async handleJoinMatch(_req: FastifyRequest, _res: FastifyReply): Promise<void> {
-    // TODO
-    // Search for the match by id
-    // Check if the match is already started
-    // Check if the user is already in a match
-    // If not, update the match with the user id and update the user with the match id
-    // Then start the match
-    // If the match is not found, throw an error
-    // If the user is not found, throw an error
-    // If the user is already in a match, throw an error
-    // If the match is already started, throw an error
-  }
 }

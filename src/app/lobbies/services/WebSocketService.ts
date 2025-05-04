@@ -7,6 +7,11 @@ export default interface WebSocketService {
   registerConnection: (userId: string, socket: WebSocket) => void;
   removeConnection: (userId: string) => void;
   matchMaking: (match: MatchDetails) => Promise<void>;
-  notifyMatchFound: (match: Match, ghostMatchId: string) => Promise<void>;
+  notifyMatchFound: (match: Match) => Promise<void>;
   setMatchMakingService(matchMakingService: MatchMakingService): void;
+  validateMatchToJoin: (matchId: string, guestId: string) => Promise<void>;
+  joinGame: (matchDetails: MatchDetails, guestId: string, guestSocket: WebSocket) => Promise<void>;
+  validateMatchToPublish: (matchId: string, hostId: string) => Promise<void>;
+  publishMatch: (matchId: string, hostSocket: WebSocket) => void;
+  removePublishedMatch: (matchId: string) => void;
 }

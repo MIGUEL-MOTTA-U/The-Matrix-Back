@@ -3,6 +3,7 @@ import type MatchRepository from '../../../schemas/MatchRepository.js';
 import type UserRepository from '../../../schemas/UserRepository.js';
 import {
   type CustomMapKey,
+  type MatchDTO,
   type MatchDetails,
   type UserQueue,
   validateUserQueue,
@@ -83,11 +84,16 @@ class MatchMaking implements MatchMakingService {
     const match = await this.createMatch(matchDetails);
     await this.updateUser(hostId, matchId);
     await this.updateMatch(matchId, hostId, guest);
-    this.webSocketService.notifyMatchFound(match, ghostMatch);
+    await this.webSocketService.notifyMatchFound(match);
+    await this.matchRepository.removeMatch(ghostMatch);
   }
 
-  public cancelMatchMaking(_userId: string): void {
-    throw new Error('Method not implemented.');
+  public async joinMatch(matchDetails: MatchDetails, guestId: string): Promise<MatchDTO> {
+    matchDetails.guest = guestId;
+    const match = await this.createMatch(matchDetails);
+    await this.updateUser(guestId, matchDetails.id);
+    await this.updateMatch(matchDetails.id, matchDetails.host, guestId);
+    return match.getMatchDTO();
   }
 
   private async updateMatch(matchId: string, host: string, guest: string): Promise<void> {
