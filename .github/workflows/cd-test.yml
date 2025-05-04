@@ -1,5 +1,4 @@
-# filepath: .github/workflows/test_cd-test.yml
-name: Test CD Bad Ice Cream Dev
+name: CD Bad Ice Cream Dev
 
 on:
   push:
@@ -28,7 +27,7 @@ jobs:
           node-version: '22.x'
           cache: 'pnpm'
 
-      - name: pnpm install and Prisma setup
+      - name: pnpm install, build and test
         run: |
           pnpm install
           pnpm prisma:generate
