@@ -24,6 +24,7 @@ const cellDTOSchema = z.object({
   coordinates: cellCordinatesSchema,
   item: boardItemSchema.nullable(),
   character: boardItemSchema.nullable(),
+  frozen: z.boolean(),
 });
 
 const playerStateSchema = z.object({
@@ -82,6 +83,11 @@ const gameMessageInputSchema = z.object({
   payload: z.union([directionSchema, z.string()]),
 });
 
+const updateFrozenCellsSchema = z.object({
+  cells: z.array(cellDTOSchema),
+  direction: directionSchema,
+});
+
 const gameMessageOutputSchema = z.object({
   type: z.enum([
     'update-state',
@@ -91,14 +97,19 @@ const gameMessageOutputSchema = z.object({
     'update-time',
     'error',
     'update-all',
+    'update-fruits',
+    'update-frozen-cells',
   ]),
   payload: z.union([
-    playerMoveSchema,
+    playerStateSchema,
     EndMatchSchema,
     updateEnemySchema,
+    playerMoveSchema,
     updateTimeSchema,
     errorMatchSchema,
     updateAllSchema,
+    fruitsSchema,
+    updateFrozenCellsSchema,
   ]),
 });
 

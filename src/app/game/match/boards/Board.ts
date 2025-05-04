@@ -222,10 +222,10 @@ abstract class Board {
     return this.guest;
   }
 
-  public getBestPathPlayers(targetCell: Cell): Direction | null {
+  public getBestPathPlayers(targetCell: Cell, canBreakFrozen: boolean): Direction | null {
     if (!this.host || !this.guest) throw new BoardError(BoardError.USER_NOT_DEFINED);
-    // Certenly, the enemies can kill
-    const mappedGraph = this.getMappedGraph(true);
+    // Certainly, the enemies can kill
+    const mappedGraph = this.getMappedGraph(true, canBreakFrozen);
     const hostPath = this.host.isAlive()
       ? this.host.getShortestPath(targetCell, mappedGraph)
       : null;
@@ -244,17 +244,17 @@ abstract class Board {
     return null;
   }
 
-  private getMappedGraph(canWalkOverPlayers: boolean): Graph {
+  private getMappedGraph(canWalkOverPlayers: boolean, canBreakFrozen: boolean): Graph {
     const graph = new Graph();
     for (let i = 0; i < this.ROWS; i++) {
       for (let j = 0; j < this.COLS; j++) {
         const cell = this.board[i][j];
         graph.addNode(parseCoordinatesToString(cell.getCoordinates()));
-        if (!cell.blocked()) {
+        if (!cell.blocked() && (canBreakFrozen || !cell.isFrozen())) {
           const neighbors: Cell[] = cell.getNeighbors();
           for (const neighbor of neighbors) {
             // The neighbor exists, is not blocked
-            const blocked = neighbor.blocked();
+            const blocked = neighbor.blocked() || (canBreakFrozen ? false : neighbor.isFrozen());
             const possibleCharacter = neighbor.getCharacter();
             if (
               !blocked &&

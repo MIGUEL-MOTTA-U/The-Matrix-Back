@@ -1,3 +1,4 @@
+import BoardError from '../../../../errors/BoardError.js';
 import type { CellCoordinates, CellDTO, Direction } from '../../../../schemas/zod.js';
 import type Character from '../../characters/Character.js';
 import type { BoardItem } from './BoardItem.js';
@@ -18,6 +19,61 @@ class Cell {
   private character: Character | null = null;
   private left: Cell | null = null;
   private right: Cell | null = null;
+  private frozen = false;
+
+  /**
+   * Returns if the cell is frozen.
+   *
+   * @returns {boolean} True if the cell is frozen, false otherwise.
+   */
+  public isFrozen(): boolean {
+    return this.frozen;
+  }
+
+  public executePower(direction: Direction): CellDTO[] {
+    const cells: CellDTO[] = [];
+    const nextCell = this.cellFromDirection(direction);
+    if (!nextCell || nextCell.blocked()) return cells;
+    if (nextCell.isFrozen()) return nextCell.unfreeze(cells, direction);
+    return nextCell.freeze(cells, direction);
+  }
+
+  private freeze(cells: CellDTO[], direction: Direction): CellDTO[] {
+    if (this.frozen || this.blocked() || this.getCharacter() !== null) return cells;
+    this.frozen = true;
+    const cellDTO = this.getCellDTO();
+    if (cellDTO) cells.push(cellDTO);
+
+    const nextCell = this.cellFromDirection(direction);
+
+    if (nextCell) nextCell.freeze(cells, direction);
+    return cells;
+  }
+
+  private unfreeze(cells: CellDTO[], direction: Direction): CellDTO[] {
+    if (!this.frozen) return cells;
+    const cellDTO = this.getCellDTO();
+    this.frozen = false;
+    if (cellDTO) cells.push(cellDTO);
+    const nextCell = this.cellFromDirection(direction);
+    if (nextCell) nextCell.unfreeze(cells, direction);
+    return cells;
+  }
+
+  private cellFromDirection(direction: Direction): Cell | null {
+    switch (direction) {
+      case 'up':
+        return this.up;
+      case 'down':
+        return this.down;
+      case 'left':
+        return this.left;
+      case 'right':
+        return this.right;
+      default:
+        throw new BoardError(BoardError.FREEZE_DIRECTION_ERROR);
+    }
+  }
 
   /**
    * Returns the cell above the current cell.
@@ -187,11 +243,12 @@ class Cell {
    * @return {CellDTO | null} A CellDTO object representing the cell, or null if the cell is empty.
    */
   public getCellDTO(): CellDTO | null {
-    if (!this.item && !this.character) return null;
+    if (!this.item && !this.character && !this.frozen) return null;
     return {
       coordinates: this.getCoordinates(),
       item: this.item?.getDTO() || null,
       character: this.character?.getDTO() || null,
+      frozen: this.frozen,
     };
   }
 }

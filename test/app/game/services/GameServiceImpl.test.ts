@@ -380,35 +380,68 @@ describe('GameServiceImpl', () => {
       expect(mockPlayer.changeOrientation).toHaveBeenCalled();
     });
 
-    it('Should Exec power', () => {
-      const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
-      const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
+    it('should handle exec-power message and notify players with frozen cells', async () => {
+      const userId = 'host1';
+      const matchId = 'match1';
+      const message = Buffer.from(JSON.stringify({ type: 'exec-power', payload: '' }));
+      
+      const frozenCells = [
+        { 
+          coordinates: { x: 5, y: 5 }, 
+          item: null,
+          character: null,
+          frozen: true,
+        }
+      ];
+      
+      const playerDirection = 'up';
+      
       const mockPlayer = {
         isAlive: vi.fn().mockReturnValue(true),
-        moveUp: vi.fn().mockResolvedValue({ id: 'host1', position: { x: 0, y: 1 } }),
+        execPower: vi.fn().mockResolvedValue(frozenCells),
+        getOrientation: vi.fn().mockReturnValue(playerDirection),
+        getId: vi.fn().mockReturnValue(userId)
       };
+      
       const mockMatch = {
-        isRunning: vi.fn().mockReturnValue(true),
-        checkLose: vi.fn().mockReturnValue(false),
-        checkWin: vi.fn().mockReturnValue(false),
+        getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
-        getPlayer: vi.fn().mockReturnValue(mockPlayer),
+        isRunning: vi.fn().mockReturnValue(true),
+        checkWin: vi.fn().mockResolvedValue(false),
+        checkLose: vi.fn().mockReturnValue(false),
+        stopGame: vi.fn(),
+        getId: vi.fn().mockReturnValue(matchId)
       };
-      const matchId = 'match1';
+      
+      const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
+      const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
+      
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
-      // Should not fail
-      expect(
-        gameServiceImpl.handleGameMessage(
-          'host1',
-          matchId,
-          Buffer.from(JSON.stringify({ type: 'exec-power', payload: 'up' }))
-        )
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
+      
+      await gameServiceImpl.handleGameMessage(userId, matchId, message);
+      
+      expect(mockPlayer.execPower).toHaveBeenCalled();
+      expect(mockPlayer.getOrientation).toHaveBeenCalled();
+      
+      const expectedPayload = { 
+        cells: frozenCells, 
+        direction: playerDirection 
+      };
+      
+      expect(mockSocketP1.send).toHaveBeenCalledWith(
+        JSON.stringify({ type: 'update-frozen-cells', payload: expectedPayload })
+      );
+      
+      expect(mockSocketP2.send).toHaveBeenCalledWith(
+        JSON.stringify({ type: 'update-frozen-cells', payload: expectedPayload })
       );
     });
 
