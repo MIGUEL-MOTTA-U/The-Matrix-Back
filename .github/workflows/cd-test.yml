@@ -31,7 +31,7 @@ jobs:
       - name: pnpm install and Prisma setup
         run: |
           pnpm install
-          pnpm prisma:generate:deploy
+          pnpm prisma:generate
           pnpm run build
           pnpm run test
 
@@ -42,7 +42,7 @@ jobs:
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_NAME: ${{ secrets.DB_NAME }}
-        run: pnpm prisma:migrate
+        run: pnpm prisma:migrate:deploy
 
 
       - name: Zip artifact for deployment
