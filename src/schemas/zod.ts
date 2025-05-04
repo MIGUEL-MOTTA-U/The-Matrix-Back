@@ -135,6 +135,7 @@ interface CellDTO {
   coordinates: CellCoordinates;
   item: BoardItemDTO | null;
   character: BoardItemDTO | null;
+  frozen: boolean;
 }
 interface BoardItemDTO {
   type: string;
@@ -167,7 +168,8 @@ interface GameMessageOutput {
     | 'update-time'
     | 'error'
     | 'update-all'
-    | 'update-fruits';
+    | 'update-fruits'
+    | 'update-frozen-cells';
   payload:
     | PlayerMove
     | EndMatch
@@ -176,7 +178,8 @@ interface GameMessageOutput {
     | ErrorMatch
     | UpdateAll
     | UpdateFruits
-    | PlayerState;
+    | PlayerState
+    | FrozenCells;
 }
 interface GameMessageInput {
   type: 'movement' | 'exec-power' | 'rotate' | 'set-color';
@@ -242,6 +245,11 @@ interface PathResult {
 }
 
 interface PathResultWithDirection extends PathResult {
+  direction: Direction;
+}
+
+interface FrozenCells {
+  cells: CellDTO[];
   direction: Direction;
 }
 

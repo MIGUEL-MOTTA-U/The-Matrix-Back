@@ -175,9 +175,7 @@ describe('validateGameMessageOutput', () => {
       type: 'update-state',
       payload: {
         id: 'player1',
-        coordinates: { x: 1, y: 2 },
-        direction: 'up',
-        state: 'alive'
+        state: 'alive',
       }
     };
     expect(validateGameMessageOutput(validData)).toEqual(validData);
@@ -353,7 +351,8 @@ describe('validateCellDTO', () => {
     const validData = {
       coordinates: { x: 1, y: 2 },
       item: null,
-      character: null
+      character: null,
+      frozen: false
     };
     expect(validateCellDTO(validData)).toEqual(validData);
   });
@@ -455,7 +454,9 @@ describe('validateCellDTO', () => {
     const validData = {
       coordinates: { x: 1, y: 2 },
       item: null,
-      character: null
+      character: null,
+      frozen: false
+
     };
     expect(validateCellDTO(validData)).toEqual(validData);
   });

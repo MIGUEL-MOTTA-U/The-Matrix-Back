@@ -2,7 +2,8 @@ import Enemy from './Enemy.js';
 
 export default class Cow extends Enemy {
   public async calculateMovement(): Promise<void> {
-    const bestPath = this.board.getBestPathPlayers(this.cell) || this.orientation;
+    const canBreakFrozen = false;
+    const bestPath = this.board.getBestPathPlayers(this.cell, canBreakFrozen) || this.orientation;
     try {
       await this.moveAlongPath(bestPath);
     } catch (_error) {

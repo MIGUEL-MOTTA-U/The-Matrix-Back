@@ -12,6 +12,7 @@ import {
   type UpdateTime,
   validateEndMatch,
   validateErrorMatch,
+  validateGameMessageOutput,
   validateGameMesssageInput,
   validatePlayerState,
 } from '../../../schemas/zod.js';
@@ -134,7 +135,7 @@ class GameServiceImpl implements GameService {
       );
 
     switch (type) {
-      case 'movement':
+      case 'movement': {
         try {
           const playerUpdate = await this.movePlayer(player, payload);
           this.notifyPlayers(socketP1, socketP2, { type: 'update-move', payload: playerUpdate });
@@ -149,15 +150,27 @@ class GameServiceImpl implements GameService {
           logger.error(error);
         }
         break;
+      }
       case 'rotate': {
         const rotatedPlayer = this.rotatePlayer(player, payload);
-        this.notifyPlayers(socketP1, socketP2, { type: 'update-move', payload: rotatedPlayer });
+        this.notifyPlayers(
+          socketP1,
+          socketP2,
+          validateGameMessageOutput({ type: 'update-move', payload: rotatedPlayer })
+        );
         break;
       }
-      case 'exec-power':
-        // Handle attack - TODO Implement attack --> Priority 2 <--- NOT MVP
+      case 'exec-power': {
+        const frozenCells = await player.execPower();
+        const playerDirection = player.getOrientation();
+        const messageFrozens = validateGameMessageOutput({
+          type: 'update-frozen-cells',
+          payload: { cells: frozenCells, direction: playerDirection },
+        });
+        this.notifyPlayers(socketP1, socketP2, messageFrozens);
         break;
-      case 'set-color':
+      }
+      case 'set-color': {
         player.setColor(payload);
         await this.userRepository.updateUser(userId, { color: payload });
         this.notifyPlayers(socketP1, socketP2, {
@@ -165,8 +178,10 @@ class GameServiceImpl implements GameService {
           payload: validatePlayerState({ id: player.getId(), state: 'alive', color: payload }),
         });
         break;
-      default:
+      }
+      default: {
         throw new MatchError(MatchError.INVALID_MESSAGE_TYPE);
+      }
     }
 
     if (await this.gameFinished(gameMatch, socketP1, socketP2)) return;

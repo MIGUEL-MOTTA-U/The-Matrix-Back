@@ -125,6 +125,7 @@ describe('Match', () => {
         coordinates: { x: 0, y: 0 },
         item: null,
         character: null,
+        frozen: false,
       },
     ];
 

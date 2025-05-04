@@ -1,6 +1,7 @@
 import CharacterError from '../../../../errors/CharacterError.js';
 import {
   type BoardItemDTO,
+  type CellDTO,
   type Direction,
   type UpdateEnemy,
   validatePlayerState,
@@ -34,8 +35,8 @@ export default abstract class Enemy extends Character {
    * Executes the enemy's special power.
    * Enemies do not have special powers, so this method does nothing.
    */
-  execPower(): void {
-    // Enemy has no power
+  public async execPower(): Promise<CellDTO[]> {
+    return [];
   }
 
   /**
@@ -70,7 +71,7 @@ export default abstract class Enemy extends Character {
    */
   protected validateMove(cell: Cell | null): { character: Character | null; cell: Cell } {
     if (!cell) throw new CharacterError(CharacterError.NULL_CELL); // If it's a border, it can't move.
-    if (cell.blocked()) throw new CharacterError(CharacterError.BLOCKED_CELL); // If it's a block object, it can't move.
+    if (cell.blocked() || cell.isFrozen()) throw new CharacterError(CharacterError.BLOCKED_CELL); // If it's a block object, it can't move.
     const character = cell.getCharacter();
     if (character?.kill()) throw new CharacterError(CharacterError.BLOCKED_CELL); // If it's another enemy, it can't move.
     return { character, cell };

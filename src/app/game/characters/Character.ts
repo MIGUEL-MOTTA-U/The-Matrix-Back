@@ -1,6 +1,7 @@
 import { Mutex } from 'async-mutex';
 import {
   type CellCoordinates,
+  type CellDTO,
   type Direction,
   type PathResult,
   type PathResultWithDirection,
@@ -177,7 +178,7 @@ abstract class Character extends BoardItem {
     return this.orientation;
   }
 
-  abstract execPower(): void;
+  abstract execPower(): Promise<CellDTO[]>;
   abstract die(): boolean;
   abstract kill(): boolean;
   abstract reborn(): void;
