@@ -34,11 +34,11 @@ class Cell {
     const cells: CellDTO[] = [];
     const nextCell = this.cellFromDirection(direction);
     if (!nextCell || nextCell.blocked()) return cells;
-    if (nextCell.isFrozen()) return nextCell.unfreeze(cells, direction);
-    return nextCell.freeze(cells, direction);
+    if (nextCell.isFrozen()) return nextCell.unfreeze(cells, direction, true);
+    return nextCell.freeze(cells, direction, true);
   }
 
-  private freeze(cells: CellDTO[], direction: Direction): CellDTO[] {
+  private freeze(cells: CellDTO[], direction: Direction, keepFreezing: boolean): CellDTO[] {
     if (this.frozen || this.blocked() || this.getCharacter() !== null) return cells;
     this.frozen = true;
     const cellDTO = this.getCellDTO();
@@ -46,17 +46,17 @@ class Cell {
 
     const nextCell = this.cellFromDirection(direction);
 
-    if (nextCell) nextCell.freeze(cells, direction);
+    if (nextCell && keepFreezing) nextCell.freeze(cells, direction, keepFreezing);
     return cells;
   }
 
-  private unfreeze(cells: CellDTO[], direction: Direction): CellDTO[] {
+  private unfreeze(cells: CellDTO[], direction: Direction, keepUnfreezing: boolean): CellDTO[] {
     if (!this.frozen) return cells;
     const cellDTO = this.getCellDTO();
     this.frozen = false;
     if (cellDTO) cells.push(cellDTO);
     const nextCell = this.cellFromDirection(direction);
-    if (nextCell) nextCell.unfreeze(cells, direction);
+    if (nextCell && keepUnfreezing) nextCell.unfreeze(cells, direction, keepUnfreezing);
     return cells;
   }
 
