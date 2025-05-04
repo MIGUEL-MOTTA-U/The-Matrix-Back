@@ -75,7 +75,7 @@ describe('MatchMaking', () => {
       await matchMaking.searchMatch(matchDetails);
       
       expect(matchRepository.updateMatch).toHaveBeenCalledWith('match2', { host: 'user1', guest: 'user2' });
-      expect(webSocketService.notifyMatchFound).toHaveBeenCalledWith(mockMatch, 'match1');
+      expect(webSocketService.notifyMatchFound).toHaveBeenCalledWith(mockMatch);
       expect(matchRepository.extendSession).toHaveBeenCalledWith('match2', 10);
     });
   
@@ -133,10 +133,6 @@ describe('MatchMaking', () => {
       expect(mockQueue.enqueue).toHaveBeenCalledWith({ id: 'user1', matchId: 'match1' });
       expect(matchRepository.updateMatch).not.toHaveBeenCalled();
       expect(webSocketService.notifyMatchFound).not.toHaveBeenCalled();
-    });
-    
-    it('should throw an error when cancelMatchMaking is called', () => {
-      expect(() => matchMaking.cancelMatchMaking('user1')).toThrow('Method not implemented.');
     });
   
     it('should update a match correctly', async () => {

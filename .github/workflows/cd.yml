@@ -30,7 +30,8 @@ jobs:
 
       - name: pnpm install, build, and test
         run: |
-          pnpm install
+          pnpm install --shamefully-hoist
+          pnpm prisma:generate
           pnpm run build
           pnpm run test
 
