@@ -30,6 +30,12 @@ class Cell {
     return this.frozen;
   }
 
+  /**
+   * This method is used to freeze or unfreeze by a player order.
+   * 
+   * @param {Direction} direction The direction to freeze or unfreeze the cell.
+   * @returns {CellDTO[]} An array of CellDTO objects representing the frozen cells.
+   */
   public executePower(direction: Direction): CellDTO[] {
     const cells: CellDTO[] = [];
     const nextCell = this.cellFromDirection(direction);
