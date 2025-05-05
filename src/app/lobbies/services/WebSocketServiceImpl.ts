@@ -69,7 +69,7 @@ export default class WebsocketServiceImpl implements WebsocketService {
     if (!this.matchMakingService) {
       throw new WebSocketError(WebSocketError.MATCHMAKING_SERVICE_NOT_INITIALIZED);
     }
-    this.matchMakingService.searchMatch(match);
+    await this.matchMakingService.searchMatch(match);
   }
 
   /**

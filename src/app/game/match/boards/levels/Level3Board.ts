@@ -7,10 +7,8 @@ import type Cell from '../CellBoard.js';
 import Rock from '../Rock.js';
 
 export default class Level3Board extends Board {
-  private freezedCells: number[][];
   constructor(match: Match, map: string, level: number) {
     super(match, map, level);
-    this.freezedCells = [];
     this.loadContext(); // We exec this method twice, because of TypeScript, it doesn't saves the status assigned after we use the father constructor:)
   }
 

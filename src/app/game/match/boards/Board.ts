@@ -31,6 +31,7 @@ import Fruit from './Fruit.js';
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 abstract class Board {
+  protected freezedCells: number[][];
   protected readonly mutex = new Mutex();
   protected readonly ROWS: number;
   protected readonly COLS: number;
@@ -67,6 +68,7 @@ abstract class Board {
     this.ROWS = 16;
     this.COLS = 16;
     this.board = [];
+    this.freezedCells = [];
     this.enemies = new Map();
     this.map = map;
     this.level = level;
@@ -440,6 +442,17 @@ abstract class Board {
 
   protected getRowCoordinatesInRange(row: number, start: number, end: number): number[][] {
     return Array.from({ length: end - start + 1 }, (_, i) => [row, start + i]);
+  }
+
+  protected getSquareCoordinatesInRange(
+    size: number,
+    rowStart: number,
+    colStart: number,
+    colEnd: number
+  ): number[][] {
+    return Array.from({ length: size }, (_, i) => i + rowStart).flatMap((row) =>
+      this.getRowCoordinatesInRange(row, colStart, colEnd)
+    );
   }
 }
 export default Board;

@@ -69,7 +69,7 @@ class MatchMaking implements MatchMakingService {
       logger.info(
         `Match not found for ${guest} so it was enqueued for match: ${JSON.stringify(matchDetails)}`
       );
-      queue.enqueue({ id: guest, matchId: matchDetails.id });
+      await queue.enqueue({ id: guest, matchId: matchDetails.id });
       return;
     }
     const { id: hostId, matchId } = validateUserQueue(host);
@@ -106,7 +106,7 @@ class MatchMaking implements MatchMakingService {
     await this.userRepository.extendSession(userId, 10);
   }
   private async createMatch(match: MatchDetails): Promise<Match> {
-    return this.gameService.createMatch(match);
+    return await this.gameService.createMatch(match);
   }
 }
 export default MatchMaking;

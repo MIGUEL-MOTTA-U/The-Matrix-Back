@@ -51,11 +51,7 @@ export default class Level2Board extends Board {
     this.rocksCoordinates = [
       ...this.getRowCoordinatesInRange(5, 1, 4),
       ...this.getRowCoordinatesInRange(5, 11, 14),
-
-      ...Array.from({ length: 4 }, (_, i) => i + 6).flatMap((row) =>
-        this.getRowCoordinatesInRange(row, 6, 9)
-      ),
-
+      ...this.getSquareCoordinatesInRange(4, 6, 6, 9),
       ...this.getRowCoordinatesInRange(10, 1, 4),
       ...this.getRowCoordinatesInRange(10, 11, 14),
     ];
