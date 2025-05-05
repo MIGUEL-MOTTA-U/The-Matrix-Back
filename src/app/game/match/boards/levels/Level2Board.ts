@@ -1,7 +1,9 @@
 import { config } from '../../../../../server.js';
 import Cow from '../../../characters/enemies/Cow.js';
+import type Enemy from '../../../characters/enemies/Enemy.js';
 import type Match from '../../Match.js';
 import Board from '../Board.js';
+import type Cell from '../CellBoard.js';
 import Rock from '../Rock.js';
 
 export default class Level2Board extends Board {
@@ -10,14 +12,8 @@ export default class Level2Board extends Board {
     this.loadContext(); // We exec this method twice, because of TypeScript, it doesn't saves the status assigned after we use the father constructor:)
   }
 
-  protected setUpEnemies(): void {
-    for (let i = 0; i < this.ENEMIES; i++) {
-      const x = this.enemiesCoordinates[i][0];
-      const y = this.enemiesCoordinates[i][1];
-      const troll = new Cow(this.board[x][y], this);
-      this.enemies.set(troll.getId(), troll);
-      this.board[x][y].setCharacter(troll);
-    }
+  protected getBoardEnemy(cell: Cell): Enemy {
+    return new Cow(cell, this);
   }
 
   protected setUpInmovableObjects(): void {
@@ -25,7 +21,6 @@ export default class Level2Board extends Board {
       const x = this.rocksCoordinates[i][0];
       const y = this.rocksCoordinates[i][1];
       if (this.board[x][y].getCharacter() === null) {
-        // This check should always be true
         const rock = new Rock(this.board[x][y], this);
         this.board[x][y].setItem(rock);
       }
@@ -40,8 +35,6 @@ export default class Level2Board extends Board {
     this.enemiesCoordinates = [
       [2, 3],
       [2, 12],
-      [7, 3],
-      [7, 12],
       [13, 3],
       [13, 12],
     ];

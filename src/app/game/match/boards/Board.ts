@@ -10,7 +10,13 @@ import {
   parseCoordinatesToString,
   validateUpdateFruits,
 } from '../../../../schemas/zod.js';
-import type { CellCoordinates, Direction, GameMessageOutput } from '../../../../schemas/zod.js';
+import type {
+  CellCoordinates,
+  Direction,
+  GameMessageOutput,
+  PathResultWithDirection,
+  PlayersPaths,
+} from '../../../../schemas/zod.js';
 import { config, logger } from '../../../../server.js';
 import { Graph } from '../../../../utils/Graph.js';
 import type Enemy from '../../characters/enemies/Enemy.js';
@@ -52,7 +58,7 @@ abstract class Board {
   protected ENEMIES_SPEED = 1000; // Milliseconds
 
   //protected abstract generateBoard(): void;
-  protected abstract setUpEnemies(): void;
+  protected abstract getBoardEnemy(cell: Cell): Enemy;
   protected abstract setUpInmovableObjects(): void;
   protected abstract loadContext(): void;
 
@@ -222,26 +228,45 @@ abstract class Board {
     return this.guest;
   }
 
-  public getBestPathPlayers(targetCell: Cell, canBreakFrozen: boolean): Direction | null {
+  public getBestDirectionToPlayers(targetCell: Cell, canBreakFrozen: boolean): Direction | null {
     if (!this.host || !this.guest) throw new BoardError(BoardError.USER_NOT_DEFINED);
     // Certainly, the enemies can kill
-    const mappedGraph = this.getMappedGraph(true, canBreakFrozen);
-    const hostPath = this.host.isAlive()
-      ? this.host.getShortestPath(targetCell, mappedGraph)
-      : null;
-    const guestPath = this.guest.isAlive()
-      ? this.guest.getShortestPath(targetCell, mappedGraph)
-      : null;
+    const bestPath = this.getBestPathToPlayers(targetCell, canBreakFrozen);
+    if (bestPath) return bestPath.direction;
+    return null;
+  }
+
+  public getBestPathToPlayers(
+    targetCell: Cell,
+    canBreakFrozen: boolean
+  ): PathResultWithDirection | null {
+    if (!this.host || !this.guest) throw new BoardError(BoardError.USER_NOT_DEFINED);
+    const { hostPath, guestPath } = this.getPlayersPaths(targetCell, canBreakFrozen);
     if (hostPath && guestPath) {
-      return hostPath.distance < guestPath.distance ? hostPath.direction : guestPath.direction;
+      return hostPath.distance < guestPath.distance ? hostPath : guestPath;
     }
     if (hostPath) {
-      return hostPath.direction;
+      return hostPath;
     }
     if (guestPath) {
-      return guestPath.direction;
+      return guestPath;
     }
     return null;
+  }
+
+  public getPlayersPaths(targetCell: Cell, canBreakFrozen: boolean): PlayersPaths {
+    if (!this.host || !this.guest) throw new BoardError(BoardError.USER_NOT_DEFINED);
+    const mappedGraph = this.getMappedGraph(true, canBreakFrozen);
+    const hostPath = this.host.isAlive()
+      ? this.host.getShortestDirectionToCharacter(targetCell, mappedGraph)
+      : null;
+    const guestPath = this.guest.isAlive()
+      ? this.guest.getShortestDirectionToCharacter(targetCell, mappedGraph)
+      : null;
+    return {
+      hostPath,
+      guestPath,
+    };
   }
 
   private getMappedGraph(canWalkOverPlayers: boolean, canBreakFrozen: boolean): Graph {
@@ -321,10 +346,6 @@ abstract class Board {
     }
   }
 
-  protected getRowCoordinatesInRange(row: number, start: number, end: number): number[][] {
-    return Array.from({ length: end - start + 1 }, (_, i) => [row, start + i]);
-  }
-
   /**
    * This method starts the enemies in the board
    */
@@ -339,15 +360,7 @@ abstract class Board {
     for (const enemy of this.enemies.values()) {
       const worker = new Worker(fileName, { workerData: { enemiesSpeed } });
       this.workers.push(worker);
-      worker.on('message', async (_message) => {
-        if (this.checkLose() || this.match.checkWin()) {
-          await this.stopGame();
-          return;
-        }
-        await enemy.calculateMovement();
-        const enemyDTO = enemy.getCharacterUpdate(null);
-        await this.match.notifyPlayers({ type: 'update-enemy', payload: enemyDTO });
-      });
+      worker.on('message', async (_message) => await this.handleEnemyMovement(enemy));
 
       worker.on('error', (error) => {
         logger.warn('An error occurred while running the enemies worker');
@@ -358,6 +371,16 @@ abstract class Board {
         else logger.info('Enemies worker finished');
       });
     }
+  }
+
+  protected async handleEnemyMovement(enemy: Enemy): Promise<void> {
+    if (this.checkLose() || this.match.checkWin()) {
+      await this.stopGame();
+      return;
+    }
+    await enemy.calculateMovement();
+    const enemyDTO = enemy.getCharacterUpdate(null);
+    await this.notifyPlayers({ type: 'update-enemy', payload: enemyDTO });
   }
 
   /**
@@ -398,12 +421,25 @@ abstract class Board {
     this.currentRound++;
   }
 
-  private getEnemiesSpeed(): number {
-    return this.ENEMIES_SPEED;
+  /**
+   * This method sets up the enemies in the board
+   */
+  protected setUpEnemies(): void {
+    for (let i = 0; i < this.ENEMIES; i++) {
+      const x = this.enemiesCoordinates[i][0];
+      const y = this.enemiesCoordinates[i][1];
+      const troll = this.getBoardEnemy(this.board[x][y]);
+      this.enemies.set(troll.getId(), troll);
+      this.board[x][y].setCharacter(troll);
+    }
   }
 
-  private getColCoordinatesInRange(col: number, start: number, end: number): number[][] {
+  protected getColCoordinatesInRange(col: number, start: number, end: number): number[][] {
     return Array.from({ length: end - start + 1 }, (_, i) => [start + i, col]);
+  }
+
+  protected getRowCoordinatesInRange(row: number, start: number, end: number): number[][] {
+    return Array.from({ length: end - start + 1 }, (_, i) => [row, start + i]);
   }
 }
 export default Board;

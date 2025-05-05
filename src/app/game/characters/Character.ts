@@ -44,21 +44,11 @@ abstract class Character extends BoardItem {
    * @param {Graph} mappedGraph - The graph representing the board.
    * @return {Direction} The direction to move towards the target cell.
    */
-  public getShortestPath(targetCell: Cell, mappedGraph: Graph): PathResultWithDirection | null {
-    const shortestPathRaw = mappedGraph.shortestPathDijkstra(
-      parseCoordinatesToString(targetCell.getCoordinates()),
-      parseCoordinatesToString(this.cell.getCoordinates())
-    );
-    const cellCoordinates: CellCoordinates[] = [];
-    for (const cell of shortestPathRaw.path) {
-      const coordinates = parseStringToCoordinates(cell);
-      cellCoordinates.push(coordinates);
-    }
-
-    const shortestPath: PathResult = {
-      distance: shortestPathRaw.distance,
-      path: cellCoordinates,
-    };
+  public getShortestDirectionToCharacter(
+    targetCell: Cell,
+    mappedGraph: Graph
+  ): PathResultWithDirection | null {
+    const shortestPath = this.getShortestPathToCharacter(targetCell, mappedGraph);
 
     if (shortestPath.distance > 0) {
       const direction: Direction | null = targetCell.getDirection(shortestPath.path[1]);
@@ -69,6 +59,22 @@ abstract class Character extends BoardItem {
       });
     }
     return null;
+  }
+
+  public getShortestPathToCharacter(targetCell: Cell, mappedGraph: Graph): PathResult {
+    const shortestPathRaw = mappedGraph.shortestPathDijkstra(
+      parseCoordinatesToString(targetCell.getCoordinates()),
+      parseCoordinatesToString(this.cell.getCoordinates())
+    );
+    const cellCoordinates: CellCoordinates[] = [];
+    for (const cell of shortestPathRaw.path) {
+      const coordinates = parseStringToCoordinates(cell);
+      cellCoordinates.push(coordinates);
+    }
+    return {
+      distance: shortestPathRaw.distance,
+      path: cellCoordinates,
+    };
   }
 
   /**

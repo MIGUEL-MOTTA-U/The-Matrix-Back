@@ -1,7 +1,9 @@
 import { config } from '../../../../../server.js';
+import type Enemy from '../../../characters/enemies/Enemy.js';
 import Troll from '../../../characters/enemies/Troll.js';
 import type Match from '../../Match.js';
 import Board from '../Board.js';
+import type Cell from '../CellBoard.js';
 /**
  * @class Level1Board
  * Class to represent the board of the game
@@ -16,16 +18,10 @@ export default class Level1Board extends Board {
   }
 
   /**
-   * Method to set up the enemies in the board
+   * This method return the enemy created in the board
    */
-  protected setUpEnemies(): void {
-    for (let i = 0; i < this.ENEMIES; i++) {
-      const x = this.enemiesCoordinates[i][0];
-      const y = this.enemiesCoordinates[i][1];
-      const troll = new Troll(this.board[x][y], this);
-      this.enemies.set(troll.getId(), troll);
-      this.board[x][y].setCharacter(troll);
-    }
+  protected getBoardEnemy(cell: Cell): Enemy {
+    return new Troll(cell, this);
   }
 
   /**
@@ -57,7 +53,5 @@ export default class Level1Board extends Board {
   /**
    * This method sets up the immovable objects in the board
    */
-  protected setUpInmovableObjects(): void {
-    // TODO --> Priority 3 <-- Implement this method
-  }
+  protected setUpInmovableObjects(): void {}
 }

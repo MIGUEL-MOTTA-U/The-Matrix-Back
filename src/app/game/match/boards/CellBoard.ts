@@ -32,7 +32,7 @@ class Cell {
 
   /**
    * This method is used to freeze or unfreeze by a player order.
-   * 
+   *
    * @param {Direction} direction The direction to freeze or unfreeze the cell.
    * @returns {CellDTO[]} An array of CellDTO objects representing the frozen cells.
    */
@@ -44,9 +44,18 @@ class Cell {
     return nextCell.freeze(cells, direction, true);
   }
 
+  /**
+   * This method is used to freeze or unfreeze the cell.
+   *
+   * @param {boolean} frozen True to freeze the cell, false to unfreeze it.
+   */
+  public setFrozen(frozen: boolean): void {
+    this.frozen = frozen;
+  }
+
   private freeze(cells: CellDTO[], direction: Direction, keepFreezing: boolean): CellDTO[] {
     if (this.frozen || this.blocked() || this.getCharacter() !== null) return cells;
-    this.frozen = true;
+    this.setFrozen(true);
     const cellDTO = this.getCellDTO();
     if (cellDTO) cells.push(cellDTO);
 
@@ -59,7 +68,7 @@ class Cell {
   private unfreeze(cells: CellDTO[], direction: Direction, keepUnfreezing: boolean): CellDTO[] {
     if (!this.frozen) return cells;
     const cellDTO = this.getCellDTO();
-    this.frozen = false;
+    this.setFrozen(false);
     if (cellDTO) cells.push(cellDTO);
     const nextCell = this.cellFromDirection(direction);
     if (nextCell && keepUnfreezing) nextCell.unfreeze(cells, direction, keepUnfreezing);

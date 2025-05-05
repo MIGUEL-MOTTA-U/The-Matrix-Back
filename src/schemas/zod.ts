@@ -143,6 +143,10 @@ interface BoardItemDTO {
   orientation?: string;
   color?: string;
 }
+interface PlayersPaths {
+  hostPath: PathResultWithDirection | null;
+  guestPath: PathResultWithDirection | null;
+}
 interface Info {
   message: string;
 }
@@ -281,6 +285,8 @@ export type {
   PathResult,
   PathResultWithDirection,
   PlayerType,
+  FrozenCells,
+  PlayersPaths,
 };
 export {
   validateString,

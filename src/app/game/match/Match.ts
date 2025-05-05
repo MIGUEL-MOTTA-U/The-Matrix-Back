@@ -91,7 +91,9 @@ class Match {
    * @return {Promise<void>} A promise that resolves when the players are notified.
    */
   public async notifyPlayers(data: GameMessageOutput): Promise<void> {
-    this.gameService.updatePlayers(this.id, this.host, this.guest, data);
+    if (this.running) {
+      await this.gameService.updatePlayers(this.id, this.host, this.guest, data);
+    }
   }
 
   /**
