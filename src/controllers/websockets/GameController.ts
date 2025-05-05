@@ -77,8 +77,8 @@ export default class GameController {
     }
   }
   private async extendSession(userId: string, matchId: string): Promise<void> {
-    this.gameService.extendUsersSession(userId);
-    this.gameService.extendMatchSession(matchId);
+    await this.gameService.extendUsersSession(userId);
+    await this.gameService.extendMatchSession(matchId);
   }
 
   private async validateData(

@@ -34,7 +34,6 @@ export default class LogMan extends Enemy {
         await this.board.notifyPlayers(
           validateGameMessageOutput({ type: 'update-enemy', payload: enemyDTO })
         );
-        //await new Promise((resolve) => setTimeout(resolve, 200));
         count++;
       } catch (_error) {
         continueRolling = false;
