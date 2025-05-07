@@ -42,16 +42,8 @@ export default class Level1Board extends Board {
       ...this.getRowCoordinatesInRange(4, 5, 11),
       ...this.getRowCoordinatesInRange(11, 5, 11),
     ];
-    this.FRUITS = this.fruitsCoordinates.length;
     this.FRUIT_TYPE = ['banana', 'grape'];
-    this.FRUITS_CONTAINER = [...this.FRUIT_TYPE];
-    this.ENEMIES = 4;
-    this.fruitsRounds = this.FRUIT_TYPE.length;
     this.ENEMIES_SPEED = config.ENEMIES_SPEED_MS;
+    this.loadConstants();
   }
-
-  /**
-   * This method sets up the immovable objects in the board
-   */
-  protected setUpInmovableObjects(): void {}
 }

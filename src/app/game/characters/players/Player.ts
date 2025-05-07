@@ -55,8 +55,8 @@ class Player extends Character {
    *
    */
   public async execPower(): Promise<CellDTO[]> {
-    return this.mutex.runExclusive(() => {
-      return this.cell.executePower(this.orientation);
+    return await this.mutex.runExclusive(() => {
+      return this.cell.executePower(this.orientation, true);
     });
   }
 

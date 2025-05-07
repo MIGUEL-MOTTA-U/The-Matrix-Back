@@ -4,7 +4,6 @@ import type Enemy from '../../../characters/enemies/Enemy.js';
 import type Match from '../../Match.js';
 import Board from '../Board.js';
 import type Cell from '../CellBoard.js';
-import Rock from '../Rock.js';
 
 export default class Level2Board extends Board {
   constructor(match: Match, map: string, level: number) {
@@ -14,17 +13,6 @@ export default class Level2Board extends Board {
 
   protected getBoardEnemy(cell: Cell): Enemy {
     return new Cow(cell, this);
-  }
-
-  protected setUpInmovableObjects(): void {
-    for (let i = 0; i < this.ROCKS; i++) {
-      const x = this.rocksCoordinates[i][0];
-      const y = this.rocksCoordinates[i][1];
-      if (this.board[x][y].getCharacter() === null) {
-        const rock = new Rock(this.board[x][y], this);
-        this.board[x][y].setItem(rock);
-      }
-    }
   }
 
   protected loadContext(): void {
@@ -55,12 +43,8 @@ export default class Level2Board extends Board {
       ...this.getRowCoordinatesInRange(10, 1, 4),
       ...this.getRowCoordinatesInRange(10, 11, 14),
     ];
-    this.ROCKS = this.rocksCoordinates.length;
-    this.FRUITS = this.fruitsCoordinates.length;
     this.FRUIT_TYPE = ['banana', 'grape'];
-    this.FRUITS_CONTAINER = [...this.FRUIT_TYPE];
-    this.ENEMIES = this.enemiesCoordinates.length;
-    this.fruitsRounds = this.FRUIT_TYPE.length;
     this.ENEMIES_SPEED = config.ENEMIES_SPEED_MS;
+    this.loadConstants();
   }
 }

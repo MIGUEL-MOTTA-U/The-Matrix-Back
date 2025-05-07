@@ -36,12 +36,21 @@ class Cell {
    * @param {Direction} direction The direction to freeze or unfreeze the cell.
    * @returns {CellDTO[]} An array of CellDTO objects representing the frozen cells.
    */
-  public executePower(direction: Direction): CellDTO[] {
+  public executePower(direction: Direction, recursiveBehaviour: boolean): CellDTO[] {
     const cells: CellDTO[] = [];
     const nextCell = this.cellFromDirection(direction);
     if (!nextCell || nextCell.blocked()) return cells;
-    if (nextCell.isFrozen()) return nextCell.unfreeze(cells, direction, true);
-    return nextCell.freeze(cells, direction, true);
+    if (nextCell.isFrozen()) return nextCell.unfreeze(cells, direction, recursiveBehaviour);
+    return nextCell.freeze(cells, direction, recursiveBehaviour);
+  }
+
+  public unfreezeCellsAround(): CellDTO[] {
+    const cells: CellDTO[] = [];
+    for (const neighbor of this.getNeighbors()) {
+      const direction = this.getDirection(neighbor.getCoordinates());
+      if (direction) neighbor.unfreeze(cells, direction, false);
+    }
+    return cells;
   }
 
   /**
@@ -75,7 +84,7 @@ class Cell {
     return cells;
   }
 
-  private cellFromDirection(direction: Direction): Cell | null {
+  public cellFromDirection(direction: Direction): Cell | null {
     switch (direction) {
       case 'up':
         return this.up;

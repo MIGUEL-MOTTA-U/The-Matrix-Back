@@ -4,7 +4,6 @@ import LogMan from '../../../characters/enemies/LogMan.js';
 import type Match from '../../Match.js';
 import Board from '../Board.js';
 import type Cell from '../CellBoard.js';
-import Rock from '../Rock.js';
 
 export default class Level3Board extends Board {
   constructor(match: Match, map: string, level: number) {
@@ -16,24 +15,6 @@ export default class Level3Board extends Board {
     return new LogMan(cell, this);
   }
 
-  protected setUpInmovableObjects(): void {
-    for (let i = 0; i < this.ROCKS; i++) {
-      const x = this.rocksCoordinates[i][0];
-      const y = this.rocksCoordinates[i][1];
-      if (this.board[x][y].getCharacter() === null) {
-        const rock = new Rock(this.board[x][y], this);
-        this.board[x][y].setItem(rock);
-      }
-    }
-
-    for (let i = 0; i < this.freezedCells.length; i++) {
-      const x = this.freezedCells[i][0];
-      const y = this.freezedCells[i][1];
-      if (this.board[x][y].getCharacter() === null && this.board[x][y].isFrozen() === false) {
-        this.board[x][y].setFrozen(true);
-      }
-    }
-  }
   protected loadContext(): void {
     this.playersStartCoordinates = [
       [10, 2],
@@ -75,13 +56,9 @@ export default class Level3Board extends Board {
       ...this.getRowCoordinatesInRange(12, 0, 3),
       ...this.getRowCoordinatesInRange(12, 12, 15),
     ];
-    this.ROCKS = this.rocksCoordinates.length;
-    this.FRUITS = this.fruitsCoordinates.length;
     this.FRUIT_TYPE = ['banana', 'grape', 'apple'];
-    this.FRUITS_CONTAINER = [...this.FRUIT_TYPE];
-    this.ENEMIES = this.enemiesCoordinates.length;
-    this.fruitsRounds = this.FRUIT_TYPE.length;
     this.ENEMIES_SPEED = config.ENEMIES_SPEED_MS + 500; // 1.5s slower than the other levels
+    this.loadConstants();
   }
 
   protected async handleEnemyMovement(enemy: Enemy): Promise<void> {

@@ -1,4 +1,6 @@
+import { config } from '../../../../../server.js';
 import type Enemy from '../../../characters/enemies/Enemy.js';
+import SquidGreen from '../../../characters/enemies/SquidGreen.js';
 import type Match from '../../Match.js';
 import Board from '../Board.js';
 import type Cell from '../CellBoard.js';
@@ -9,11 +11,8 @@ export default class Level4Board extends Board {
     this.loadContext(); // We exec this method twice, because of TypeScript, it doesn't saves the status assigned after we use the father constructor:)
   }
 
-  protected getBoardEnemy(_cell: Cell): Enemy {
-    throw new Error('Method not implemented.');
-  }
-  protected setUpInmovableObjects(): void {
-    throw new Error('Method not implemented.');
+  protected getBoardEnemy(cell: Cell): Enemy {
+    return new SquidGreen(cell, this);
   }
   protected loadContext(): void {
     this.playersStartCoordinates = [
@@ -48,7 +47,6 @@ export default class Level4Board extends Board {
       [3, 15],
 
       ...this.getSquareCoordinatesInRange(2, 5, 7, 8),
-
       ...this.getSquareCoordinatesInRange(2, 7, 5, 6),
       ...this.getSquareCoordinatesInRange(2, 7, 9, 10),
       ...this.getSquareCoordinatesInRange(2, 9, 7, 8),
@@ -68,5 +66,8 @@ export default class Level4Board extends Board {
       ...this.getColCoordinatesInRange(14, 12, 13),
       ...this.getRowCoordinatesInRange(14, 1, 14),
     ];
+    this.FRUIT_TYPE = ['grape', 'apple'];
+    this.ENEMIES_SPEED = config.ENEMIES_SPEED_MS;
+    this.loadConstants();
   }
 }

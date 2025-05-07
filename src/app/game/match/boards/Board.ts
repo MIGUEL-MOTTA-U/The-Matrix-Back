@@ -24,6 +24,7 @@ import Player from '../../characters/players/Player.js';
 import type Match from '../Match.js';
 import Cell from './CellBoard.js';
 import Fruit from './Fruit.js';
+import Rock from './Rock.js';
 /**
  * @abstract class Board
  * Abstract class representing a game board.
@@ -60,7 +61,7 @@ abstract class Board {
 
   //protected abstract generateBoard(): void;
   protected abstract getBoardEnemy(cell: Cell): Enemy;
-  protected abstract setUpInmovableObjects(): void;
+  //protected abstract setUpInmovableObjects(): void;
   protected abstract loadContext(): void;
 
   constructor(match: Match, map: string, level: number) {
@@ -453,6 +454,33 @@ abstract class Board {
     return Array.from({ length: size }, (_, i) => i + rowStart).flatMap((row) =>
       this.getRowCoordinatesInRange(row, colStart, colEnd)
     );
+  }
+
+  protected setUpInmovableObjects(): void {
+    for (let i = 0; i < this.ROCKS; i++) {
+      const x = this.rocksCoordinates[i][0];
+      const y = this.rocksCoordinates[i][1];
+      if (this.board[x][y].getCharacter() === null) {
+        const rock = new Rock(this.board[x][y], this);
+        this.board[x][y].setItem(rock);
+      }
+    }
+
+    for (let i = 0; i < this.freezedCells.length; i++) {
+      const x = this.freezedCells[i][0];
+      const y = this.freezedCells[i][1];
+      if (this.board[x][y].getCharacter() === null && this.board[x][y].isFrozen() === false) {
+        this.board[x][y].setFrozen(true);
+      }
+    }
+  }
+
+  protected loadConstants(): void {
+    this.ROCKS = this.rocksCoordinates.length;
+    this.FRUITS = this.fruitsCoordinates.length;
+    this.FRUITS_CONTAINER = [...this.FRUIT_TYPE];
+    this.ENEMIES = this.enemiesCoordinates.length;
+    this.fruitsRounds = this.FRUIT_TYPE.length;
   }
 }
 export default Board;
