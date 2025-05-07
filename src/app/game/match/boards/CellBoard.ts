@@ -74,6 +74,10 @@ class Cell {
     return cells;
   }
 
+  public unfreezeFrontCells(direction: Direction, keepUnfreezing: boolean): CellDTO[] {
+    return this.unfreeze([], direction, keepUnfreezing);
+  }
+
   private unfreeze(cells: CellDTO[], direction: Direction, keepUnfreezing: boolean): CellDTO[] {
     if (!this.frozen) return cells;
     const cellDTO = this.getCellDTO();

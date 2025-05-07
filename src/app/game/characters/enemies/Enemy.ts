@@ -4,6 +4,7 @@ import {
   type CellDTO,
   type Direction,
   type UpdateEnemy,
+  validateGameMessageOutput,
   validatePlayerState,
   validateUpdateEnemy,
 } from '../../../../schemas/zod.js';
@@ -35,7 +36,7 @@ export default abstract class Enemy extends Character {
    * Executes the enemy's special power.
    * Enemies do not have special powers, so this method does nothing.
    */
-  public async execPower(): Promise<CellDTO[]> {
+  public async execPower(_direction?: Direction): Promise<CellDTO[]> {
     return [];
   }
 
@@ -159,5 +160,9 @@ export default abstract class Enemy extends Character {
    */
   reborn(): void {
     // Enemy cannot reborn, because it can't die either
+  }
+
+  protected async notifyPlayers(type: string, payload: CellDTO[] | UpdateEnemy): Promise<void> {
+    await this.board.notifyPlayers(validateGameMessageOutput({ type, payload }));
   }
 }

@@ -1,8 +1,4 @@
-import {
-  type CellDTO,
-  type UpdateEnemy,
-  validateGameMessageOutput,
-} from '../../../../schemas/zod.js';
+import type { CellDTO } from '../../../../schemas/zod.js';
 import Enemy from './Enemy.js';
 /**
  * @class SquidGreen
@@ -36,9 +32,5 @@ export default class SquidGreen extends Enemy {
     return await this.mutex.runExclusive(() => {
       return this.cell.unfreezeCellsAround();
     });
-  }
-
-  private async notifyPlayers(type: string, payload: CellDTO[] | UpdateEnemy): Promise<void> {
-    await this.board.notifyPlayers(validateGameMessageOutput({ type, payload }));
   }
 }
