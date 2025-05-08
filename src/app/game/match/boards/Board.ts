@@ -34,8 +34,8 @@ import Rock from './Rock.js';
 abstract class Board {
   protected freezedCells: number[][];
   protected readonly mutex = new Mutex();
-  protected readonly ROWS: number;
-  protected readonly COLS: number;
+  protected readonly ROWS = 16;
+  protected readonly COLS = 16;
   protected readonly map: string;
   protected readonly level: number;
   protected readonly match: Match;
@@ -64,10 +64,15 @@ abstract class Board {
   //protected abstract setUpInmovableObjects(): void;
   protected abstract loadContext(): void;
 
+  /**
+   * Default Constructor for the Board class.
+   *
+   * @param {Match} match - The match instance associated with this board.
+   * @param {string} map - The map string representing the board layout.
+   * @param {number} level - The level of the game.
+   */
   constructor(match: Match, map: string, level: number) {
     this.match = match;
-    this.ROWS = 16;
-    this.COLS = 16;
     this.board = [];
     this.freezedCells = [];
     this.enemies = new Map();
@@ -78,6 +83,20 @@ abstract class Board {
     this.setUpEnemies();
     this.setUpInmovableObjects();
   }
+
+  constructor(match: Match, map: string, level: number, host: Player, guest:Player) {
+    this.match = match;
+    this.board = [];
+    this.freezedCells = [];
+    this.enemies = new Map();
+    this.map = map;
+    this.level = level;
+    this.host = host;
+    this.guest = guest;
+  }
+
+
+
   /**
    * Sets up the fruits on the board after it is generated.
    *

@@ -163,6 +163,32 @@ interface MatchDTO {
   board: BoardDTO;
   typeFruits: string[];
 }
+interface MatchStorage extends Omit<MatchDTO, 'board' | 'hostId' | 'guestId'> {
+  host: PlayerStorage;
+  guest: PlayerStorage;
+  board: BoardStorage;
+  timeSeconds: number;
+}
+
+interface PlayerStorage {
+  id: string;
+  color: string;
+  coordinates: CellCoordinates;
+  direction: Direction;
+  state: 'dead' | 'alive';
+}
+
+interface BoardStorage {
+  fruitType: string[];
+  fruitsContainer: string[];
+  fruitsNumber: number;
+  fruitsRound: number;
+  currentRound: number;
+  currentFruitType: string;
+  rocksCoordinates: number[][];
+  fruitsCoordinates: number[][];
+}
+
 interface GameMessageOutput {
   type:
     | 'update-state'
@@ -290,6 +316,7 @@ export type {
   FrozenCells,
   PlayersPaths,
   EnemyState,
+  MatchStorage,
 };
 export {
   validateString,
