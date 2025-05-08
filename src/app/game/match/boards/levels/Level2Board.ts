@@ -5,6 +5,14 @@ import type Match from '../../Match.js';
 import Board from '../Board.js';
 import type Cell from '../CellBoard.js';
 
+/**
+ * @class Level3Board
+ * @extends Board
+ * Class representing the board for level 3.
+ *
+ * @since 07/05/2025
+ * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
+ */
 export default class Level2Board extends Board {
   constructor(match: Match, map: string, level: number) {
     super(match, map, level);

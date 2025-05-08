@@ -3,6 +3,7 @@ import {
   type BoardItemDTO,
   type CellDTO,
   type Direction,
+  type EnemyState,
   type UpdateEnemy,
   validateGameMessageOutput,
   validatePlayerState,
@@ -19,8 +20,7 @@ import Character from '../Character.js';
  * @since 18/04/2025
  * @extends Character
  * @abstract
- * @author
- * Santiago Avellaneda, Andres Serrato, and Miguel Motta
+ * @author Santiago Avellaneda, Andres Serrato, and Miguel Motta
  */
 export default abstract class Enemy extends Character {
   /**
@@ -31,13 +31,23 @@ export default abstract class Enemy extends Character {
    * @return {Promise<void>} A promise that resolves when the movement is calculated.
    */
   public abstract calculateMovement(): Promise<void>;
-
+  public abstract getEnemyName(): string;
+  protected enemyState: EnemyState = 'stopped';
   /**
    * Executes the enemy's special power.
    * Enemies do not have special powers, so this method does nothing.
    */
   public async execPower(_direction?: Direction): Promise<CellDTO[]> {
     return [];
+  }
+
+  /**
+   * Retrieves the current state of the enemy.
+   *
+   * @return {EnemyState} The current state of the enemy.
+   */
+  public getEnemyState(): EnemyState {
+    return this.enemyState;
   }
 
   /**
@@ -60,6 +70,7 @@ export default abstract class Enemy extends Character {
       enemyId: this.id,
       coordinates: this.cell.getCoordinates(),
       direction: this.orientation,
+      enemyState: this.getEnemyState(),
     });
   }
 
@@ -106,6 +117,7 @@ export default abstract class Enemy extends Character {
           payload: validatePlayerState(character.getCharacterState()),
         });
     }
+    this.enemyState = 'walking';
     return null;
   }
 
@@ -148,7 +160,7 @@ export default abstract class Enemy extends Character {
    */
   getDTO(): BoardItemDTO {
     return {
-      type: this.constructor.name.toLowerCase(),
+      type: this.getEnemyName(),
       orientation: this.orientation,
       id: this.id,
     };

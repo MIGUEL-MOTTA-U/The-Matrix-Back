@@ -45,10 +45,13 @@ const EndMatchSchema = z.object({
   result: z.enum(['win', 'lose', 'end game']),
 });
 
+const enemyStateSchema = z.enum(['walking', 'roling', 'stopped']);
+
 const updateEnemySchema = z.object({
   enemyId: z.string().nonempty(),
   coordinates: cellCordinatesSchema,
   direction: directionSchema,
+  enemyState: enemyStateSchema,
 });
 
 const playerMoveSchema = z.object({

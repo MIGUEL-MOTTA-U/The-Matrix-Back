@@ -5,12 +5,23 @@ import type Match from '../../Match.js';
 import Board from '../Board.js';
 import type Cell from '../CellBoard.js';
 
+/**
+ * @class Level4Board
+ * @extends Board
+ * Class representing the board for level 4.
+ *
+ * @since 07/05/2025
+ * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
+ */
 export default class Level4Board extends Board {
   constructor(match: Match, map: string, level: number) {
     super(match, map, level);
     this.loadContext(); // We exec this method twice, because of TypeScript, it doesn't saves the status assigned after we use the father constructor:)
   }
 
+  /*
+   * The default enemy for this level is a SquidGreen.
+   */
   protected getBoardEnemy(cell: Cell): Enemy {
     return new SquidGreen(cell, this);
   }

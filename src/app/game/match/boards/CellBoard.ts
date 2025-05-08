@@ -44,6 +44,10 @@ class Cell {
     return nextCell.freeze(cells, direction, recursiveBehaviour);
   }
 
+  /**
+   * This method is used to unfreeze the cells around the current cell.
+   * @returns {CellDTO[]} An array of CellDTO objects representing the unfrozen cells.
+   */
   public unfreezeCellsAround(): CellDTO[] {
     const cells: CellDTO[] = [];
     for (const neighbor of this.getNeighbors()) {
@@ -62,32 +66,21 @@ class Cell {
     this.frozen = frozen;
   }
 
-  private freeze(cells: CellDTO[], direction: Direction, keepFreezing: boolean): CellDTO[] {
-    if (this.frozen || this.blocked() || this.getCharacter() !== null) return cells;
-    this.setFrozen(true);
-    const cellDTO = this.getCellDTO();
-    if (cellDTO) cells.push(cellDTO);
-
-    const nextCell = this.cellFromDirection(direction);
-
-    if (nextCell && keepFreezing) nextCell.freeze(cells, direction, keepFreezing);
-    return cells;
-  }
-
+  /**
+   * This method is used to unfreeze the cells in the given direction.
+   * @param direction The direction to unfreeze the cells.
+   * @param keepUnfreezing True to keep unfreezing cells in the given direction until it can't unfreeze any more.
+   * @returns {CellDTO[]} An array of CellDTO objects representing the unfrozen cells.
+   */
   public unfreezeFrontCells(direction: Direction, keepUnfreezing: boolean): CellDTO[] {
     return this.unfreeze([], direction, keepUnfreezing);
   }
 
-  private unfreeze(cells: CellDTO[], direction: Direction, keepUnfreezing: boolean): CellDTO[] {
-    if (!this.frozen) return cells;
-    const cellDTO = this.getCellDTO();
-    this.setFrozen(false);
-    if (cellDTO) cells.push(cellDTO);
-    const nextCell = this.cellFromDirection(direction);
-    if (nextCell && keepUnfreezing) nextCell.unfreeze(cells, direction, keepUnfreezing);
-    return cells;
-  }
-
+  /**
+   * This method returns the cell in the given direction.
+   * @param direction The direction to freeze the cells.
+   * @returns {Cell | null} The cell in the given direction, or null if it doesn't exist.
+   */
   public cellFromDirection(direction: Direction): Cell | null {
     switch (direction) {
       case 'up':
@@ -278,6 +271,28 @@ class Cell {
       character: this.character?.getDTO() || null,
       frozen: this.frozen,
     };
+  }
+
+  private unfreeze(cells: CellDTO[], direction: Direction, keepUnfreezing: boolean): CellDTO[] {
+    if (!this.frozen) return cells;
+    const cellDTO = this.getCellDTO();
+    this.setFrozen(false);
+    if (cellDTO) cells.push(cellDTO);
+    const nextCell = this.cellFromDirection(direction);
+    if (nextCell && keepUnfreezing) nextCell.unfreeze(cells, direction, keepUnfreezing);
+    return cells;
+  }
+
+  private freeze(cells: CellDTO[], direction: Direction, keepFreezing: boolean): CellDTO[] {
+    if (this.frozen || this.blocked() || this.getCharacter() !== null) return cells;
+    this.setFrozen(true);
+    const cellDTO = this.getCellDTO();
+    if (cellDTO) cells.push(cellDTO);
+
+    const nextCell = this.cellFromDirection(direction);
+
+    if (nextCell && keepFreezing) nextCell.freeze(cells, direction, keepFreezing);
+    return cells;
   }
 }
 export default Cell;

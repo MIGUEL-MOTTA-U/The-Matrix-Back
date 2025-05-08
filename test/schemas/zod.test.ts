@@ -241,7 +241,8 @@ describe('validateUpdateEnemy', () => {
     const validData = {
       enemyId: 'enemy1',
       coordinates: { x: 1, y: 2 },
-      direction: 'up'
+      direction: 'up',
+      enemyState: 'walking'
     };
     expect(validateUpdateEnemy(validData)).toEqual(validData);
   });

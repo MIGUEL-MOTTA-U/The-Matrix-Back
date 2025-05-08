@@ -24,13 +24,22 @@ export default class SquidGreen extends Enemy {
       const enemyDTO = this.getCharacterUpdate(null);
       await this.notifyPlayers('update-enemy', enemyDTO);
     } catch (_error) {
+      this.enemyState = 'stopped';
       // Do nothing if the squid cannot move. It will just stay in its current position.
     }
   }
 
+  /**
+   * Executes the squid's special power to unfreeze cells around it.
+   * @returns {Promise<CellDTO[]>} - A promise that resolves to an array of CellDTO objects representing the cells that were unfrozen.
+   */
   public async execPower(): Promise<CellDTO[]> {
     return await this.mutex.runExclusive(() => {
       return this.cell.unfreezeCellsAround();
     });
+  }
+
+  public getEnemyName(): string {
+    return 'squid-green';
   }
 }

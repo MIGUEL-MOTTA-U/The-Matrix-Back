@@ -201,6 +201,7 @@ interface UpdateEnemy {
   enemyId: string;
   coordinates: CellCoordinates;
   direction: Direction;
+  enemyState: EnemyState;
 }
 interface PlayerMove {
   id: string;
@@ -259,6 +260,7 @@ interface FrozenCells {
 
 type Direction = 'up' | 'down' | 'left' | 'right';
 type PlayerType = 'HOST' | 'GUEST';
+type EnemyState = 'walking' | 'roling' | 'stopped';
 export type {
   MatchInputDTO,
   MatchDetails,
@@ -287,6 +289,7 @@ export type {
   PlayerType,
   FrozenCells,
   PlayersPaths,
+  EnemyState,
 };
 export {
   validateString,

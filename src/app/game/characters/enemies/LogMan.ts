@@ -6,7 +6,15 @@ import {
   validatePathResultWithDirection,
 } from '../../../../schemas/zod.js';
 import Enemy from './Enemy.js';
-
+/**
+ * @class LogMan
+ * @extends Enemy
+ * Represents the behavior and properties of a LogMan enemy in the game.
+ * The LogMan moves in a straight line towards the players and can break frozen cells.
+ *
+ * @since 7/05/2025
+ * @author Santiago Avellaneda, Andres Serrato, and Miguel Motta
+ */
 export default class LogMan extends Enemy {
   public async calculateMovement(): Promise<void> {
     const canBreakFrozen = false;
@@ -30,6 +38,7 @@ export default class LogMan extends Enemy {
     while (continueRolling && (times === undefined || count < times)) {
       try {
         await this.moveAlongPath(direction);
+        this.enemyState = 'roling';
         const enemyDTO = this.getCharacterUpdate(null);
         await this.board.notifyPlayers(
           validateGameMessageOutput({ type: 'update-enemy', payload: enemyDTO })
@@ -40,6 +49,7 @@ export default class LogMan extends Enemy {
         // Optional: Log error or handle specific obstacles
       }
     }
+    this.enemyState = 'stopped';
   }
 
   /*
@@ -113,5 +123,12 @@ export default class LogMan extends Enemy {
     }
 
     return coordinates;
+  }
+  /**
+   * Retrieves the name of the Log Man enemy.
+   * @returns {string} The name of the enemy.
+   */
+  public getEnemyName(): string {
+    return 'log-man';
   }
 }

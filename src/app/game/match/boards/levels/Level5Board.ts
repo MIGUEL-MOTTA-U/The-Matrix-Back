@@ -4,6 +4,14 @@ import SquidBlue from '../../../characters/enemies/SquidBlue.js';
 import Board from '../Board.js';
 import type Cell from '../CellBoard.js';
 
+/**
+ * @class Level5Board
+ * @extends Board
+ * Class representing the board for level 5.
+ *
+ * @since 07/05/2025
+ * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
+ */
 export default class Level5Board extends Board {
   protected getBoardEnemy(cell: Cell): Enemy {
     return new SquidBlue(cell, this);
