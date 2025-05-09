@@ -14,11 +14,6 @@ import type Cell from '../CellBoard.js';
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 export default class Level4Board extends Board {
-  constructor(match: Match, map: string, level: number) {
-    super(match, map, level);
-    this.loadContext(); // We exec this method twice, because of TypeScript, it doesn't saves the status assigned after we use the father constructor:)
-  }
-
   /*
    * The default enemy for this level is a SquidGreen.
    */

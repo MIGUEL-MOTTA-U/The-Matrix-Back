@@ -187,8 +187,6 @@ describe('Cell', () => {
 
   it('should throw error when using an invalid direction', () => {
     const cell = new Cell(1, 1);
-
-    // @ts-expect-error - Testing invalid direction
     expect(() => cell.executePower('invalid', true)).toThrow('Not supported direction for freeze');
   });
 });

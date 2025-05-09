@@ -1,3 +1,4 @@
+import type { EnemiesTypes } from '../../../../schemas/zod.js';
 import Enemy from './Enemy.js';
 
 /**
@@ -29,9 +30,9 @@ export default class Cow extends Enemy {
   }
   /**
    * This method retrieves the name of the Cow enemy.
-   * @returns {string} - The name of the enemy.
+   * @returns {EnemiesTypes} - The name of the enemy.
    */
-  public getEnemyName(): string {
+  public getEnemyName(): EnemiesTypes {
     return 'cow';
   }
 }

@@ -13,6 +13,7 @@ import {
   validatePathResultWithDirection,
 } from '../../../schemas/zod.js';
 import type { Graph } from '../../../utils/Graph.js';
+import type Board from '../match/boards/Board.js';
 import { BoardItem } from '../match/boards/BoardItem.js';
 import type Cell from '../match/boards/CellBoard.js';
 
@@ -24,10 +25,32 @@ import type Cell from '../match/boards/CellBoard.js';
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 abstract class Character extends BoardItem {
+  constructor(
+    cell: Cell,
+    board: Board,
+    id?: string,
+    color = 'brown',
+    orientation: Direction = 'down',
+    alive = true
+  ) {
+    super(cell, board, id);
+    this.orientation = orientation;
+    this.color = color;
+    this.alive = alive;
+  }
   protected readonly mutex = new Mutex();
-  protected alive = true;
-  protected color: string | null = null;
-  protected orientation: Direction = 'down';
+  protected alive: boolean;
+  protected color: string;
+  protected orientation: Direction;
+
+  /**
+   * Retrieves the color of the character.
+   *
+   * @return {string} The color of the character.
+   */
+  public getColor(): string {
+    return this.color;
+  }
   /**
    * Sets the color of the character.
    *
@@ -49,7 +72,6 @@ abstract class Character extends BoardItem {
     mappedGraph: Graph
   ): PathResultWithDirection | null {
     const shortestPath = this.getShortestPathToCharacter(targetCell, mappedGraph);
-
     if (shortestPath.distance > 0) {
       const direction: Direction | null = targetCell.getDirection(shortestPath.path[1]);
       return validatePathResultWithDirection({

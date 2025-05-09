@@ -1,3 +1,4 @@
+import type { BoardStorage, PlayerStorage } from '../../../../schemas/zod.js';
 import type Match from '../Match.js';
 import type Board from './Board.js';
 import Level1Board from './levels/Level1Board.js';
@@ -24,20 +25,27 @@ class BoardFactory {
    * @returns A Board instance appropriate for the level and map
    */
   public static createBoard(match: Match, map: string, level: number): Board {
+    let board: Board;
     switch (level) {
       case 1:
-        return new Level1Board(match, map, level);
+        board = new Level1Board(match, map, level);
+        break;
       case 2:
-        return new Level2Board(match, map, level);
+        board = new Level2Board(match, map, level);
+        break;
       case 3:
-        return new Level3Board(match, map, level);
+        board = new Level3Board(match, map, level);
+        break;
       case 4:
-        return new Level4Board(match, map, level);
+        board = new Level4Board(match, map, level);
+        break;
       case 5:
-        return new Level5Board(match, map, level);
+        board = new Level5Board(match, map, level);
+        break;
       default:
-        return new Level1Board(match, map, level);
+        board = new Level1Board(match, map, level);
     }
+    return board;
   }
 }
 export default BoardFactory;

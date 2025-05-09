@@ -1,6 +1,7 @@
 import {
   type CellCoordinates,
   type Direction,
+  type EnemiesTypes,
   type PathResultWithDirection,
   validateGameMessageOutput,
   validatePathResultWithDirection,
@@ -126,9 +127,9 @@ export default class LogMan extends Enemy {
   }
   /**
    * Retrieves the name of the Log Man enemy.
-   * @returns {string} The name of the enemy.
+   * @returns {EnemiesTypes} The name of the enemy.
    */
-  public getEnemyName(): string {
+  public getEnemyName(): EnemiesTypes {
     return 'log-man';
   }
 }

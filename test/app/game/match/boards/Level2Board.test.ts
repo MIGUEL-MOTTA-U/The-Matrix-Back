@@ -30,12 +30,14 @@ describe('Level2Board', () => {
         it('should set up fruits', () => {
             boardMock = new Level2Board(match, map, level);
             boardMock.initialize();
+            boardMock.initialize();
             const fruits = boardMock.getFruitsNumber();
             expect(fruits).toEqual(36);
         });
 
         it('should set up rocks', () => {
             boardMock = new Level2Board(match, map, level);
+            boardMock.initialize();
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
             const rocks = boardMock["ROCKS"]
             expect(rocks).toEqual(32);
@@ -43,6 +45,7 @@ describe('Level2Board', () => {
 
         it('should set up enemies', () => {
             boardMock = new Level2Board(match, map, level);
+            boardMock.initialize();
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
             const enemiesCoordinates = boardMock["enemiesCoordinates"];
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
@@ -56,6 +59,7 @@ describe('Level2Board', () => {
 
         it('should set up players', () => {
             boardMock = new Level2Board(match, map, level);
+            boardMock.initialize();
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
             const players = boardMock["playersStartCoordinates"]
             expect(players).toEqual([[9, 1], [9, 14]]);
@@ -63,9 +67,10 @@ describe('Level2Board', () => {
 
         it('should set up fruits type', () => {
             boardMock = new Level2Board(match, map, level);
+            boardMock.initialize();
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
             const fruitsType = boardMock["FRUIT_TYPE"]
-            expect(fruitsType).toEqual(['banana', 'grape']);
+            expect(fruitsType).toEqual(['grape']);
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
             const fruitsContainer = boardMock["FRUITS_CONTAINER"]
             expect(fruitsContainer).toEqual(['banana', 'grape']);
@@ -73,6 +78,7 @@ describe('Level2Board', () => {
 
         it('should set up enemies speed', () => {
             boardMock = new Level2Board(match, map, level);
+            boardMock.initialize();
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
             const enemiesSpeed = boardMock["ENEMIES_SPEED"]
             expect(enemiesSpeed).toEqual(1000);

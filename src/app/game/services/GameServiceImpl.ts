@@ -3,9 +3,11 @@ import GameError from '../../../errors/GameError.js';
 import MatchError from '../../../errors/MatchError.js';
 import type MatchRepository from '../../../schemas/MatchRepository.js';
 import type UserRepository from '../../../schemas/UserRepository.js';
+import type GameCache from '../../../schemas/repositories/GameCache.js';
 import {
   type GameMessageOutput,
   type MatchDetails,
+  type MatchStorage,
   type PlayerMove,
   type UpdateAll,
   type UpdateEnemy,
@@ -31,6 +33,7 @@ class GameServiceImpl implements GameService {
   private readonly matchRepository: MatchRepository;
   private readonly matches: Map<string, Match>;
   private readonly connections: Map<string, WebSocket>;
+  private readonly gameCache: GameCache;
 
   /**
    * Updates the time of a match and notifies the players.
@@ -57,11 +60,22 @@ class GameServiceImpl implements GameService {
       });
   }
 
-  constructor(matchRepository: MatchRepository, userRepository: UserRepository) {
+  constructor(
+    matchRepository: MatchRepository,
+    userRepository: UserRepository,
+    gameCache: GameCache
+  ) {
     this.matchRepository = matchRepository;
     this.userRepository = userRepository;
     this.matches = new Map<string, Match>();
     this.connections = new Map();
+    this.gameCache = gameCache;
+  }
+  public async saveMatch(matchId: string, matchStorage: MatchStorage): Promise<void> {
+    return await this.gameCache.saveMatch(matchId, matchStorage);
+  }
+  public async getMatchStorage(matchId: string): Promise<MatchStorage | null> {
+    return await this.gameCache.getMatch(matchId);
   }
 
   /**
@@ -70,10 +84,24 @@ class GameServiceImpl implements GameService {
    * @param {string} matchId The ID of the match to get the update.
    * @return {UpdateAll} The match update.
    */
-  public getMatchUpdate(matchId: string): UpdateAll {
-    const match = this.getMatch(matchId);
+  public async getMatchUpdate(matchId: string): Promise<UpdateAll> {
+    const match = await this.getMatch(matchId);
     if (!match) throw new MatchError(MatchError.MATCH_NOT_FOUND);
     return match.getMatchUpdate();
+  }
+
+  private async restoreMatch(matchStorage: MatchStorage): Promise<Match> {
+    const match = new Match(
+      this,
+      matchStorage.id,
+      matchStorage.level,
+      matchStorage.map,
+      matchStorage.host.id,
+      matchStorage.guest.id
+    );
+    match.loadBoard(matchStorage.board, matchStorage.host, matchStorage.guest);
+    await match.startGame();
+    return match;
   }
 
   /**
@@ -95,8 +123,22 @@ class GameServiceImpl implements GameService {
    * @param {string} matchId The ID of the match to retrieve.
    * @return {Match | undefined} The match if it exists, undefined otherwise.
    */
-  public getMatch(matchId: string): Match | undefined {
-    if (!this.matches.has(matchId)) return undefined;
+  public async getMatch(matchId: string): Promise<Match | undefined> {
+    if (!this.matches.has(matchId)) {
+      const matchStorage = await this.getMatchStorage(matchId);
+      logger.debug(
+        `Match ${matchId}  found in memory, trying to restore from cache: ${JSON.stringify(matchStorage)}`
+      );
+      if (!matchStorage) return undefined;
+      try {
+        const match = await this.restoreMatch(matchStorage);
+        this.matches.set(matchId, match);
+      } catch (error) {
+        logger.warn(`Error restoring match ${matchId}`);
+        logger.error(error);
+        return undefined;
+      }
+    }
     return this.matches.get(matchId);
   }
 
@@ -183,6 +225,17 @@ class GameServiceImpl implements GameService {
         throw new MatchError(MatchError.INVALID_MESSAGE_TYPE);
       }
     }
+    gameMatch
+      ?.getMatchStorage()
+      .then((matchStorage) => {
+        if (matchStorage) {
+          this.gameCache.saveMatch(matchId, matchStorage);
+        }
+      })
+      .catch((error) => {
+        logger.warn(`Error trying to save match ${matchId} in cache`);
+        logger.error(error);
+      });
 
     if (await this.gameFinished(gameMatch, socketP1, socketP2)) return;
   }
@@ -202,7 +255,7 @@ class GameServiceImpl implements GameService {
     guestId: string,
     data: GameMessageOutput
   ): Promise<void> {
-    const gameMatch = this.matches.get(matchId);
+    const gameMatch = await this.getMatch(matchId);
     if (!gameMatch) throw new MatchError(MatchError.MATCH_NOT_FOUND);
     const socketP1 = this.connections.get(hostId);
     const socketP2 = this.connections.get(guestId);
@@ -240,7 +293,7 @@ class GameServiceImpl implements GameService {
       matchDetails.host,
       matchDetails.guest
     );
-    await gameMatch.initialize();
+    gameMatch.initialize();
     this.matches.set(matchDetails.id, gameMatch);
     await this.userRepository.updateUser(matchDetails.host, { matchId: matchDetails.id });
     await this.userRepository.updateUser(matchDetails.guest, { matchId: matchDetails.id });
@@ -254,7 +307,7 @@ class GameServiceImpl implements GameService {
    * @return {Promise<void>} A promise that resolves when the match starts.
    */
   public async startMatch(matchId: string): Promise<void> {
-    const gameMatch = this.matches.get(matchId);
+    const gameMatch = await this.getMatch(matchId);
     if (!gameMatch) throw new MatchError(MatchError.MATCH_NOT_FOUND);
     await gameMatch.startGame();
   }

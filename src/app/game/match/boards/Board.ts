@@ -7,18 +7,24 @@ import {
   type BoardDTO,
   type CellDTO,
   type UpdateFruits,
+  enemiesConst,
   parseCoordinatesToString,
   validateUpdateFruits,
 } from '../../../../schemas/zod.js';
 import type {
+  BoardItem,
+  BoardItemDTO,
+  BoardStorage,
   CellCoordinates,
   Direction,
   GameMessageOutput,
   PathResultWithDirection,
+  PlayerStorage,
   PlayersPaths,
 } from '../../../../schemas/zod.js';
 import { config, logger } from '../../../../server.js';
 import { Graph } from '../../../../utils/Graph.js';
+import type Character from '../../characters/Character.js';
 import type Enemy from '../../characters/enemies/Enemy.js';
 import Player from '../../characters/players/Player.js';
 import type Match from '../Match.js';
@@ -58,10 +64,7 @@ abstract class Board {
   protected playersStartCoordinates: number[][] = [];
   protected rocksCoordinates: number[][] = [];
   protected ENEMIES_SPEED = 1000; // Milliseconds
-
-  //protected abstract generateBoard(): void;
-  protected abstract getBoardEnemy(cell: Cell): Enemy;
-  //protected abstract setUpInmovableObjects(): void;
+  protected abstract getBoardEnemy(cell: Cell, id?: string, orientation?: Direction): Enemy;
   protected abstract loadContext(): void;
 
   /**
@@ -78,32 +81,84 @@ abstract class Board {
     this.enemies = new Map();
     this.map = map;
     this.level = level;
+  }
+  public loadBoard(boardStorage: BoardStorage, host: PlayerStorage, guest: PlayerStorage): void {
+    this.generateBoard();
+    this.setUpPlayers(host.id, guest.id, host, guest);
+    this.FRUIT_TYPE = boardStorage.fruitType;
+    this.FRUITS_CONTAINER = boardStorage.fruitsContainer;
+    this.fruitsNumber = boardStorage.fruitsNumber;
+    this.fruitsRounds = boardStorage.fruitsRound;
+    this.currentRound = boardStorage.currentRound;
+    this.currentFruitType = boardStorage.currentFruitType;
+    this.rocksCoordinates = boardStorage.rocksCoordinates;
+    this.fruitsCoordinates = boardStorage.fruitsCoordinates;
+    this.loadCells(boardStorage.board);
+  }
+  /**
+   * Loads the default context for the board, including generating the board,
+   */
+  private loadDefaultContext(): void {
     this.loadContext();
     this.generateBoard();
     this.setUpEnemies();
     this.setUpInmovableObjects();
   }
 
-  constructor(match: Match, map: string, level: number, host: Player, guest:Player) {
-    this.match = match;
-    this.board = [];
-    this.freezedCells = [];
-    this.enemies = new Map();
-    this.map = map;
-    this.level = level;
-    this.host = host;
-    this.guest = guest;
+  public getPlayersStorage(): { hostStorage: PlayerStorage; guestStorage: PlayerStorage } {
+    if (!this.host || !this.guest) throw new BoardError(BoardError.USER_NOT_DEFINED);
+    const hostStorage: PlayerStorage = this.host.getPlayerStorage();
+    const guestStorage: PlayerStorage = this.guest.getPlayerStorage();
+    return { hostStorage, guestStorage };
   }
 
+  public async getBoardStorage(): Promise<BoardStorage> {
+    if (!this.host || !this.guest) throw new BoardError(BoardError.USER_NOT_DEFINED);
+    return this.mutex.runExclusive(() => {
+      return {
+        fruitType: this.FRUIT_TYPE,
+        fruitsContainer: this.FRUITS_CONTAINER,
+        fruitsNumber: this.fruitsNumber,
+        fruitsRound: this.fruitsRounds,
+        currentRound: this.currentRound,
+        currentFruitType: this.calcultateCurrentFruitType(),
+        rocksCoordinates: this.rocksCoordinates,
+        fruitsCoordinates: this.fruitsCoordinates,
+        board: this.cellsBoardDTO(),
+      };
+    });
+  }
 
+  private calcultateCurrentFruitType(): string {
+    const index = this.currentRound === 0 ? 0 : this.currentRound - 1;
+    const currentType = this.FRUITS_CONTAINER[index];
+    return currentType;
+  }
+
+  /**
+   * This method sets up the board with the given cells
+   * @param {CellDTO[]} cells - The cells to set up the board with.
+   */
+  private loadCells(cells: CellDTO[]): void {
+    for (const cell of cells) {
+      const { x, y } = cell.coordinates;
+      const cellBoard = this.board[x][y];
+      const character = cell.character;
+      const item = cell.item;
+      if (character) cellBoard.setCharacter(this.characterFactory(character, cellBoard));
+      if (item) cellBoard.setItem(this.boardItemFactory(item, cellBoard));
+      if (cell.frozen) cellBoard.setFrozen(true);
+    }
+  }
 
   /**
    * Sets up the fruits on the board after it is generated.
    *
-   * @return {Promise<void>} A promise that resolves when the fruits are set up.
+   * @return {void} A promise that resolves when the fruits are set up.
    */
-  public async initialize(): Promise<void> {
-    await this.setUpFruits();
+  public initialize(): void {
+    this.loadDefaultContext();
+    this.setUpFruits();
   }
 
   /**
@@ -156,7 +211,7 @@ abstract class Board {
       this.board[x][y].setItem(null);
       this.fruitsNumber--;
       if (this.fruitsNumber === 0 && this.FRUIT_TYPE.length > 0) {
-        await this.setUpFruits();
+        this.setUpFruits();
         await this.match.notifyPlayers({ type: 'update-fruits', payload: this.getUpdateFruits() });
       }
       return;
@@ -327,7 +382,7 @@ abstract class Board {
    * @return {Promise<void>} A promise that resolves when the game starts.
    */
   public async startGame(host: string, guest: string): Promise<void> {
-    this.setUpPlayers(host, guest);
+    if (!this.host || !this.guest) this.setUpPlayers(host, guest);
     await this.startEnemies();
   }
 
@@ -408,24 +463,47 @@ abstract class Board {
   /**
    * Method to set up the players in the board
    */
-  protected setUpPlayers(host: string, guest: string): void {
-    const [hostCoordinates, guestCoordinates] = this.playersStartCoordinates;
-    const hostPlayer = new Player(this.board[hostCoordinates[0]][hostCoordinates[1]], this, host);
-    const guestPlayer = new Player(
-      this.board[guestCoordinates[0]][guestCoordinates[1]],
+  protected setUpPlayers(
+    host: string,
+    guest: string,
+    hostStorage?: PlayerStorage,
+    guestStorage?: PlayerStorage
+  ): void {
+    const [hostPositions, guestPositions] =
+      hostStorage === undefined || guestStorage === undefined
+        ? this.playersStartCoordinates
+        : [
+            [hostStorage.coordinates.x, hostStorage.coordinates.y],
+            [guestStorage.coordinates.x, guestStorage.coordinates.y],
+          ];
+    const hostState = hostStorage ? hostStorage.state === 'alive' : true;
+    const guestState = guestStorage ? guestStorage.state === 'alive' : true;
+    const hostPlayer = new Player(
+      this.board[hostPositions[0]][hostPositions[1]],
       this,
-      guest
+      host,
+      hostStorage?.color,
+      hostStorage?.direction,
+      hostState
+    );
+    const guestPlayer = new Player(
+      this.board[guestPositions[0]][guestPositions[1]],
+      this,
+      guest,
+      guestStorage?.color,
+      guestStorage?.direction,
+      guestState
     );
     this.host = hostPlayer;
     this.guest = guestPlayer;
-    this.board[hostCoordinates[0]][hostCoordinates[1]].setCharacter(this.host);
-    this.board[guestCoordinates[0]][guestCoordinates[1]].setCharacter(this.guest);
+    this.board[hostPositions[0]][hostPositions[1]].setCharacter(this.host);
+    this.board[guestPositions[0]][guestPositions[1]].setCharacter(this.guest);
   }
 
   /**
    * This method sets up the fruits in the board
    */
-  protected async setUpFruits(): Promise<void> {
+  protected setUpFruits(): void {
     this.fruitsNumber = this.FRUITS;
     this.currentFruitType = this.FRUIT_TYPE[0];
     for (let i = 0; i < this.FRUITS; i++) {
@@ -441,6 +519,29 @@ abstract class Board {
     this.FRUIT_TYPE.shift();
     this.fruitsRounds--;
     this.currentRound++;
+  }
+
+  private boardItemFactory(boardItemDTO: BoardItemDTO, cell: Cell): BoardItem {
+    if (!this.currentFruitType) throw new BoardError(BoardError.FRUIT_TYPE_NOT_DEFINED);
+    switch (boardItemDTO.type) {
+      case 'rock':
+        return new Rock(cell, this, boardItemDTO.id);
+      case 'fruit':
+        return new Fruit(cell, this.currentFruitType, this);
+      default:
+        throw new BoardError(BoardError.INVALID_ITEM_TYPE);
+    }
+  }
+
+  private characterFactory(boardItemDTO: BoardItemDTO, cell: Cell): Character {
+    if (enemiesConst.includes(boardItemDTO.type)) {
+      const enemy = this.getBoardEnemy(cell, boardItemDTO.id, boardItemDTO.orientation);
+      this.enemies.set(enemy.getId(), enemy);
+      return enemy;
+    }
+    if (!this.host || !this.guest) throw new BoardError(BoardError.USER_NOT_DEFINED);
+    const character = boardItemDTO.id === this.host.getId() ? this.host : this.guest;
+    return character;
   }
 
   /**

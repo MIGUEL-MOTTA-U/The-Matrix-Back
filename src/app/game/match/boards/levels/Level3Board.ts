@@ -1,7 +1,6 @@
 import { config } from '../../../../../server.js';
 import type Enemy from '../../../characters/enemies/Enemy.js';
 import LogMan from '../../../characters/enemies/LogMan.js';
-import type Match from '../../Match.js';
 import Board from '../Board.js';
 import type Cell from '../CellBoard.js';
 
@@ -14,11 +13,6 @@ import type Cell from '../CellBoard.js';
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 export default class Level3Board extends Board {
-  constructor(match: Match, map: string, level: number) {
-    super(match, map, level);
-    this.loadContext(); // We exec this method twice, because of TypeScript, it doesn't saves the status assigned after we use the father constructor:)
-  }
-
   protected getBoardEnemy(cell: Cell): Enemy {
     return new LogMan(cell, this);
   }

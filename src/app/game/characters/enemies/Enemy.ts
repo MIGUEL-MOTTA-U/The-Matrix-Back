@@ -3,6 +3,7 @@ import {
   type BoardItemDTO,
   type CellDTO,
   type Direction,
+  type EnemiesTypes,
   type EnemyState,
   type UpdateEnemy,
   validateGameMessageOutput,
@@ -31,7 +32,7 @@ export default abstract class Enemy extends Character {
    * @return {Promise<void>} A promise that resolves when the movement is calculated.
    */
   public abstract calculateMovement(): Promise<void>;
-  public abstract getEnemyName(): string;
+  public abstract getEnemyName(): EnemiesTypes;
   protected enemyState: EnemyState = 'stopped';
   /**
    * Executes the enemy's special power.

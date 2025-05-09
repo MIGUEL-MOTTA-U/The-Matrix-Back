@@ -4,6 +4,7 @@ import {
   type BoardItemDTO,
   type CellDTO,
   type PlayerMove,
+  type PlayerStorage,
   validatePlayerMove,
 } from '../../../../schemas/zod.js';
 import type Cell from '../../match/boards/CellBoard.js';
@@ -37,6 +38,16 @@ class Player extends Character {
       idItemConsumed,
       numberOfFruits,
     });
+  }
+
+  public getPlayerStorage(): PlayerStorage {
+    return {
+      id: this.id,
+      color: this.color,
+      coordinates: this.getCoordinates(),
+      direction: this.orientation,
+      state: this.getState(),
+    };
   }
 
   /**

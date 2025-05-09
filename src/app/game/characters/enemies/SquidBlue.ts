@@ -1,4 +1,4 @@
-import type { CellDTO, Direction } from '../../../../schemas/zod.js';
+import type { CellDTO, Direction, EnemiesTypes } from '../../../../schemas/zod.js';
 import Enemy from './Enemy.js';
 /**
  * @class SquidBlue
@@ -44,9 +44,9 @@ export default class SquidBlue extends Enemy {
 
   /**
    * This method retrieves the name of the SquidBlue enemy.
-   * @returns {string} - The name of the enemy.
+   * @returns {EnemiesTypes} - The name of the enemy.
    */
-  public getEnemyName(): string {
+  public getEnemyName(): EnemiesTypes {
     return 'squid-blue';
   }
 }

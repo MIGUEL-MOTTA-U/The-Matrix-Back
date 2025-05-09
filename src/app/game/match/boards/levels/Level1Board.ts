@@ -1,3 +1,4 @@
+import type { Direction } from '../../../../../schemas/zod.js';
 import { config } from '../../../../../server.js';
 import type Enemy from '../../../characters/enemies/Enemy.js';
 import Troll from '../../../characters/enemies/Troll.js';
@@ -12,16 +13,11 @@ import type Cell from '../CellBoard.js';
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 export default class Level1Board extends Board {
-  constructor(match: Match, map: string, level: number) {
-    super(match, map, level);
-    this.loadContext(); // We exec this method twice, because of TypeScript, it doesn't saves the status assigned after we use the father constructor:)
-  }
-
   /**
    * This method return the enemy created in the board
    */
-  protected getBoardEnemy(cell: Cell): Enemy {
-    return new Troll(cell, this);
+  protected getBoardEnemy(cell: Cell, id?: string, orientation?: Direction): Enemy {
+    return new Troll(cell, this, id, undefined, orientation);
   }
 
   /**

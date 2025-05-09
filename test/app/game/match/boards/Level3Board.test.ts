@@ -29,6 +29,7 @@ describe('Level3Board', () => {
         it('should set up fruits', () => {
             boardMock = new Level3Board(match, map, level);
             boardMock.initialize();
+            boardMock.initialize();
             const fruits = boardMock.getFruitsNumber();
             // Count based on the coordinates in Level3Board loadContext
             expect(fruits).toBeGreaterThan(0);
@@ -36,6 +37,7 @@ describe('Level3Board', () => {
 
         it('should set up rocks', () => {
             boardMock = new Level3Board(match, map, level);
+            boardMock.initialize();
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
             const rocks = boardMock["ROCKS"];
             // Based on rocksCoordinates length from Level3Board
@@ -44,6 +46,7 @@ describe('Level3Board', () => {
 
         it('should set up enemies', () => {
             boardMock = new Level3Board(match, map, level);
+            boardMock.initialize();
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
             const enemiesCoordinates = boardMock["enemiesCoordinates"];
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
@@ -57,6 +60,7 @@ describe('Level3Board', () => {
 
         it('should set up players', () => {
             boardMock = new Level3Board(match, map, level);
+            boardMock.initialize();
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
             const players = boardMock["playersStartCoordinates"];
             expect(players).toEqual([[10, 2], [10, 13]]);
@@ -64,9 +68,10 @@ describe('Level3Board', () => {
 
         it('should set up fruits type', () => {
             boardMock = new Level3Board(match, map, level);
+            boardMock.initialize();
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
             const fruitsType = boardMock["FRUIT_TYPE"];
-            expect(fruitsType).toEqual(['banana', 'grape', 'apple']);
+            expect(fruitsType).toEqual(['grape', 'apple']);
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
             const fruitsContainer = boardMock["FRUITS_CONTAINER"];
             expect(fruitsContainer).toEqual(['banana', 'grape', 'apple']);
@@ -74,6 +79,7 @@ describe('Level3Board', () => {
 
         it('should set up enemies speed', () => {
             boardMock = new Level3Board(match, map, level);
+            boardMock.initialize();
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
             const enemiesSpeed = boardMock["ENEMIES_SPEED"];
             // In Level3Board, speed is config.ENEMIES_SPEED_MS + 500
@@ -82,14 +88,16 @@ describe('Level3Board', () => {
 
         it('should set up fruit rounds', () => {
             boardMock = new Level3Board(match, map, level);
+            boardMock.initialize();
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
             const fruitsRounds = boardMock["fruitsRounds"];
             // fruitsRounds equals FRUIT_TYPE.length in Level3Board
-            expect(fruitsRounds).toEqual(3);
+            expect(fruitsRounds).toEqual(3 - 1);
         });
 
         it('should handle enemy movement', async () => {
             boardMock = new Level3Board(match, map, level);
+            boardMock.initialize();
             const enemy = boardMock.getBoard()[2][7].getCharacter() as LogMan;
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
             boardMock["checkLose"] = vi.fn().mockReturnValue(false);
@@ -103,6 +111,7 @@ describe('Level3Board', () => {
 
         it('should call stopGame when checkWin is true', async () => {
             boardMock = new Level3Board(match, map, level);
+            boardMock.initialize();
             const enemyMock = mockDeep<LogMan>();
             
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>

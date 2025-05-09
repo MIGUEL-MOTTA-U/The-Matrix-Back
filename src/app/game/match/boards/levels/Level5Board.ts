@@ -1,6 +1,7 @@
 import { config } from '../../../../../server.js';
 import type Enemy from '../../../characters/enemies/Enemy.js';
 import SquidBlue from '../../../characters/enemies/SquidBlue.js';
+import type Match from '../../Match.js';
 import Board from '../Board.js';
 import type Cell from '../CellBoard.js';
 

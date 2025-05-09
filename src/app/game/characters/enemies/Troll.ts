@@ -1,4 +1,4 @@
-import type { Direction } from '../../../../schemas/zod.js';
+import type { Direction, EnemiesTypes } from '../../../../schemas/zod.js';
 import Enemy from './Enemy.js';
 
 /**
@@ -72,9 +72,9 @@ export default class Troll extends Enemy {
 
   /**
    * This method retrieves the name of the Troll enemy.
-   * @returns {string} - The name of the enemy.
+   * @returns {EnemiesTypes} - The name of the enemy.
    */
-  public getEnemyName(): string {
+  public getEnemyName(): EnemiesTypes {
     return 'troll';
   }
 }

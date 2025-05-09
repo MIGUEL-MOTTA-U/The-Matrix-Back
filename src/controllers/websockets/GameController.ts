@@ -106,7 +106,7 @@ export default class GameController {
     socket: WebSocket
   ): Promise<void> {
     await this.gameService.startMatch(matchDetails.id);
-    const updateMatch = this.gameService.getMatchUpdate(matchDetails.id);
+    const updateMatch = await this.gameService.getMatchUpdate(matchDetails.id);
     socket.send(this.parseToString(updateMatch));
     logger.info(`The User: ${userIdParsed} is connected to the match ${matchDetails.id}`);
   }
@@ -130,7 +130,7 @@ export default class GameController {
     userIdParsed: string,
     socket: WebSocket
   ): Promise<void> {
-    const updateMatch = this.gameService.getMatchUpdate(matchDetails.id);
+    const updateMatch = await this.gameService.getMatchUpdate(matchDetails.id);
     socket.send(this.parseToString(updateMatch));
     logger.info(
       `Player ${userIdParsed} reconnected to match ${matchDetails.id} \nHost: ${matchDetails.host} \nGuest: ${matchDetails.guest}\n`
