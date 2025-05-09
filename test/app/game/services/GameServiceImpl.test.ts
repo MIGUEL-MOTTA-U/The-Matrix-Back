@@ -6,6 +6,7 @@ import { WebSocket } from 'ws';
 import GameServiceImpl from '../../../../src/app/game/services/GameServiceImpl.js';
 import type { MatchDetails, PlayerMove, UpdateEnemy, UpdateTime } from 'src/schemas/zod.js';
 import type Match from '../../../../src/app/game/match/Match.js';
+import type GameCacheRedis from '../../../../src/schemas/repositories/GameCacheRedis.js';
 
 vi.mock('../../../../src/server.js', () => {
   return {
@@ -21,7 +22,10 @@ vi.mock('../../../../src/server.js', () => {
 
 const matchRepository = mockDeep<MatchRepository>();
 const userRepository = mockDeep<UserRepository>();
-const gameServiceImpl = new GameServiceImpl(matchRepository, userRepository);
+const gameCache = mockDeep<GameCacheRedis>();
+gameCache.getMatch.mockResolvedValue(null);
+gameCache.saveMatch.mockResolvedValue(undefined);
+const gameServiceImpl = new GameServiceImpl(matchRepository, userRepository, gameCache);
 beforeEach(() => {
   vi.clearAllMocks();
 });
@@ -66,6 +70,16 @@ describe('GameServiceImpl', () => {
         getPlayer: vi.fn().mockReturnValue(undefined),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
@@ -91,6 +105,16 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockResolvedValue(false),
         stopGame: vi.fn(),
         getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
@@ -130,6 +154,16 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockResolvedValue(false),
         stopGame: vi.fn(),
         getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
@@ -169,6 +203,16 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockResolvedValue(false),
         stopGame: vi.fn(),
         getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
@@ -207,6 +251,16 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockResolvedValue(false),
         stopGame: vi.fn(),
         getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
@@ -251,6 +305,16 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockResolvedValue(false),
         stopGame: vi.fn(),
         getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
@@ -289,6 +353,16 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockResolvedValue(false),
         stopGame: vi.fn(),
         getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
@@ -328,6 +402,16 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockResolvedValue(false),
         stopGame: vi.fn(),
         getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
@@ -365,6 +449,16 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockResolvedValue(false),
         stopGame: vi.fn(),
         getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
@@ -411,7 +505,17 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockResolvedValue(false),
         checkLose: vi.fn().mockReturnValue(false),
         stopGame: vi.fn(),
-        getId: vi.fn().mockReturnValue(matchId)
+        getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
@@ -461,6 +565,16 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockResolvedValue(false),
         stopGame: vi.fn(),
         getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
@@ -493,11 +607,22 @@ describe('GameServiceImpl', () => {
         enemyId: 'enemy1',
         coordinates: { x: 5, y: 5 },
         direction: 'up',
+        enemyState: 'walking'
       };
       const mockMatch = {
         isRunning: vi.fn().mockReturnValue(true),
         checkLose: vi.fn().mockReturnValue(false),
         checkWin: vi.fn().mockReturnValue(false),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN };
@@ -523,6 +648,7 @@ describe('GameServiceImpl', () => {
         enemyId: 'enemy1',
         coordinates: { x: 5, y: 5 },
         direction: 'up',
+        enemyState: 'walking'
       };
 
       await expect(gameServiceImpl.updatePlayers(matchId, hostId, guestId, {type: 'update-enemy' , payload: data})).rejects.toThrow(
@@ -614,6 +740,16 @@ describe('GameServiceImpl', () => {
         getGuest: vi.fn().mockReturnValue('guest1'),
         checkWin: vi.fn().mockReturnValue(false),
         checkLose: vi.fn().mockReturnValue(false),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       type GameServiceImplWithPrivateMethods = typeof gameServiceImpl & {
         notifyPlayers: (
@@ -683,27 +819,27 @@ describe('GameServiceImpl', () => {
     });
   });
   describe('getMatch', () => {
-    it('should return a match by its ID', () => {
+    it('should return a match by its ID', async () => {
       const matchId = 'match1';
       const mockMatch = { id: matchId };
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
 
-      const result = gameServiceImpl.getMatch(matchId);
+      const result = await gameServiceImpl.getMatch(matchId);
 
       expect(result).toBe(mockMatch);
     });
-    it('should return undefined if the match is not found', () => {
+    it('should return undefined if the match is not found', async () => {
       const matchId = 'invalidMatchId';
 
-      const result = gameServiceImpl.getMatch(matchId);
+      const result = await gameServiceImpl.getMatch(matchId);
 
       expect(result).toBeUndefined();
     });
   });
 
   describe('get match update', () => {
-    it('should return the match update', () => {
+    it('should return the match update', async () => {
       const matchId = 'match1';
       const matchUpdate = {
         id: matchId,
@@ -719,19 +855,29 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockReturnValue(false),
         checkLose: vi.fn().mockReturnValue(false),
         getMatchUpdate: vi.fn().mockReturnValue(matchUpdate),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
 
-      const result = gameServiceImpl.getMatchUpdate(matchId);
+      const result = await gameServiceImpl.getMatchUpdate(matchId);
 
       expect(result).toEqual(matchUpdate);
     });
 
-    it('should throw error if the match is not found', () => {
+    it('should throw error if the match is not found', async () => {
       const matchId = 'invalidMatchId';
 
-      expect(() => gameServiceImpl.getMatchUpdate(matchId)).toThrow(
+      await expect(gameServiceImpl.getMatchUpdate(matchId)).rejects.toThrow(
         'The requested match was not found'
       );
     });

@@ -1,35 +1,21 @@
 import { config } from '../../../../../server.js';
 import Cow from '../../../characters/enemies/Cow.js';
+import type Enemy from '../../../characters/enemies/Enemy.js';
 import type Match from '../../Match.js';
 import Board from '../Board.js';
-import Rock from '../Rock.js';
+import type Cell from '../CellBoard.js';
 
+/**
+ * @class Level3Board
+ * @extends Board
+ * Class representing the board for level 3.
+ *
+ * @since 07/05/2025
+ * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
+ */
 export default class Level2Board extends Board {
-  constructor(match: Match, map: string, level: number) {
-    super(match, map, level);
-    this.loadContext(); // We exec this method twice, because of TypeScript, it doesn't saves the status assigned after we use the father constructor:)
-  }
-
-  protected setUpEnemies(): void {
-    for (let i = 0; i < this.ENEMIES; i++) {
-      const x = this.enemiesCoordinates[i][0];
-      const y = this.enemiesCoordinates[i][1];
-      const troll = new Cow(this.board[x][y], this);
-      this.enemies.set(troll.getId(), troll);
-      this.board[x][y].setCharacter(troll);
-    }
-  }
-
-  protected setUpInmovableObjects(): void {
-    for (let i = 0; i < this.ROCKS; i++) {
-      const x = this.rocksCoordinates[i][0];
-      const y = this.rocksCoordinates[i][1];
-      if (this.board[x][y].getCharacter() === null) {
-        // This check should always be true
-        const rock = new Rock(this.board[x][y], this);
-        this.board[x][y].setItem(rock);
-      }
-    }
+  protected getBoardEnemy(cell: Cell): Enemy {
+    return new Cow(cell, this);
   }
 
   protected loadContext(): void {
@@ -40,8 +26,6 @@ export default class Level2Board extends Board {
     this.enemiesCoordinates = [
       [2, 3],
       [2, 12],
-      [7, 3],
-      [7, 12],
       [13, 3],
       [13, 12],
     ];
@@ -58,20 +42,12 @@ export default class Level2Board extends Board {
     this.rocksCoordinates = [
       ...this.getRowCoordinatesInRange(5, 1, 4),
       ...this.getRowCoordinatesInRange(5, 11, 14),
-
-      ...Array.from({ length: 4 }, (_, i) => i + 6).flatMap((row) =>
-        this.getRowCoordinatesInRange(row, 6, 9)
-      ),
-
+      ...this.getSquareCoordinatesInRange(4, 6, 6, 9),
       ...this.getRowCoordinatesInRange(10, 1, 4),
       ...this.getRowCoordinatesInRange(10, 11, 14),
     ];
-    this.ROCKS = this.rocksCoordinates.length;
-    this.FRUITS = this.fruitsCoordinates.length;
     this.FRUIT_TYPE = ['banana', 'grape'];
-    this.FRUITS_CONTAINER = [...this.FRUIT_TYPE];
-    this.ENEMIES = this.enemiesCoordinates.length;
-    this.fruitsRounds = this.FRUIT_TYPE.length;
     this.ENEMIES_SPEED = config.ENEMIES_SPEED_MS;
+    this.loadConstants();
   }
 }

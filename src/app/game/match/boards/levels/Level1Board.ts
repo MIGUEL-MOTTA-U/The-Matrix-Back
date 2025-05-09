@@ -1,7 +1,10 @@
+import type { Direction } from '../../../../../schemas/zod.js';
 import { config } from '../../../../../server.js';
+import type Enemy from '../../../characters/enemies/Enemy.js';
 import Troll from '../../../characters/enemies/Troll.js';
 import type Match from '../../Match.js';
 import Board from '../Board.js';
+import type Cell from '../CellBoard.js';
 /**
  * @class Level1Board
  * Class to represent the board of the game
@@ -10,22 +13,11 @@ import Board from '../Board.js';
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 export default class Level1Board extends Board {
-  constructor(match: Match, map: string, level: number) {
-    super(match, map, level);
-    this.loadContext(); // We exec this method twice, because of TypeScript, it doesn't saves the status assigned after we use the father constructor:)
-  }
-
   /**
-   * Method to set up the enemies in the board
+   * This method return the enemy created in the board
    */
-  protected setUpEnemies(): void {
-    for (let i = 0; i < this.ENEMIES; i++) {
-      const x = this.enemiesCoordinates[i][0];
-      const y = this.enemiesCoordinates[i][1];
-      const troll = new Troll(this.board[x][y], this);
-      this.enemies.set(troll.getId(), troll);
-      this.board[x][y].setCharacter(troll);
-    }
+  protected getBoardEnemy(cell: Cell, id?: string, orientation?: Direction): Enemy {
+    return new Troll(cell, this, id, undefined, orientation);
   }
 
   /**
@@ -46,18 +38,8 @@ export default class Level1Board extends Board {
       ...this.getRowCoordinatesInRange(4, 5, 11),
       ...this.getRowCoordinatesInRange(11, 5, 11),
     ];
-    this.FRUITS = this.fruitsCoordinates.length;
     this.FRUIT_TYPE = ['banana', 'grape'];
-    this.FRUITS_CONTAINER = [...this.FRUIT_TYPE];
-    this.ENEMIES = 4;
-    this.fruitsRounds = this.FRUIT_TYPE.length;
     this.ENEMIES_SPEED = config.ENEMIES_SPEED_MS;
-  }
-
-  /**
-   * This method sets up the immovable objects in the board
-   */
-  protected setUpInmovableObjects(): void {
-    // TODO --> Priority 3 <-- Implement this method
+    this.loadConstants();
   }
 }

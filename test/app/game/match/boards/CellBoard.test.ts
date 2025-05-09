@@ -65,7 +65,7 @@ describe('Cell', () => {
     const cell = new Cell(1, 1);
     expect(cell.isFrozen()).toBe(false);
 
-    // We'll need to use executePower to make it frozen
+    // We'll need to use executePower to make , trueit frozen
     // since 'frozen' is private
   });
 
@@ -75,7 +75,7 @@ describe('Cell', () => {
 
     cell.setNeighbors(cellToFreeze, null, null, null);
 
-    const result = cell.executePower('up');
+    const result = cell.executePower('up', true);
 
     expect(result.length).toBe(1);
     expect(result[0].coordinates).toEqual({ x: 1, y: 2 });
@@ -89,7 +89,7 @@ describe('Cell', () => {
 
     cell.setNeighbors(null, cellToFreeze, null, null);
 
-    const result = cell.executePower('down');
+    const result = cell.executePower('down', true);
 
     expect(result.length).toBe(1);
     expect(result[0].coordinates).toEqual({ x: 3, y: 2 });
@@ -108,7 +108,7 @@ describe('Cell', () => {
     cell2.setNeighbors(null, null, cell1, cell3);
     cell3.setNeighbors(null, null, cell2, null);
 
-    const result = originalCell.executePower('right');
+    const result = originalCell.executePower('right', true);
 
     expect(result.length).toBe(3);
     expect(cell1.isFrozen()).toBe(true);
@@ -123,15 +123,15 @@ describe('Cell', () => {
     originalCell.setNeighbors(null, null, null, cell1);
 
     // First freeze the cell
-    originalCell.executePower('right');
+    originalCell.executePower('right', true);
     expect(cell1.isFrozen()).toBe(true);
 
     // Then unfreeze it
-    const result = originalCell.executePower('right');
+    const result = originalCell.executePower('right', true);
 
     expect(result.length).toBe(1);
     expect(cell1.isFrozen()).toBe(false);
-    expect(result[0].frozen).toBe(true);
+    expect(result[0].frozen).toBe(false);
   });
 
   it('should not freeze a blocked cell', () => {
@@ -143,7 +143,7 @@ describe('Cell', () => {
 
     originalCell.setNeighbors(null, null, null, blockedCell);
 
-    const result = originalCell.executePower('right');
+    const result = originalCell.executePower('right', true);
 
     expect(result.length).toBe(0);
     expect(blockedCell.isFrozen()).toBe(false);
@@ -159,7 +159,7 @@ describe('Cell', () => {
 
     originalCell.setNeighbors(null, null, null, cellWithCharacter);
 
-    const result = originalCell.executePower('right');
+    const result = originalCell.executePower('right', true);
 
     expect(result.length).toBe(0);
   });
@@ -177,7 +177,7 @@ describe('Cell', () => {
     // Mock the blocked method to return true for the blocked cell
     vi.spyOn(blockedCell, 'blocked').mockReturnValue(true);
 
-    const result = originalCell.executePower('right');
+    const result = originalCell.executePower('right', true);
 
     expect(result.length).toBe(2);
     expect(cell1.isFrozen()).toBe(true);
@@ -187,8 +187,6 @@ describe('Cell', () => {
 
   it('should throw error when using an invalid direction', () => {
     const cell = new Cell(1, 1);
-
-    // @ts-expect-error - Testing invalid direction
-    expect(() => cell.executePower('invalid')).toThrow('Not supported direction for freeze');
+    expect(() => cell.executePower('invalid', true)).toThrow('Not supported direction for freeze');
   });
 });

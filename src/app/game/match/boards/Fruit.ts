@@ -49,8 +49,8 @@ export default class Fruit extends BoardItem {
    * @param {string} name The name of the fruit.
    * @param {Board} board The board to which the fruit belongs.
    */
-  constructor(cell: Cell, name: string, board: Board) {
-    super(cell, board);
+  constructor(cell: Cell, name: string, board: Board, id?: string) {
+    super(cell, board, id);
     this.name = name;
   }
 

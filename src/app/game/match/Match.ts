@@ -2,9 +2,12 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
 import {
+  type BoardStorage,
   type GameMessageOutput,
   type MatchDTO,
+  type MatchStorage,
   type PlayerState,
+  type PlayerStorage,
   type UpdateAll,
   type UpdateTime,
   validatePlayerState,
@@ -55,21 +58,55 @@ class Match {
   }
 
   /**
+   * Retrieves the board of the match.
+   *
+   * @return {Board} The board of the match.
+   */
+  public initialize(): void {
+    this.board.initialize();
+  }
+
+  /**
+   * Loads the board with the given storage data.
+   *
+   * @param {BoardStorage} boardStorage The storage data for the board.
+   * @param {PlayerStorage} host The storage data for the host player.
+   * @param {PlayerStorage} guest The storage data for the guest player.
+   */
+  public loadBoard(boardStorage: BoardStorage, host: PlayerStorage, guest: PlayerStorage): void {
+    this.board.loadBoard(boardStorage, host, guest);
+  }
+
+  /**
+   * Retrieves the storage data of the match, including players and board.
+   *
+   * @return {Promise<MatchStorage>} A promise that resolves to the match storage data.
+   */
+  public async getMatchStorage(): Promise<MatchStorage> {
+    const { hostStorage, guestStorage } = this.board.getPlayersStorage() as {
+      hostStorage: PlayerStorage;
+      guestStorage: PlayerStorage;
+    };
+    const boardStorage = await this.board.getBoardStorage();
+    return {
+      id: this.id,
+      level: this.level,
+      map: this.map,
+      host: hostStorage,
+      guest: guestStorage,
+      board: boardStorage,
+      timeSeconds: this.timeSeconds,
+      typeFruits: this.board.getFruitTypes(),
+    };
+  }
+
+  /**
    * Checks if the match is currently running.
    *
    * @return {boolean} True if the match is running, false otherwise.
    */
   public isRunning(): boolean {
     return this.running;
-  }
-
-  /**
-   * Initializes the match by setting up the board and players.
-   *
-   * @return {Promise<void>} A promise that resolves when the match is initialized.
-   */
-  public async initialize(): Promise<void> {
-    await this.board.initialize();
   }
 
   /**
@@ -91,7 +128,9 @@ class Match {
    * @return {Promise<void>} A promise that resolves when the players are notified.
    */
   public async notifyPlayers(data: GameMessageOutput): Promise<void> {
-    this.gameService.updatePlayers(this.id, this.host, this.guest, data);
+    if (this.running) {
+      await this.gameService.updatePlayers(this.id, this.host, this.guest, data);
+    }
   }
 
   /**

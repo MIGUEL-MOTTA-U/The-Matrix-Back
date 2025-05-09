@@ -1,4 +1,4 @@
-import type { Direction } from '../../../../schemas/zod.js';
+import type { Direction, EnemiesTypes } from '../../../../schemas/zod.js';
 import Enemy from './Enemy.js';
 
 /**
@@ -27,7 +27,9 @@ export default class Troll extends Enemy {
         try {
           await this.moveRandomDirection(movements);
           return;
-        } catch (_err) {}
+        } catch (_err) {
+          this.enemyState = 'stopped';
+        }
       }
     }
   }
@@ -66,5 +68,13 @@ export default class Troll extends Enemy {
         await this.moveRight();
         return;
     }
+  }
+
+  /**
+   * This method retrieves the name of the Troll enemy.
+   * @returns {EnemiesTypes} - The name of the enemy.
+   */
+  public getEnemyName(): EnemiesTypes {
+    return 'troll';
   }
 }

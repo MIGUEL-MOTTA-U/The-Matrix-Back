@@ -4,6 +4,7 @@ import {
   type BoardItemDTO,
   type CellDTO,
   type PlayerMove,
+  type PlayerStorage,
   validatePlayerMove,
 } from '../../../../schemas/zod.js';
 import type Cell from '../../match/boards/CellBoard.js';
@@ -39,6 +40,16 @@ class Player extends Character {
     });
   }
 
+  public getPlayerStorage(): PlayerStorage {
+    return {
+      id: this.id,
+      color: this.color,
+      coordinates: this.getCoordinates(),
+      direction: this.orientation,
+      state: this.getState(),
+    };
+  }
+
   /**
    * Converts the player into a `BoardItemDTO` object.
    *
@@ -55,8 +66,8 @@ class Player extends Character {
    *
    */
   public async execPower(): Promise<CellDTO[]> {
-    return this.mutex.runExclusive(() => {
-      return this.cell.executePower(this.orientation);
+    return await this.mutex.runExclusive(() => {
+      return this.cell.executePower(this.orientation, true);
     });
   }
 

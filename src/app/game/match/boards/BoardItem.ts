@@ -15,4 +15,11 @@ export abstract class BoardItem {
     this.board = board;
     this.id = id || uuidv4();
   }
+  /**
+   * Retrieves the id of the board item.
+   * @returns {string} The id of the board item.
+   */
+  public getId(): string {
+    return this.id;
+  }
 }

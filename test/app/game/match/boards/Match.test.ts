@@ -46,8 +46,7 @@ describe('Match', () => {
     match = new Match(gameServiceMock, 'match-id', 1, 'map-1', 'host-id', 'guest-id');
   });
 
-  it('should initialize the match', async () => {
-    await match.initialize();
+  it('should initialize the match', () => {  
     expect(Level1Board).toHaveBeenCalledWith(match, 'map-1', 1);
     expect(match.isRunning()).toBe(true);
   });

@@ -9,10 +9,12 @@ const matchInputDTOSchema = z.object({
   level: z.number().nonnegative(),
   map: z.string().nonempty(),
 });
+const enemiesTypesSchema = z.enum(['troll', 'cow', 'log-man', 'squid-blue', 'squid-green']);
+const itemsTypesSchema = z.enum(['rock', 'fruit']);
 const boardItemSchema = z.object({
-  type: z.string().nonempty(),
+  type: z.union([enemiesTypesSchema, itemsTypesSchema, z.enum(['player'])]),
   id: z.string(),
-  orientation: z.string().optional(),
+  orientation: directionSchema.optional(),
   color: z.string().optional(),
 });
 const cellCordinatesSchema = z.object({
@@ -45,10 +47,13 @@ const EndMatchSchema = z.object({
   result: z.enum(['win', 'lose', 'end game']),
 });
 
+const enemyStateSchema = z.enum(['walking', 'roling', 'stopped']);
+
 const updateEnemySchema = z.object({
   enemyId: z.string().nonempty(),
   coordinates: cellCordinatesSchema,
   direction: directionSchema,
+  enemyState: enemyStateSchema,
 });
 
 const playerMoveSchema = z.object({
@@ -154,6 +159,37 @@ const pathResultSchema = z.object({
 const PathResultWithDirectionSchema = pathResultSchema.extend({
   direction: directionSchema,
 });
+
+const PlayerStorageSchema = z.object({
+  id: z.string().nonempty(),
+  color: z.string(),
+  coordinates: cellCordinatesSchema,
+  direction: directionSchema,
+  state: z.enum(['dead', 'alive']),
+});
+
+const BoardStorageSchema = z.object({
+  fruitType: z.array(z.string()),
+  fruitsContainer: z.array(z.string()),
+  fruitsNumber: z.number().nonnegative(),
+  fruitsRound: z.number().nonnegative(),
+  currentRound: z.number().nonnegative(),
+  currentFruitType: z.string(),
+  rocksCoordinates: z.array(z.array(z.number())),
+  fruitsCoordinates: z.array(z.array(z.number())),
+  board: z.array(cellDTOSchema),
+});
+
+const MatchStorageSchema = z.object({
+  id: z.string().nonempty(),
+  level: z.number().nonnegative(),
+  map: z.string().nonempty(),
+  timeSeconds: z.number().nonnegative(),
+  typeFruits: z.array(z.string()),
+  host: PlayerStorageSchema,
+  guest: PlayerStorageSchema,
+  board: BoardStorageSchema,
+});
 export {
   stringSchema,
   matchInputDTOSchema,
@@ -176,4 +212,6 @@ export {
   customMapKeySchema,
   pathResultSchema,
   PathResultWithDirectionSchema,
+  BoardStorageSchema,
+  MatchStorageSchema,
 };

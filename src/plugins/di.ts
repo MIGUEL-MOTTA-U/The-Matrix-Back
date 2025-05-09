@@ -10,12 +10,15 @@ import MatchController from '../controllers/rest/MatchController.js';
 import UserController from '../controllers/rest/UserController.js';
 import GameController from '../controllers/websockets/GameController.js';
 import MatchMakingController from '../controllers/websockets/MatchMakingController.js';
+import GameCacheRedis from '../schemas/repositories/GameCacheRedis.js';
 import MatchRepositoryPostgres from '../schemas/repositories/MatchRepositoryPostgres.js';
 import UserRepositoryPostgres from '../schemas/repositories/UserRepositoryPostgres.js';
 import { container } from './diContainer.js';
 const registerDependencies = (server: FastifyInstance) => {
   container.register({
+    redis: asValue(server.redis),
     prisma: asValue(server.prisma),
+    gameCache: asClass(GameCacheRedis, { lifetime: Lifetime.SINGLETON }),
     userRepository: asClass(UserRepositoryPostgres, { lifetime: Lifetime.SINGLETON }),
     matchRepository: asClass(MatchRepositoryPostgres, { lifetime: Lifetime.SINGLETON }),
     webSocketService: asClass(WebsocketServiceImpl, { lifetime: Lifetime.SINGLETON }),

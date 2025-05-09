@@ -113,6 +113,16 @@ const parseStringToCoordinates = (coordinates: string): CellCoordinates => {
   return { x, y };
 };
 
+const validateBoardStorage = (data: unknown): BoardStorage => {
+  const schema = objects.BoardStorageSchema;
+  return schema.parse(data);
+};
+
+const validateMatchStorage = (data: unknown): MatchStorage => {
+  const schema = objects.MatchStorageSchema;
+  return schema.parse(data);
+};
+
 interface MatchInputDTO {
   level: number;
   map: string;
@@ -138,10 +148,14 @@ interface CellDTO {
   frozen: boolean;
 }
 interface BoardItemDTO {
-  type: string;
+  type: EnemiesTypes | ItemsTypes | 'player';
   id: string;
-  orientation?: string;
+  orientation?: Direction;
   color?: string;
+}
+interface PlayersPaths {
+  hostPath: PathResultWithDirection | null;
+  guestPath: PathResultWithDirection | null;
 }
 interface Info {
   message: string;
@@ -159,6 +173,33 @@ interface MatchDTO {
   board: BoardDTO;
   typeFruits: string[];
 }
+interface MatchStorage extends Omit<MatchDTO, 'board' | 'hostId' | 'guestId'> {
+  host: PlayerStorage;
+  guest: PlayerStorage;
+  board: BoardStorage;
+  timeSeconds: number;
+}
+
+interface PlayerStorage {
+  id: string;
+  color: string;
+  coordinates: CellCoordinates;
+  direction: Direction;
+  state: 'dead' | 'alive';
+}
+
+interface BoardStorage {
+  fruitType: string[];
+  fruitsContainer: string[];
+  fruitsNumber: number;
+  fruitsRound: number;
+  currentRound: number;
+  currentFruitType: string;
+  rocksCoordinates: number[][];
+  fruitsCoordinates: number[][];
+  board: CellDTO[];
+}
+
 interface GameMessageOutput {
   type:
     | 'update-state'
@@ -197,6 +238,7 @@ interface UpdateEnemy {
   enemyId: string;
   coordinates: CellCoordinates;
   direction: Direction;
+  enemyState: EnemyState;
 }
 interface PlayerMove {
   id: string;
@@ -252,9 +294,14 @@ interface FrozenCells {
   cells: CellDTO[];
   direction: Direction;
 }
-
-type Direction = 'up' | 'down' | 'left' | 'right';
+const enemiesConst = ['troll', 'cow', 'log-man', 'squid-blue', 'squid-green'];
+const enemiesStatesConst = ['walking', 'roling', 'stopped'];
+const directionsConst = ['up', 'down', 'left', 'right'];
+type Direction = (typeof directionsConst)[number];
 type PlayerType = 'HOST' | 'GUEST';
+type EnemyState = (typeof enemiesStatesConst)[number];
+type EnemiesTypes = (typeof enemiesConst)[number];
+type ItemsTypes = 'rock' | 'fruit';
 export type {
   MatchInputDTO,
   MatchDetails,
@@ -281,8 +328,17 @@ export type {
   PathResult,
   PathResultWithDirection,
   PlayerType,
+  FrozenCells,
+  PlayersPaths,
+  EnemyState,
+  MatchStorage,
+  BoardStorage,
+  PlayerStorage,
+  EnemiesTypes,
+  ItemsTypes,
 };
 export {
+  enemiesConst,
   validateString,
   validateMatchInputDTO,
   validateCoordinates,
@@ -306,4 +362,6 @@ export {
   validatePathResultWithDirection,
   parseCoordinatesToString,
   parseStringToCoordinates,
+  validateBoardStorage,
+  validateMatchStorage,
 };

@@ -49,7 +49,7 @@ export default class MatchMakingController {
       if (match.started) throw new MatchError(MatchError.MATCH_ALREADY_STARTED);
       this.websocketService.registerConnection(match.host, socket);
       this.sendMessage(socket, validateInfo({ message: 'Connected and looking for a match...' }));
-      this.websocketService.matchMaking(match);
+      await this.websocketService.matchMaking(match);
       this.extendExpiration(match.id, match.host);
       logger.info(`Matchmaking from ${match.host}: looking for Match: ${JSON.stringify(match)}`);
 
