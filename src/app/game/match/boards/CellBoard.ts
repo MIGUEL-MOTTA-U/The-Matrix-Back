@@ -277,8 +277,8 @@ class Cell {
     if (!this.frozen) return cells;
     const cellDTO = this.getCellDTO();
     this.setFrozen(false);
-    
-    if (cellDTO){
+
+    if (cellDTO) {
       cellDTO.frozen = false;
       cells.push(cellDTO);
     }

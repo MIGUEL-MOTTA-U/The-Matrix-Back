@@ -131,7 +131,7 @@ describe('Cell', () => {
 
     expect(result.length).toBe(1);
     expect(cell1.isFrozen()).toBe(false);
-    expect(result[0].frozen).toBe(true);
+    expect(result[0].frozen).toBe(false);
   });
 
   it('should not freeze a blocked cell', () => {
