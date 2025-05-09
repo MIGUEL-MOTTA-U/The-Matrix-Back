@@ -339,6 +339,8 @@ export type {
 };
 export {
   enemiesConst,
+  enemiesStatesConst,
+  directionsConst,
   validateString,
   validateMatchInputDTO,
   validateCoordinates,
