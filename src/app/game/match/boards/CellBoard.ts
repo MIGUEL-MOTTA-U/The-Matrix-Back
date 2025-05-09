@@ -277,7 +277,11 @@ class Cell {
     if (!this.frozen) return cells;
     const cellDTO = this.getCellDTO();
     this.setFrozen(false);
-    if (cellDTO) cells.push(cellDTO);
+    
+    if (cellDTO){
+      cellDTO.frozen = false;
+      cells.push(cellDTO);
+    }
     const nextCell = this.cellFromDirection(direction);
     if (nextCell && keepUnfreezing) nextCell.unfreeze(cells, direction, keepUnfreezing);
     return cells;
