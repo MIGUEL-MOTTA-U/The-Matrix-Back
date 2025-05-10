@@ -15,6 +15,7 @@ vi.mock('../../../../../src/server.js', () => ({
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
+    debug: vi.fn(),
   },
   config: {
     MATCH_TIME_SECONDS: 300,

@@ -25,7 +25,7 @@ import BoardFactory from './boards/BoardFactory.js';
  * @since 18/04/2025
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
-class Match {
+export default class Match {
   private readonly id: string;
   private readonly level: number;
   private readonly map: string;
@@ -35,6 +35,7 @@ class Match {
   private readonly gameService: GameService;
   private started: boolean;
   private running: boolean;
+  private fruitGenerated: boolean;
   private timeSeconds: number;
   private worker: Worker | null = null;
   constructor(
@@ -49,6 +50,7 @@ class Match {
     this.id = id;
     this.level = level;
     this.map = map;
+    this.fruitGenerated = false;
     this.host = host;
     this.guest = guest;
     this.board = BoardFactory.createBoard(this, this.map, this.level);
@@ -327,4 +329,3 @@ class Match {
     ];
   }
 }
-export default Match;

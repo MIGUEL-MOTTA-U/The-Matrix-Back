@@ -12,6 +12,7 @@ vi.mock('../../../../../src/server.js', () => {
             info: vi.fn(),
             warn: vi.fn(),
             error: vi.fn(),
+            debug: vi.fn(),
         },
         config: {
             ENEMIES_SPEED_MS: 1000,

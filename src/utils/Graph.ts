@@ -10,7 +10,7 @@ type Edge<T> = { to: T; weight: number };
  * @author Your Name
  */
 export class Graph {
-  private adj: Map<string, Edge<string>[]> = new Map();
+  private readonly adj: Map<string, Edge<string>[]> = new Map();
   /**
    * Adds a node to the graph if it doesn't already exist.
    *
@@ -68,6 +68,32 @@ export class Graph {
     dist.set(start, 0);
     pq.enqueue(start, 0);
 
+    // main Search loop
+    this.mainSearchLoob(pq, dist, prev, end);
+
+    const path: string[] = [];
+    let u: string | null = end;
+
+    if (u) {
+      const prevU = prev.get(u);
+      if (prevU !== null || u === start) {
+        while (u) {
+          path.unshift(u);
+          u = prev.get(u) ?? null;
+        }
+      }
+    }
+
+    const finalDistance = dist.get(end) ?? Number.POSITIVE_INFINITY;
+    return { distance: finalDistance, path };
+  }
+
+  private mainSearchLoob(
+    pq: MinPriorityQueue<string>,
+    dist: Map<string, number>,
+    prev: Map<string, string | null>,
+    end: string
+  ) {
     while (!pq.isEmpty()) {
       const dequeued = pq.dequeue();
       if (!dequeued) break;
@@ -92,22 +118,6 @@ export class Graph {
         }
       }
     }
-
-    const path: string[] = [];
-    let u: string | null = end;
-
-    if (u) {
-      const prevU = prev.get(u);
-      if (prevU !== null || u === start) {
-        while (u) {
-          path.unshift(u);
-          u = prev.get(u) ?? null;
-        }
-      }
-    }
-
-    const finalDistance = dist.get(end) ?? Number.POSITIVE_INFINITY;
-    return { distance: finalDistance, path };
   }
 }
 

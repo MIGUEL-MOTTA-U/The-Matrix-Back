@@ -5,22 +5,20 @@ import { Mutex } from 'async-mutex';
 import BoardError from '../../../../errors/BoardError.js';
 import {
   type BoardDTO,
+  type BoardItem,
+  type BoardItemDTO,
+  type BoardStorage,
+  type CellCoordinates,
   type CellDTO,
+  type Direction,
+  type GameMessageOutput,
+  type PathResultWithDirection,
+  type PlayerStorage,
+  type PlayersPaths,
   type UpdateFruits,
   enemiesConst,
   parseCoordinatesToString,
   validateUpdateFruits,
-} from '../../../../schemas/zod.js';
-import type {
-  BoardItem,
-  BoardItemDTO,
-  BoardStorage,
-  CellCoordinates,
-  Direction,
-  GameMessageOutput,
-  PathResultWithDirection,
-  PlayerStorage,
-  PlayersPaths,
 } from '../../../../schemas/zod.js';
 import { config, logger } from '../../../../server.js';
 import { Graph } from '../../../../utils/Graph.js';
@@ -47,7 +45,7 @@ abstract class Board {
   protected readonly match: Match;
   protected readonly board: Cell[][];
   protected readonly enemies: Map<string, Enemy>;
-  protected ENEMIES = 0;
+  protected NUMENEMIES = 0;
   protected FRUITS = 0;
   protected ROCKS = 0;
   protected FRUIT_TYPE: string[] = [];
@@ -180,7 +178,7 @@ abstract class Board {
    */
   public getBoardDTO(): BoardDTO {
     return {
-      enemiesNumber: this.ENEMIES,
+      enemiesNumber: this.NUMENEMIES,
       fruitsNumber: this.FRUITS,
       playersStartCoordinates: this.playersStartCoordinates,
       cells: this.cellsBoardDTO(),
@@ -352,26 +350,47 @@ abstract class Board {
       for (let j = 0; j < this.COLS; j++) {
         const cell = this.board[i][j];
         graph.addNode(parseCoordinatesToString(cell.getCoordinates()));
-        if (!cell.blocked() && (canBreakFrozen || !cell.isFrozen())) {
+        if (this.isAvailableCell(cell, canBreakFrozen)) {
           const neighbors: Cell[] = cell.getNeighbors();
-          for (const neighbor of neighbors) {
-            // The neighbor exists, is not blocked
-            const blocked = neighbor.blocked() || (canBreakFrozen ? false : neighbor.isFrozen());
-            const possibleCharacter = neighbor.getCharacter();
-            if (
-              !blocked &&
-              (possibleCharacter === null || possibleCharacter?.kill() === canWalkOverPlayers)
-            ) {
-              graph.addEdge(
-                parseCoordinatesToString(cell.getCoordinates()),
-                parseCoordinatesToString(neighbor.getCoordinates())
-              );
-            }
-          }
+          this.mapNeighborsToGraph(neighbors, canBreakFrozen, canWalkOverPlayers, graph, cell);
         }
       }
     }
     return graph;
+  }
+
+  private isAvailableCell(cell: Cell, canBreakFrozen: boolean): boolean {
+    return !cell.blocked() && (canBreakFrozen || !cell.isFrozen());
+  }
+
+  private mapNeighborsToGraph(
+    neighbors: Cell[],
+    canBreakFrozen: boolean,
+    canWalkOverPlayers: boolean,
+    graph: Graph,
+    cell: Cell
+  ): void {
+    for (const neighbor of neighbors) {
+      // The neighbor exists, is not blocked
+      const blocked = neighbor.blocked() || (canBreakFrozen ? false : neighbor.isFrozen());
+      const possibleCharacter = neighbor.getCharacter();
+      if (this.isAvailableNeighbor(blocked, possibleCharacter, canWalkOverPlayers)) {
+        graph.addEdge(
+          parseCoordinatesToString(cell.getCoordinates()),
+          parseCoordinatesToString(neighbor.getCoordinates())
+        );
+      }
+    }
+  }
+
+  private isAvailableNeighbor(
+    blocked: boolean,
+    possibleCharacter: Character | null,
+    canWalkOverPlayers: boolean
+  ): boolean {
+    return (
+      !blocked && (possibleCharacter === null || possibleCharacter?.kill() === canWalkOverPlayers)
+    );
   }
 
   /**
@@ -548,7 +567,7 @@ abstract class Board {
    * This method sets up the enemies in the board
    */
   protected setUpEnemies(): void {
-    for (let i = 0; i < this.ENEMIES; i++) {
+    for (let i = 0; i < this.NUMENEMIES; i++) {
       const x = this.enemiesCoordinates[i][0];
       const y = this.enemiesCoordinates[i][1];
       const troll = this.getBoardEnemy(this.board[x][y]);
@@ -585,10 +604,9 @@ abstract class Board {
         this.board[x][y].setItem(rock);
       }
     }
-
-    for (let i = 0; i < this.freezedCells.length; i++) {
-      const x = this.freezedCells[i][0];
-      const y = this.freezedCells[i][1];
+    for (const freezedCell of this.freezedCells) {
+      const x = freezedCell[0];
+      const y = freezedCell[1];
       if (this.board[x][y].getCharacter() === null && this.board[x][y].isFrozen() === false) {
         this.board[x][y].setFrozen(true);
       }
@@ -599,7 +617,7 @@ abstract class Board {
     this.ROCKS = this.rocksCoordinates.length;
     this.FRUITS = this.fruitsCoordinates.length;
     this.FRUITS_CONTAINER = [...this.FRUIT_TYPE];
-    this.ENEMIES = this.enemiesCoordinates.length;
+    this.NUMENEMIES = this.enemiesCoordinates.length;
     this.fruitsRounds = this.FRUIT_TYPE.length;
   }
 }

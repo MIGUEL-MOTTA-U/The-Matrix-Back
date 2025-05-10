@@ -77,7 +77,7 @@ abstract class Character extends BoardItem {
       return validatePathResultWithDirection({
         distance: shortestPath.distance,
         path: shortestPath.path,
-        direction: direction || this.orientation,
+        direction: direction ?? this.orientation,
       });
     }
     return null;

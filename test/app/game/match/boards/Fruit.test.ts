@@ -9,6 +9,7 @@ vi.mock('../../../../../src/server.js', () => {
         logger: {
             info: vi.fn(),
             warn: vi.fn(),
+            debug: vi.fn(),
             error: vi.fn(),
         },
         config: {

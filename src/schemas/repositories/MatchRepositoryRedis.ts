@@ -33,7 +33,7 @@ export default class MatchRepositoryRedis implements MatchRepository {
       'host',
       match.host,
       'guest',
-      match.guest || '',
+      match.guest ?? '',
       'level',
       match.level,
       'map',

@@ -6,6 +6,7 @@ import {
   validateGameMessageOutput,
   validatePathResultWithDirection,
 } from '../../../../schemas/zod.js';
+import { logger } from '../../../../server.js';
 import Enemy from './Enemy.js';
 /**
  * @class LogMan
@@ -45,9 +46,11 @@ export default class LogMan extends Enemy {
           validateGameMessageOutput({ type: 'update-enemy', payload: enemyDTO })
         );
         count++;
-      } catch (_error) {
+      } catch (error) {
         continueRolling = false;
-        // Optional: Log error or handle specific obstacles
+        logger.debug(
+          `LogMan ${this.id} cannot move in the direction ${direction}. Error: ${error}`
+        );
       }
     }
     this.enemyState = 'stopped';

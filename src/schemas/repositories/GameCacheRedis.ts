@@ -30,7 +30,7 @@ export default class GameCacheRedis implements GameCache {
       logger.warn(`Error setting expiration for match: ${matchId}`);
       logger.error(error);
     });
-    if (!flat || !flat.id) return null;
+    if (!flat.id) return null;
     return validateMatchStorage({
       id: flat.id,
       level: Number(flat.level),
@@ -60,7 +60,7 @@ export default class GameCacheRedis implements GameCache {
       guest: JSON.stringify(matchStorage.guest),
       board: JSON.stringify(matchStorage.board),
     };
-    const entries = Object.entries(flat).flat() as string[];
+    const entries: string[] = Object.entries(flat).flat();
     await this.redis.hset(key, entries);
     this.redis.expire(key, 15 * 60).catch((error) => {
       logger.warn(`Error setting expiration for match: ${matchId}`);

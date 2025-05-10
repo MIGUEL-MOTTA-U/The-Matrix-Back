@@ -1,4 +1,6 @@
+import { randomInt } from 'node:crypto';
 import type { Direction, EnemiesTypes } from '../../../../schemas/zod.js';
+import { logger } from '../../../../server.js';
 import Enemy from './Enemy.js';
 
 /**
@@ -22,12 +24,16 @@ export default class Troll extends Enemy {
     const movements: Direction[] = ['up', 'down', 'left', 'right'];
     try {
       await this.keepMoving();
-    } catch (_error) {
+    } catch (error) {
+      logger.debug(
+        `Troll ${this.id} cannot move in the direction ${this.orientation}. Error: ${error}`
+      );
       while (movements.length > 0) {
         try {
           await this.moveRandomDirection(movements);
           return;
-        } catch (_err) {
+        } catch (err) {
+          logger.debug(`Troll ${this.id} cannot move in the direction ${movements}. Error: ${err}`);
           this.enemyState = 'stopped';
         }
       }
@@ -41,7 +47,7 @@ export default class Troll extends Enemy {
    * @return {Promise<void>} A promise that resolves when the Troll moves in a random direction.
    */
   private async moveRandomDirection(movements: Direction[]): Promise<void> {
-    const random = Math.floor(Math.random() * movements.length);
+    const random = randomInt(0, movements.length);
     const direction = movements[random];
     movements.splice(random, 1);
     await this.moveAlongPath(direction);
