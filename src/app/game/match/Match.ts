@@ -1,6 +1,7 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
+import { Mutex } from 'async-mutex';
 import {
   type BoardStorage,
   type GameMessageOutput,
@@ -26,6 +27,7 @@ import BoardFactory from './boards/BoardFactory.js';
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 export default class Match {
+  private readonly mutex: Mutex;
   private readonly id: string;
   private readonly level: number;
   private readonly map: string;
@@ -36,6 +38,7 @@ export default class Match {
   private started: boolean;
   private running: boolean;
   private fruitGenerated: boolean;
+  private paused: boolean;
   private timeSeconds: number;
   private worker: Worker | null = null;
   constructor(
@@ -44,17 +47,20 @@ export default class Match {
     level: number,
     map: string,
     host: string,
-    guest: string
+    guest: string,
+    paused = false
   ) {
     this.gameService = gameService;
     this.id = id;
     this.level = level;
+    this.mutex = new Mutex();
     this.map = map;
-    this.fruitGenerated = false;
     this.host = host;
     this.guest = guest;
     this.board = BoardFactory.createBoard(this, this.map, this.level);
     this.started = false;
+    this.paused = paused;
+    this.fruitGenerated = false;
     this.timeSeconds = config.MATCH_TIME_SECONDS; // default time in seconds is 300
     this.running = true;
   }
@@ -99,7 +105,19 @@ export default class Match {
       board: boardStorage,
       timeSeconds: this.timeSeconds,
       typeFruits: this.board.getFruitTypes(),
+      fruitGenerated: this.fruitGenerated,
+      paused: this.paused,
     };
+  }
+
+  /**
+   * Return state of the match if paused.
+   * @returns {boolean} true if paused, false otherwise
+   */
+  public async isPaused(): Promise<boolean> {
+    return await this.mutex.runExclusive(() => {
+      return this.paused;
+    });
   }
 
   /**
@@ -109,6 +127,25 @@ export default class Match {
    */
   public isRunning(): boolean {
     return this.running;
+  }
+  /**
+   * Pause the match for both players.
+   * @returns {Promise<void>} Void promise when the match is paused.
+   */
+  public async pauseMatch(): Promise<void> {
+    await this.mutex.runExclusive(() => {
+      this.paused = true;
+    });
+  }
+
+  /**
+   * Resumes the match
+   * @returns {Promise<void>} Void promise when the match is resumed.
+   */
+  public async resumeMatch(): Promise<void> {
+    await this.mutex.runExclusive(() => {
+      this.paused = false;
+    });
   }
 
   /**
@@ -279,6 +316,7 @@ export default class Match {
     this.worker = new Worker(fileName, { workerData: { timerSpeed } });
 
     this.worker.on('message', async (_message) => {
+      if (await this.isPaused()) return;
       if (this.timeSeconds <= 0) {
         await this.stopTime();
         return;

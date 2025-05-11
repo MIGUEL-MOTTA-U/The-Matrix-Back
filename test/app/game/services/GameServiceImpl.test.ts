@@ -67,6 +67,7 @@ describe('GameServiceImpl', () => {
       const matchId = 'match1';
       const message = Buffer.from(JSON.stringify({ type: 'movement', payload: 'up' }));
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(undefined),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -98,6 +99,7 @@ describe('GameServiceImpl', () => {
         moveUp: vi.fn().mockResolvedValue({ id: 'host1', position: { x: 0, y: 1 } }),
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -147,6 +149,7 @@ describe('GameServiceImpl', () => {
         moveDown: vi.fn().mockResolvedValue({ id: 'host1', position: { x: 0, y: 1 } }),
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -196,6 +199,7 @@ describe('GameServiceImpl', () => {
         moveRight: vi.fn().mockResolvedValue({ id: 'host1', position: { x: 0, y: 1 } }),
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -244,6 +248,7 @@ describe('GameServiceImpl', () => {
         moveLeft: vi.fn().mockResolvedValue({ id: 'host1', position: { x: 0, y: 1 } }),
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -298,6 +303,7 @@ describe('GameServiceImpl', () => {
         changeOrientation: vi.fn().mockReturnValue(mockPalyerUpdate),
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -346,6 +352,7 @@ describe('GameServiceImpl', () => {
         changeOrientation: vi.fn().mockReturnValue(mockPalyerUpdate),
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -395,6 +402,7 @@ describe('GameServiceImpl', () => {
         changeOrientation: vi.fn().mockReturnValue(mockPalyerUpdate),
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -442,6 +450,7 @@ describe('GameServiceImpl', () => {
         changeOrientation: vi.fn().mockReturnValue(mockPalyerUpdate),
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -498,6 +507,7 @@ describe('GameServiceImpl', () => {
       };
       
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -558,6 +568,7 @@ describe('GameServiceImpl', () => {
         moveUp: vi.fn().mockResolvedValue({ id: 'host1', position: { x: 0, y: 1 } }),
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -610,6 +621,7 @@ describe('GameServiceImpl', () => {
         enemyState: 'walking'
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         isRunning: vi.fn().mockReturnValue(true),
         checkLose: vi.fn().mockReturnValue(false),
         checkWin: vi.fn().mockReturnValue(false),
@@ -733,6 +745,7 @@ describe('GameServiceImpl', () => {
         secondsLeft: 50,
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getId: vi.fn().mockReturnValue(matchId),
         setTime: vi.fn(),
         isRunning: vi.fn().mockReturnValue(true),
@@ -821,7 +834,8 @@ describe('GameServiceImpl', () => {
   describe('getMatch', () => {
     it('should return a match by its ID', async () => {
       const matchId = 'match1';
-      const mockMatch = { id: matchId };
+      const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false), id: matchId };
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
 
@@ -848,6 +862,7 @@ describe('GameServiceImpl', () => {
         running: true,
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getId: vi.fn().mockReturnValue(matchId),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),

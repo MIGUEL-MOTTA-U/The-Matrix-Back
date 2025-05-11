@@ -84,7 +84,7 @@ const updateAllSchema = z.object({
 });
 
 const gameMessageInputSchema = z.object({
-  type: z.enum(['movement', 'exec-power', 'rotate', 'set-color']),
+  type: z.enum(['movement', 'exec-power', 'rotate', 'set-color', 'pause', 'resume']),
   payload: z.union([directionSchema, z.string()]),
 });
 
@@ -104,6 +104,7 @@ const gameMessageOutputSchema = z.object({
     'update-all',
     'update-fruits',
     'update-frozen-cells',
+    'paused',
   ]),
   payload: z.union([
     playerStateSchema,
@@ -115,6 +116,7 @@ const gameMessageOutputSchema = z.object({
     updateAllSchema,
     fruitsSchema,
     updateFrozenCellsSchema,
+    z.boolean(),
   ]),
 });
 
@@ -189,6 +191,8 @@ const MatchStorageSchema = z.object({
   host: PlayerStorageSchema,
   guest: PlayerStorageSchema,
   board: BoardStorageSchema,
+  fruitGenerated: z.boolean(),
+  paused: z.boolean(),
 });
 export {
   stringSchema,

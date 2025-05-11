@@ -40,6 +40,8 @@ export default class GameCacheRedis implements GameCache {
       host: JSON.parse(flat.host),
       guest: JSON.parse(flat.guest),
       board: JSON.parse(flat.board),
+      fruitGenerated: JSON.parse(flat.fruitGenerated),
+      paused: Boolean(JSON.stringify(flat.paused)),
     });
   }
   /**
@@ -59,6 +61,8 @@ export default class GameCacheRedis implements GameCache {
       host: JSON.stringify(matchStorage.host),
       guest: JSON.stringify(matchStorage.guest),
       board: JSON.stringify(matchStorage.board),
+      fruitGenerated: JSON.stringify(matchStorage.fruitGenerated),
+      paused: JSON.stringify(matchStorage.paused),
     };
     const entries: string[] = Object.entries(flat).flat();
     await this.redis.hset(key, entries);

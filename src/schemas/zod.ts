@@ -178,6 +178,8 @@ interface MatchStorage extends Omit<MatchDTO, 'board' | 'hostId' | 'guestId'> {
   guest: PlayerStorage;
   board: BoardStorage;
   timeSeconds: number;
+  fruitGenerated: boolean;
+  paused: boolean;
 }
 
 interface PlayerStorage {
@@ -210,7 +212,8 @@ interface GameMessageOutput {
     | 'error'
     | 'update-all'
     | 'update-fruits'
-    | 'update-frozen-cells';
+    | 'update-frozen-cells'
+    | 'paused';
   payload:
     | PlayerMove
     | EndMatch
@@ -220,10 +223,11 @@ interface GameMessageOutput {
     | UpdateAll
     | UpdateFruits
     | PlayerState
-    | FrozenCells;
+    | FrozenCells
+    | boolean;
 }
 interface GameMessageInput {
-  type: 'movement' | 'exec-power' | 'rotate' | 'set-color';
+  type: 'movement' | 'exec-power' | 'rotate' | 'set-color' | 'pause' | 'resume';
   payload: Direction | string;
 }
 interface PlayerState {

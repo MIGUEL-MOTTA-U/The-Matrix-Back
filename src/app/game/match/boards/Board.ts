@@ -456,7 +456,11 @@ abstract class Board {
     for (const enemy of this.enemies.values()) {
       const worker = new Worker(fileName, { workerData: { enemiesSpeed } });
       this.workers.push(worker);
-      worker.on('message', async (_message) => await this.handleEnemyMovement(enemy));
+      worker.on('message', async (_message) => {
+        const isPaused = await this.match.isPaused();
+        if (isPaused) return;
+        await this.handleEnemyMovement(enemy);
+      });
 
       worker.on('error', (error) => {
         logger.warn('An error occurred while running the enemies worker');
