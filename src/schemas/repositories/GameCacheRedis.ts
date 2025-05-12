@@ -41,7 +41,7 @@ export default class GameCacheRedis implements GameCache {
       guest: JSON.parse(flat.guest),
       board: JSON.parse(flat.board),
       fruitGenerated: JSON.parse(flat.fruitGenerated),
-      paused: Boolean(JSON.stringify(flat.paused)),
+      paused: JSON.parse(flat.paused),
     });
   }
   /**

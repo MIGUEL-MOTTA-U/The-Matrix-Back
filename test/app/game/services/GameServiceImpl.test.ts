@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockDeep } from 'vitest-mock-extended';
 import { WebSocket } from 'ws';
 import GameServiceImpl from '../../../../src/app/game/services/GameServiceImpl.js';
-import type { MatchDetails, PlayerMove, UpdateEnemy, UpdateTime } from 'src/schemas/zod.js';
+import type { MatchStorage, MatchDetails, PlayerMove, UpdateEnemy, UpdateTime } from '../../../../src/schemas/zod.js';
 import type Match from '../../../../src/app/game/match/Match.js';
 import type GameCacheRedis from '../../../../src/schemas/repositories/GameCacheRedis.js';
 
@@ -609,6 +609,8 @@ describe('GameServiceImpl', () => {
     });
   });
 
+  
+
   describe('updatePlayers', () => {
     it('should update players with the given data', async () => {
       const matchId = 'match1';
@@ -847,7 +849,7 @@ describe('GameServiceImpl', () => {
       const matchId = 'invalidMatchId';
 
       const result = await gameServiceImpl.getMatch(matchId);
-
+      expect(gameCache.getMatch).toHaveBeenCalledWith(matchId);
       expect(result).toBeUndefined();
     });
   });
@@ -897,4 +899,145 @@ describe('GameServiceImpl', () => {
       );
     });
   });
+
+  describe('updateTime', () => {
+    it('should update the time of the match', async () => {
+      const matchId = 'match1';
+      const time: UpdateTime = {
+        minutesLeft: 1000,
+        secondsLeft: 50,
+      };
+      const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
+        getId: vi.fn().mockReturnValue(matchId),
+        setTime: vi.fn(),
+        isRunning: vi.fn().mockReturnValue(true),
+        getHost: vi.fn().mockReturnValue('host1'),
+        getGuest: vi.fn().mockReturnValue('guest1'),
+        checkWin: vi.fn().mockReturnValue(false),
+        checkLose: vi.fn().mockReturnValue(false),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
+      };
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
+
+      await gameServiceImpl.updateTimeMatch(matchId, time);
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      expect(gameServiceImpl["notifyPlayers"]).toHaveBeenCalled();
+      expect(mockMatch.checkWin).toHaveBeenCalled();
+      expect(mockMatch.checkLose).toHaveBeenCalled();
+    });
+
+    it('should throw error if the match is not found', async () => {
+      const matchId = 'invalidMatchId';
+      const time: UpdateTime = {
+        minutesLeft: 1000,
+        secondsLeft: 50,
+      };
+
+      await expect(gameServiceImpl.updateTimeMatch(matchId, time)).rejects.toThrow(
+        'The requested match was not found'
+      );
+    });
+
+    it('should notify if they loose', async () => {
+      const matchId = 'match1';
+      const time: UpdateTime = {
+        minutesLeft: 1000,
+        secondsLeft: 50,
+      };
+      const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
+        getId: vi.fn().mockReturnValue(matchId),
+        setTime: vi.fn(),
+        isRunning: vi.fn().mockReturnValue(true),
+        getHost: vi.fn().mockReturnValue('host1'),
+        getGuest: vi.fn().mockReturnValue('guest1'),
+        checkWin: vi.fn().mockReturnValue(false),
+        checkLose: vi.fn().mockReturnValue(true),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
+      };
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
+
+      await gameServiceImpl.updateTimeMatch(matchId, time);
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      expect(gameServiceImpl["notifyPlayers"]).toHaveBeenCalled();
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      expect(gameServiceImpl["notifyPlayers"]).toHaveBeenCalledTimes(2);
+    })
+
+    it('should notify if they win', async () => {
+      const matchId = 'match1';
+      const time: UpdateTime = {
+        minutesLeft: 1000,
+        secondsLeft: 50,
+      };
+      const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
+        getId: vi.fn().mockReturnValue(matchId),
+        setTime: vi.fn(),
+        isRunning: vi.fn().mockReturnValue(true),
+        getHost: vi.fn().mockReturnValue('host1'),
+        getGuest: vi.fn().mockReturnValue('guest1'),
+        checkWin: vi.fn().mockReturnValue(true),
+        checkLose: vi.fn().mockReturnValue(false),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
+      };
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
+
+      await gameServiceImpl.updateTimeMatch(matchId, time);
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      expect(gameServiceImpl["notifyPlayers"]).toHaveBeenCalled();
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      expect(gameServiceImpl["notifyPlayers"]).toHaveBeenCalledTimes(2);
+      expect(mockMatch.checkLose).not.toHaveBeenCalled();
+    });
+  })
+
+  describe('save match', () => {
+    it('should save the match', async () => {
+      const matchId = 'match1';
+      const matchStorage = {
+        id: matchId,
+        level: 1,
+        map: 'test-map',
+        timeSeconds: 300,
+        typeFruits: [],
+        host: { id: 'host1' },
+        guest: { id: 'guest1' },
+        board: {},
+      } as unknown as MatchStorage;
+      await gameServiceImpl.saveMatch(matchId,matchStorage);
+      expect(gameCache.saveMatch).toHaveBeenCalledWith(matchId, matchStorage);
+    });
+  })
 });

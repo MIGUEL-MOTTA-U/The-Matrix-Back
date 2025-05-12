@@ -34,8 +34,10 @@ describe('Cow tests', () => {
         await cow.calculateMovement();
         expect(mockBoard.getBestDirectionToPlayers).toHaveBeenCalledWith(mockCell, false);
         // biome-ignore lint/complexity/useLiteralKeys: <explanation>
-        expect(cow["moveAlongPath"]).toHaveBeenCalled()
-    })
+        expect(cow["moveAlongPath"]).toHaveBeenCalled();
+        // biome-ignore lint/complexity/useLiteralKeys: <explanation>
+        expect(cow["moveAlongPath"]).toHaveBeenCalledWith('down');
+    });
 
     it('should calculate movement with default direction', async () => {
         const cow = new Cow(mockCell, mockBoard);
@@ -45,12 +47,55 @@ describe('Cow tests', () => {
         await cow.calculateMovement();
         expect(mockBoard.getBestDirectionToPlayers).toHaveBeenCalledWith(mockCell, false);
         // biome-ignore lint/complexity/useLiteralKeys: <explanation>
-        expect(cow["moveAlongPath"]).toHaveBeenCalled()
+        expect(cow["moveAlongPath"]).toHaveBeenCalled();
         // biome-ignore lint/complexity/useLiteralKeys: <explanation>
         expect(cow["moveAlongPath"]).toHaveBeenCalledWith(cow["orientation"]);
-    })
+    });
 
-    
+    it('should handle error when moveAlongPath throws', async () => {
+        const cow = new Cow(mockCell, mockBoard);
+        // biome-ignore lint/complexity/useLiteralKeys: <explanation>
+        cow["id"] = "test-cow-id";
+        // biome-ignore lint/complexity/useLiteralKeys: <explanation>
+        cow["orientation"] = "right";
+        mockBoard.getBestDirectionToPlayers.mockReturnValue('down');
+        
+        const mockError = new Error('Movement error');
+        // biome-ignore lint/complexity/useLiteralKeys: <explanation>
+        cow["moveAlongPath"] = vi.fn().mockRejectedValue(mockError);
+        
+        await cow.calculateMovement();
+        
+        expect(cow.getEnemyState()).toBe('stopped');
+        const { logger } = await import('../../../../../src/server.js');
+        expect(logger.debug).toHaveBeenCalledWith(
+            `Cow test-cow-id cannot move in the direction down. Error: ${mockError}`
+        );
+    });
 
-    
+    it('should handle error when getBestDirectionToPlayers returns null and moveAlongPath throws', async () => {
+        const cow = new Cow(mockCell, mockBoard);
+        // biome-ignore lint/complexity/useLiteralKeys: <explanation>
+        cow["id"] = "test-cow-id";
+        // biome-ignore lint/complexity/useLiteralKeys: <explanation>
+        cow["orientation"] = "right";
+        mockBoard.getBestDirectionToPlayers.mockReturnValue(null);
+        
+        const mockError = new Error('Movement error');
+        // biome-ignore lint/complexity/useLiteralKeys: <explanation>
+        cow["moveAlongPath"] = vi.fn().mockRejectedValue(mockError);
+        
+        await cow.calculateMovement();
+        
+        expect(cow.getEnemyState()).toBe('stopped');
+        const { logger } = await import('../../../../../src/server.js');
+        expect(logger.debug).toHaveBeenCalledWith(
+            `Cow test-cow-id cannot move in the direction right. Error: ${mockError}`
+        );
+    });
+
+    it('should return name', () => {
+        const cow = new Cow(mockCell, mockBoard);
+        expect(cow.getEnemyName()).toBe('cow');
+    });
 });

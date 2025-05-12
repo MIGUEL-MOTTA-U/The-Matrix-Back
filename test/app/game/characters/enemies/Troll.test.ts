@@ -152,4 +152,10 @@ describe('Troll', () => {
     // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
     expect(troll['moveDown']).toHaveBeenCalledWith();
   });
+
+  it('should return enemy name', () => {
+    const troll = new Troll(mockCell, mockBoard, 'troll-id');
+    const name = troll.getEnemyName();
+    expect(name).toBe('troll');
+  })
 });
