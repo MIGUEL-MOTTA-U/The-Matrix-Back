@@ -42,15 +42,4 @@ export default class UserController {
     return res.send(user);
   }
 
-  /**
-   * Handles the request to retrieve all users.
-   *
-   * @param {FastifyRequest} _req The request from the client (not used).
-   * @param {FastifyReply} res The response to be sent to the client.
-   * @return {Promise<void>} A promise that resolves when all user data is retrieved and sent.
-   */
-  public async handleGetUsers(_req: FastifyRequest, res: FastifyReply): Promise<void> {
-    const usersData = await this.userRepository.getAllUsers();
-    return res.send(usersData);
-  }
 }

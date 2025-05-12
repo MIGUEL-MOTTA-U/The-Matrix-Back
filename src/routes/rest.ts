@@ -12,15 +12,19 @@ export async function restRoutes(fastify: FastifyInstance): Promise<void> {
     await userController.handleGetUser(req, res);
   });
 
-  fastify.get('/users', async (req, res) => {
-    await userController.handleGetUsers(req, res);
-  });
-
   fastify.post('/users/:userId/matches', async (req, res) => {
     await matchController.handleCreateMatch(req, res);
   });
 
   fastify.get('/users/:userId/matches', async (req, res) => {
     await matchController.handleGetMatch(req, res);
+  });
+
+  fastify.put('/users/:userId/matches/:matchId', async (req, res) => {
+    await matchController.handleUpdateMatch(req, res);
+  });
+
+  fastify.get('/health', async (_req, res) => {
+    return res.send().status(200);
   });
 }
