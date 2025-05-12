@@ -40,7 +40,7 @@ describe('Cell', () => {
   });
 
   it('should pick a fruit', async () => {
-    await board.initialize();
+    board.initialize();
     const cell = board.getBoard()[4][10];
     expect(cell.getItem()).toBeInstanceOf(Fruit);
     await cell.pickItem();
@@ -189,5 +189,54 @@ describe('Cell', () => {
   it('should throw error when using an invalid direction', () => {
     const cell = new Cell(1, 1);
     expect(() => cell.executePower('invalid', true)).toThrow('Not supported direction for freeze');
+  });
+
+  it('should return direction', () => {
+    const cell = new Cell(1, 1);
+      const result = cell.getDirection({ x: 1, y: 2 });
+      expect(result).toBe('right');
+
+    const result2 = cell.getDirection({ x: 0, y: 1 });
+    expect(result2).toBe('up');
+
+    const result3 = cell.getDirection({ x: 2, y: 1 });
+    expect(result3).toBe('down');
+
+    const result4 = cell.getDirection({ x: 1, y: 0 });
+    expect(result4).toBe('left');
+
+    const result5 = cell.getDirection({ x: 1, y: 1 });
+    expect(result5).toBe(null);
+  })
+
+  it('should set neighbors', () => {
+    const cell = new Cell(1, 1);
+    const upCell = new Cell(0, 1);
+    const downCell = new Cell(2, 1);
+    const leftCell = new Cell(1, 0);
+    const rightCell = new Cell(1, 2);
+
+    cell.setNeighbors(upCell, downCell, leftCell, rightCell);
+
+    expect(cell.getUpCell()).toEqual(upCell);
+    expect(cell.getDownCell()).toEqual(downCell);
+    expect(cell.getLeftCell()).toEqual(leftCell);
+    expect(cell.getRightCell()).toEqual(rightCell);
+  });
+
+  it('should return neighbors', () => {
+    const cell = new Cell(1, 1);
+    const upCell = new Cell(0, 1);
+    const downCell = new Cell(2, 1);
+    const leftCell = new Cell(1, 0);
+    const rightCell = new Cell(1, 2);
+
+    cell.setNeighbors(upCell, downCell, leftCell, rightCell);
+    const neighbors = cell.getNeighbors();
+    expect(neighbors.length).toBe(4);
+    expect(neighbors[0]).toEqual(upCell);
+    expect(neighbors[1]).toEqual(downCell); 
+    expect(neighbors[2]).toEqual(leftCell);
+    expect(neighbors[3]).toEqual(rightCell);
   });
 });

@@ -1,11 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Player from '../../../../../src/app/game/characters/players/Player.js';
 import Level1Board from '../../../../../src/app/game/match/boards/levels/Level1Board.js';
 import Cell from '../../../../../src/app/game/match/boards/CellBoard.js';
 import CharacterError from '../../../../../src/errors/CharacterError.js';
 import { mockDeep, mockReset } from 'vitest-mock-extended';
 import type Match from '../../../../../src/app/game/match/Match.js';
-import { beforeEach } from 'node:test';
+import type { Graph } from '../../../../../src/utils/Graph.js';
+
 vi.mock('../../../../../src/server.js', () => {
     return {
         logger: {
@@ -27,12 +28,13 @@ vi.mock('../../../../../src/server.js', () => {
         },
     };
 });
+
 describe('Player', () => {
     const match = mockDeep<Match>();
     
     beforeEach(() => {
         mockReset(match);
-    })
+    });
 
     it('should create a player', () => {
         const board = new Level1Board(match, 'map', 1);
@@ -154,4 +156,211 @@ describe('Player', () => {
         expect(board.getBoard()[9][1].getCharacter()).toBe(player);
         expect(board.getBoard()[9][2].getCharacter()).toBe(player2);
     })
+
+
+    describe('color methods', () => {
+        it('should get player color', () => {
+            const board = new Level1Board(match, 'map', 1);
+            const cell = new Cell(1, 1);
+            const player = new Player(cell, board, 'id-player-test');
+            
+            expect(player.getColor()).toBe('brown');
+
+            player.setColor('blue');
+            expect(player.getColor()).toBe('blue');
+        });
+    });
+
+    describe('orientation methods', () => {
+        it('should get and change orientation', () => {
+            const board = new Level1Board(match, 'map', 1);
+            const cell = new Cell(1, 1);
+            const player = new Player(cell, board, 'id-player-test');
+            
+            expect(player.getOrientation()).toBe('down');
+
+            player.changeOrientation('up');
+            expect(player.getOrientation()).toBe('up');
+
+            player.changeOrientation('left');
+            expect(player.getOrientation()).toBe('left');
+
+            player.changeOrientation('right');
+            expect(player.getOrientation()).toBe('right');
+        });
+
+        it('should return update data when changing orientation', () => {
+            const board = new Level1Board(match, 'map', 1);
+            const cell = new Cell(1, 1);
+            const player = new Player(cell, board, 'id-player-test');
+            
+            const updateData = player.changeOrientation('up');
+            
+            expect(updateData).toBeDefined();
+            expect(updateData.coordinates).toEqual(cell.getCoordinates());
+            expect(updateData.direction).toBe('up');
+        });
+    });
+
+    describe('state methods', () => {
+        it('should get character state', () => {
+            const board = new Level1Board(match, 'map', 1);
+            const cell = new Cell(1, 1);
+            const player = new Player(cell, board, 'id-player-test');
+            
+            expect(player.getState()).toBe('alive');
+            
+            player.setColor('green');
+            expect(player.getCharacterState()).toEqual({
+                id: 'id-player-test',
+                state: 'alive',
+                color: 'green'
+            });
+
+            player.die();
+            expect(player.getState()).toBe('dead');
+            expect(player.getCharacterState()).toEqual({
+                id: 'id-player-test',
+                state: 'dead',
+                color: 'green'
+            });
+        });
+    });
+
+    describe('reborn method', () => {
+        it('should reborn a dead player', () => {
+            const board = new Level1Board(match, 'map', 1);
+            const cell = new Cell(1, 1);
+            const player = new Player(cell, board, 'id-player-test');
+            
+            player.die();
+            expect(player.isAlive()).toBe(false);
+            
+            player.reborn();
+            expect(player.isAlive()).toBe(true);
+        });
+    });
+
+    describe('pathfinding methods', () => {
+        it('should get shortest path to character', () => {
+            const board = new Level1Board(match, 'map', 1);
+            const sourceCell = new Cell(1, 1);
+            const targetCell = new Cell(3, 3);
+            const player = new Player(sourceCell, board, 'id-player-test');
+            
+            const mockGraph = mockDeep<Graph>();
+            mockGraph.shortestPathDijkstra.mockReturnValue({
+                distance: 4,
+                path: ['1,1', '2,1', '2,2', '3,2', '3,3']
+            });
+            
+            const result = player.getShortestPathToCharacter(targetCell, mockGraph);
+            
+            expect(result).toEqual({
+                distance: 4,
+                path: [
+                    { x: 1, y: 1 },
+                    { x: 2, y: 1 },
+                    { x: 2, y: 2 },
+                    { x: 3, y: 2 },
+                    { x: 3, y: 3 }
+                ]
+            });
+            
+            expect(mockGraph.shortestPathDijkstra).toHaveBeenCalledWith('3,3', '1,1');
+        });
+
+        it('should get shortest direction to character', () => {
+            const board = new Level1Board(match, 'map', 1);
+            const sourceCell = new Cell(1, 1);
+            const targetCell = new Cell(2, 1);
+            const player = new Player(sourceCell, board, 'id-player-test');
+            
+            const mockGraph = mockDeep<Graph>();
+            mockGraph.shortestPathDijkstra.mockReturnValue({
+                distance: 1,
+                path: ['2,1', '1,1']
+            });
+            
+            vi.spyOn(targetCell, 'getDirection').mockReturnValue('down');
+            
+            const result = player.getShortestDirectionToCharacter(targetCell, mockGraph);
+            
+            expect(result).toEqual({
+                distance: 1,
+                path: [{x: 2, y: 1}, {x: 1, y: 1}],
+                direction: 'down'
+            });
+        });
+
+        it('should return null when no path exists', () => {
+            const board = new Level1Board(match, 'map', 1);
+            const sourceCell = new Cell(1, 1);
+            const targetCell = new Cell(2, 1);
+            const player = new Player(sourceCell, board, 'id-player-test');
+            
+            const mockGraph = mockDeep<Graph>();
+            mockGraph.shortestPathDijkstra.mockReturnValue({
+                distance: 0,
+                path: ['2,1']
+            });
+            
+            const result = player.getShortestDirectionToCharacter(targetCell, mockGraph);
+            
+            expect(result).toBeNull();
+        });
+    });
+
+    describe('BoardItem methods', () => {
+        it('should not block cells', () => {
+            const board = new Level1Board(match, 'map', 1);
+            const cell = new Cell(1, 1);
+            const player = new Player(cell, board, 'id-player-test');
+            
+            expect(player.blocked()).toBe(false);
+        });
+
+        it('should handle pick method', async () => {
+            const board = new Level1Board(match, 'map', 1);
+            const cell = new Cell(1, 1);
+            const player = new Player(cell, board, 'id-player-test');
+            
+            const result = await player.pick();
+            expect(result).toBeUndefined();
+        });
+    });
+
+    describe('get DTO', () => {
+        it('should return the DTO of the player', () => {
+            const board = new Level1Board(match, 'map', 1);
+            const cell = new Cell(1, 1);
+            const player = new Player(cell, board, 'id-player-test');
+            
+            const dto = player.getDTO();
+            
+            expect(dto).toEqual({
+                type: 'player',
+                id: 'id-player-test',
+                orientation: 'down'
+            });
+        });
+
+        it('should return player storage', () => {
+            const board = new Level1Board(match, 'map', 1);
+            const cell = new Cell(1, 1);
+            const player = new Player(cell, board, 'id-player-test');
+            
+            const storage = player.getPlayerStorage();
+            
+            expect(storage).toEqual({
+                id: 'id-player-test',
+                color: 'brown',
+                coordinates: { x: 1, y: 1 },
+                direction: 'down',
+                state: 'alive'
+            });
+        });
+    })
+
+    
 });

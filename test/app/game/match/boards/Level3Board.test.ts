@@ -108,6 +108,7 @@ describe('Level3Board', () => {
             enemy.calculateMovement = vi.fn().mockResolvedValue(undefined);
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
             await boardMock["handleEnemyMovement"](enemy);
+            expect(enemy.calculateMovement).toHaveBeenCalled();
         });
 
         it('should call stopGame when checkWin is true', async () => {

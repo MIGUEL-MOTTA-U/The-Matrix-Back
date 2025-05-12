@@ -96,7 +96,7 @@ class Player extends Character {
    * @throws {Error} This method is not implemented.
    */
   reborn(): void {
-    throw new Error('Method not implemented.');
+    this.alive = true;
   }
 
   /**
