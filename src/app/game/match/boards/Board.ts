@@ -5,22 +5,21 @@ import { Mutex } from 'async-mutex';
 import BoardError from '../../../../errors/BoardError.js';
 import {
   type BoardDTO,
+  type BoardItem,
+  type BoardItemDTO,
+  type BoardStorage,
+  type CellCoordinates,
   type CellDTO,
+  type Direction,
+  type GameMessageOutput,
+  type PathResultWithDirection,
+  type PlayerState,
+  type PlayerStorage,
+  type PlayersPaths,
   type UpdateFruits,
   enemiesConst,
   parseCoordinatesToString,
   validateUpdateFruits,
-} from '../../../../schemas/zod.js';
-import type {
-  BoardItem,
-  BoardItemDTO,
-  BoardStorage,
-  CellCoordinates,
-  Direction,
-  GameMessageOutput,
-  PathResultWithDirection,
-  PlayerStorage,
-  PlayersPaths,
 } from '../../../../schemas/zod.js';
 import { config, logger } from '../../../../server.js';
 import { Graph } from '../../../../utils/Graph.js';
@@ -31,6 +30,7 @@ import type Match from '../Match.js';
 import Cell from './CellBoard.js';
 import Fruit from './Fruit.js';
 import Rock from './Rock.js';
+import SpecialFruit from './SpecialFruit.js';
 /**
  * @abstract class Board
  * Abstract class representing a game board.
@@ -47,15 +47,16 @@ abstract class Board {
   protected readonly match: Match;
   protected readonly board: Cell[][];
   protected readonly enemies: Map<string, Enemy>;
-  protected ENEMIES = 0;
+  protected ENEMIES_SPEED = 1000; // Milliseconds
+  protected NUMENEMIES = 0;
   protected FRUITS = 0;
   protected ROCKS = 0;
   protected FRUIT_TYPE: string[] = [];
   protected FRUITS_CONTAINER: string[] = [];
   protected host: Player | null = null;
   protected guest: Player | null = null;
-  protected fruitsNumber = 0;
-  protected fruitsRounds = 0;
+  protected currentNumberFruits = 0;
+  protected remainingFruitRounds = 0;
   protected currentRound = 0;
   protected workers: Worker[] = [];
   protected currentFruitType: string | undefined;
@@ -63,9 +64,40 @@ abstract class Board {
   protected fruitsCoordinates: number[][] = [];
   protected playersStartCoordinates: number[][] = [];
   protected rocksCoordinates: number[][] = [];
-  protected ENEMIES_SPEED = 1000; // Milliseconds
   protected abstract getBoardEnemy(cell: Cell, id?: string, orientation?: Direction): Enemy;
   protected abstract loadContext(): void;
+
+  /**
+   * Generates a special fruit on the board.
+   *
+   * @return {Promise<CellDTO | null>} A promise that resolves to the generated fruit's cell DTO or null if no cell is available.
+   */
+  public async generateSpecialFruit(): Promise<CellDTO | null> {
+    return await this.mutex.runExclusive(async () => {
+      for (const cellArray of this.board) {
+        for (const cell of cellArray) {
+          if (!cell.blocked() && cell.getCharacter() === null && cell.getItem() === null) {
+            const fruit = new SpecialFruit(cell, 'specialfruit', this);
+            cell.setItem(fruit);
+            return cell.getCellDTO();
+          }
+        }
+      }
+      return null;
+    });
+  }
+
+  /**
+   * Revives the players on the board.
+   *
+   * @return {PlayerState | null} The state of the revived player or null if no player was revived.
+   */
+  public revivePlayers(): PlayerState | null {
+    if (!this.host || !this.guest) throw new BoardError(BoardError.USER_NOT_DEFINED);
+    const deadPlayer = !this.host.isAlive() ? this.host : !this.guest.isAlive() ? this.guest : null;
+    deadPlayer?.reborn();
+    return deadPlayer?.getCharacterState() ?? null;
+  }
 
   /**
    * Default Constructor for the Board class.
@@ -87,12 +119,14 @@ abstract class Board {
     this.setUpPlayers(host.id, guest.id, host, guest);
     this.FRUIT_TYPE = boardStorage.fruitType;
     this.FRUITS_CONTAINER = boardStorage.fruitsContainer;
-    this.fruitsNumber = boardStorage.fruitsNumber;
-    this.fruitsRounds = boardStorage.fruitsRound;
+    this.currentNumberFruits = boardStorage.fruitsNumber;
+    this.remainingFruitRounds = boardStorage.fruitsRound;
     this.currentRound = boardStorage.currentRound;
     this.currentFruitType = boardStorage.currentFruitType;
     this.rocksCoordinates = boardStorage.rocksCoordinates;
     this.fruitsCoordinates = boardStorage.fruitsCoordinates;
+    this.ROCKS = this.rocksCoordinates.length;
+    this.FRUITS = this.fruitsCoordinates.length;
     this.loadCells(boardStorage.board);
   }
   /**
@@ -118,8 +152,8 @@ abstract class Board {
       return {
         fruitType: this.FRUIT_TYPE,
         fruitsContainer: this.FRUITS_CONTAINER,
-        fruitsNumber: this.fruitsNumber,
-        fruitsRound: this.fruitsRounds,
+        fruitsNumber: this.currentNumberFruits,
+        fruitsRound: this.remainingFruitRounds,
         currentRound: this.currentRound,
         currentFruitType: this.calcultateCurrentFruitType(),
         rocksCoordinates: this.rocksCoordinates,
@@ -149,6 +183,7 @@ abstract class Board {
       if (item) cellBoard.setItem(this.boardItemFactory(item, cellBoard));
       if (cell.frozen) cellBoard.setFrozen(true);
     }
+    this.NUMENEMIES = this.enemies.size;
   }
 
   /**
@@ -180,7 +215,7 @@ abstract class Board {
    */
   public getBoardDTO(): BoardDTO {
     return {
-      enemiesNumber: this.ENEMIES,
+      enemiesNumber: this.NUMENEMIES,
       fruitsNumber: this.FRUITS,
       playersStartCoordinates: this.playersStartCoordinates,
       cells: this.cellsBoardDTO(),
@@ -194,8 +229,8 @@ abstract class Board {
   public checkWin(): boolean {
     if (!this.host || !this.guest) throw new BoardError(BoardError.USER_NOT_DEFINED);
     return (
-      this.fruitsNumber === 0 &&
-      this.fruitsRounds === 0 &&
+      this.currentNumberFruits === 0 &&
+      this.remainingFruitRounds === 0 &&
       (this.host.isAlive() || this.guest.isAlive())
     );
   }
@@ -209,8 +244,8 @@ abstract class Board {
   public async removeFruit({ x, y }: CellCoordinates): Promise<void> {
     await this.mutex.runExclusive(async () => {
       this.board[x][y].setItem(null);
-      this.fruitsNumber--;
-      if (this.fruitsNumber === 0 && this.FRUIT_TYPE.length > 0) {
+      this.currentNumberFruits--;
+      if (this.currentNumberFruits === 0 && this.FRUIT_TYPE.length > 0) {
         this.setUpFruits();
         await this.match.notifyPlayers({ type: 'update-fruits', payload: this.getUpdateFruits() });
       }
@@ -227,7 +262,7 @@ abstract class Board {
     const nextFruitType = this.FRUIT_TYPE[0] ? this.FRUIT_TYPE[0] : null;
     return validateUpdateFruits({
       fruitType: this.currentFruitType,
-      fruitsNumber: this.fruitsNumber,
+      fruitsNumber: this.currentNumberFruits,
       cells: this.cellsBoardDTO().filter((cell: CellDTO) => cell.item !== null),
       currentRound: this.currentRound,
       nextFruitType: nextFruitType,
@@ -276,7 +311,7 @@ abstract class Board {
    * @return {number} The number of fruits on the board.
    */
   public getFruitsNumber(): number {
-    return this.fruitsNumber;
+    return this.currentNumberFruits;
   }
 
   /**
@@ -352,26 +387,47 @@ abstract class Board {
       for (let j = 0; j < this.COLS; j++) {
         const cell = this.board[i][j];
         graph.addNode(parseCoordinatesToString(cell.getCoordinates()));
-        if (!cell.blocked() && (canBreakFrozen || !cell.isFrozen())) {
+        if (this.isAvailableCell(cell, canBreakFrozen)) {
           const neighbors: Cell[] = cell.getNeighbors();
-          for (const neighbor of neighbors) {
-            // The neighbor exists, is not blocked
-            const blocked = neighbor.blocked() || (canBreakFrozen ? false : neighbor.isFrozen());
-            const possibleCharacter = neighbor.getCharacter();
-            if (
-              !blocked &&
-              (possibleCharacter === null || possibleCharacter?.kill() === canWalkOverPlayers)
-            ) {
-              graph.addEdge(
-                parseCoordinatesToString(cell.getCoordinates()),
-                parseCoordinatesToString(neighbor.getCoordinates())
-              );
-            }
-          }
+          this.mapNeighborsToGraph(neighbors, canBreakFrozen, canWalkOverPlayers, graph, cell);
         }
       }
     }
     return graph;
+  }
+
+  private isAvailableCell(cell: Cell, canBreakFrozen: boolean): boolean {
+    return !cell.blocked() && (canBreakFrozen || !cell.isFrozen());
+  }
+
+  private mapNeighborsToGraph(
+    neighbors: Cell[],
+    canBreakFrozen: boolean,
+    canWalkOverPlayers: boolean,
+    graph: Graph,
+    cell: Cell
+  ): void {
+    for (const neighbor of neighbors) {
+      // The neighbor exists, is not blocked
+      const blocked = neighbor.blocked() || (canBreakFrozen ? false : neighbor.isFrozen());
+      const possibleCharacter = neighbor.getCharacter();
+      if (this.isAvailableNeighbor(blocked, possibleCharacter, canWalkOverPlayers)) {
+        graph.addEdge(
+          parseCoordinatesToString(cell.getCoordinates()),
+          parseCoordinatesToString(neighbor.getCoordinates())
+        );
+      }
+    }
+  }
+
+  private isAvailableNeighbor(
+    blocked: boolean,
+    possibleCharacter: Character | null,
+    canWalkOverPlayers: boolean
+  ): boolean {
+    return (
+      !blocked && (possibleCharacter === null || possibleCharacter?.kill() === canWalkOverPlayers)
+    );
   }
 
   /**
@@ -437,7 +493,11 @@ abstract class Board {
     for (const enemy of this.enemies.values()) {
       const worker = new Worker(fileName, { workerData: { enemiesSpeed } });
       this.workers.push(worker);
-      worker.on('message', async (_message) => await this.handleEnemyMovement(enemy));
+      worker.on('message', async (_message) => {
+        const isPaused = await this.match.isPaused();
+        if (isPaused) return;
+        await this.handleEnemyMovement(enemy);
+      });
 
       worker.on('error', (error) => {
         logger.warn('An error occurred while running the enemies worker');
@@ -504,7 +564,7 @@ abstract class Board {
    * This method sets up the fruits in the board
    */
   protected setUpFruits(): void {
-    this.fruitsNumber = this.FRUITS;
+    this.currentNumberFruits = this.FRUITS;
     this.currentFruitType = this.FRUIT_TYPE[0];
     for (let i = 0; i < this.FRUITS; i++) {
       const x = this.fruitsCoordinates[i][0];
@@ -513,11 +573,11 @@ abstract class Board {
         const fruit = new Fruit(this.board[x][y], this.FRUIT_TYPE[0], this);
         this.board[x][y].setItem(fruit);
       } else {
-        this.fruitsNumber--;
+        this.currentNumberFruits--;
       }
     }
     this.FRUIT_TYPE.shift();
-    this.fruitsRounds--;
+    this.remainingFruitRounds--;
     this.currentRound++;
   }
 
@@ -548,7 +608,7 @@ abstract class Board {
    * This method sets up the enemies in the board
    */
   protected setUpEnemies(): void {
-    for (let i = 0; i < this.ENEMIES; i++) {
+    for (let i = 0; i < this.NUMENEMIES; i++) {
       const x = this.enemiesCoordinates[i][0];
       const y = this.enemiesCoordinates[i][1];
       const troll = this.getBoardEnemy(this.board[x][y]);
@@ -585,10 +645,9 @@ abstract class Board {
         this.board[x][y].setItem(rock);
       }
     }
-
-    for (let i = 0; i < this.freezedCells.length; i++) {
-      const x = this.freezedCells[i][0];
-      const y = this.freezedCells[i][1];
+    for (const freezedCell of this.freezedCells) {
+      const x = freezedCell[0];
+      const y = freezedCell[1];
       if (this.board[x][y].getCharacter() === null && this.board[x][y].isFrozen() === false) {
         this.board[x][y].setFrozen(true);
       }
@@ -599,8 +658,8 @@ abstract class Board {
     this.ROCKS = this.rocksCoordinates.length;
     this.FRUITS = this.fruitsCoordinates.length;
     this.FRUITS_CONTAINER = [...this.FRUIT_TYPE];
-    this.ENEMIES = this.enemiesCoordinates.length;
-    this.fruitsRounds = this.FRUIT_TYPE.length;
+    this.NUMENEMIES = this.enemiesCoordinates.length;
+    this.remainingFruitRounds = this.FRUIT_TYPE.length;
   }
 }
 export default Board;

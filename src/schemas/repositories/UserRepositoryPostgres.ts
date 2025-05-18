@@ -43,7 +43,7 @@ export default class UserRepositoryPostgres implements UserRepository {
     });
   }
   public async createUser(user: UserQueue): Promise<void> {
-    const role = user.role || 'HOST';
+    const role = user.role ?? 'HOST';
     await this.prisma.user.create({
       data: {
         id: user.id,

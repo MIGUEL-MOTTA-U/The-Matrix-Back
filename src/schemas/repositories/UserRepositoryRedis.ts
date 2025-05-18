@@ -25,7 +25,7 @@ export default class UserRepositoryRedis implements UserRepository {
   }
   public async createUser(user: UserQueue): Promise<void> {
     const userId = user.id;
-    const matchId = user.matchId || '';
+    const matchId = user.matchId ?? '';
     await redis.hset(`users:${userId}`, 'id', userId, 'matchId', matchId);
     await redis.expire(`users:${userId}`, 10 * 60); // 10 minutes expiration
   }

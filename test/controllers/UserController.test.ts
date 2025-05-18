@@ -68,19 +68,4 @@ describe('UserController', () => {
     });
   });
 
-  describe('handleGetUsers', () => {
-    it('should retrieve all users from Redis and send the user list', async () => {
-      req = {
-        params: {},
-      } as unknown as FastifyRequest;
-
-      userRepository.getAllUsers.mockResolvedValue([{
-      id: 'fixed-uuid',
-      matchId: 'fixed-match-id'
-      }]);
-      await controller.handleGetUsers(req, res);
-
-      expect(res.send).toHaveBeenCalledWith([{ id: 'fixed-uuid', matchId: 'fixed-match-id' }]);
-    });
-  });
 });

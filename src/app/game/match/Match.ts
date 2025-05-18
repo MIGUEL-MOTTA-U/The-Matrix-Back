@@ -1,6 +1,7 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
+import { Mutex } from 'async-mutex';
 import {
   type BoardStorage,
   type GameMessageOutput,
@@ -25,7 +26,8 @@ import BoardFactory from './boards/BoardFactory.js';
  * @since 18/04/2025
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
-class Match {
+export default class Match {
+  private readonly mutex: Mutex;
   private readonly id: string;
   private readonly level: number;
   private readonly map: string;
@@ -35,6 +37,8 @@ class Match {
   private readonly gameService: GameService;
   private started: boolean;
   private running: boolean;
+  private fruitGenerated: boolean;
+  private paused: boolean;
   private timeSeconds: number;
   private worker: Worker | null = null;
   constructor(
@@ -43,17 +47,24 @@ class Match {
     level: number,
     map: string,
     host: string,
-    guest: string
+    guest: string,
+    paused = false,
+    fruitGenerated = false,
+    timeSeconds = config.MATCH_TIME_SECONDS
   ) {
     this.gameService = gameService;
     this.id = id;
     this.level = level;
+    this.mutex = new Mutex();
     this.map = map;
     this.host = host;
     this.guest = guest;
     this.board = BoardFactory.createBoard(this, this.map, this.level);
     this.started = false;
-    this.timeSeconds = config.MATCH_TIME_SECONDS; // default time in seconds is 300
+    this.paused = paused;
+    this.fruitGenerated = false;
+    this.fruitGenerated = fruitGenerated;
+    this.timeSeconds = timeSeconds; // default time in seconds is 300
     this.running = true;
   }
 
@@ -96,8 +107,19 @@ class Match {
       guest: guestStorage,
       board: boardStorage,
       timeSeconds: this.timeSeconds,
-      typeFruits: this.board.getFruitTypes(),
+      fruitGenerated: this.fruitGenerated,
+      paused: this.paused,
     };
+  }
+
+  /**
+   * Return state of the match if paused.
+   * @returns {boolean} true if paused, false otherwise
+   */
+  public async isPaused(): Promise<boolean> {
+    return await this.mutex.runExclusive(() => {
+      return this.paused;
+    });
   }
 
   /**
@@ -107,6 +129,25 @@ class Match {
    */
   public isRunning(): boolean {
     return this.running;
+  }
+  /**
+   * Pause the match for both players.
+   * @returns {Promise<void>} Void promise when the match is paused.
+   */
+  public async pauseMatch(): Promise<void> {
+    await this.mutex.runExclusive(() => {
+      this.paused = true;
+    });
+  }
+
+  /**
+   * Resumes the match
+   * @returns {Promise<void>} Void promise when the match is resumed.
+   */
+  public async resumeMatch(): Promise<void> {
+    await this.mutex.runExclusive(() => {
+      this.paused = false;
+    });
   }
 
   /**
@@ -277,9 +318,20 @@ class Match {
     this.worker = new Worker(fileName, { workerData: { timerSpeed } });
 
     this.worker.on('message', async (_message) => {
+      if (await this.isPaused()) return;
       if (this.timeSeconds <= 0) {
         await this.stopTime();
         return;
+      }
+      if (!this.fruitGenerated && this.isTimeToGenerateFruit()) {
+        const coordinates = await this.board.generateSpecialFruit();
+        this.fruitGenerated = coordinates !== null;
+        if (coordinates) {
+          await this.notifyPlayers({
+            type: 'update-special-fruit',
+            payload: coordinates,
+          });
+        }
       }
       await this.updateTimeMatch();
     });
@@ -326,5 +378,9 @@ class Match {
       }),
     ];
   }
+
+  private isTimeToGenerateFruit(): boolean {
+    const timeToGenerateFruit = config.TIME_TO_GENERATE_FRUIT;
+    return this.timeSeconds < timeToGenerateFruit;
+  }
 }
-export default Match;

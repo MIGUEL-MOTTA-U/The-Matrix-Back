@@ -1,4 +1,3 @@
-import type { BoardStorage, PlayerStorage } from '../../../../schemas/zod.js';
 import type Match from '../Match.js';
 import type Board from './Board.js';
 import Level1Board from './levels/Level1Board.js';

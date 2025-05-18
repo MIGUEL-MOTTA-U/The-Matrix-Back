@@ -10,6 +10,7 @@ vi.mock('../../../../../src/server.js', () => {
             info: vi.fn(),
             warn: vi.fn(),
             error: vi.fn(),
+            debug: vi.fn(),
         },
         config: {
             ENEMIES_SPEED_MS: 1000,
@@ -49,7 +50,7 @@ describe('Level2Board', () => {
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
             const enemiesCoordinates = boardMock["enemiesCoordinates"];
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
-            const enemies = boardMock["ENEMIES"]
+            const enemies = boardMock["NUMENEMIES"]
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
             const enemyType = boardMock["getBoardEnemy"](boardMock.getBoard()[2][3]);
             expect(enemiesCoordinates).toEqual([[2, 3], [2, 12], [13, 3], [13, 12]]);

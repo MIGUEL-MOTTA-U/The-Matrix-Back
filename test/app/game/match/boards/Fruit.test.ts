@@ -9,6 +9,7 @@ vi.mock('../../../../../src/server.js', () => {
         logger: {
             info: vi.fn(),
             warn: vi.fn(),
+            debug: vi.fn(),
             error: vi.fn(),
         },
         config: {
@@ -30,11 +31,13 @@ describe('Fruit', () => {
     beforeEach(() => {
         mockReset(board);
     })
-    it('should pick a fruit', () => {
+    it('should pick a fruit', async () => {
         const cell = new Cell(1,1);
         const fruit = new Fruit(cell, 'apple', board);
-        fruit.pick();
+        const id = await fruit.pick();
+        expect(board.removeFruit).toHaveBeenCalled();
         expect(cell.getItem()).toBeNull();
+        expect(fruit.getId()).toBe(id);
     });
 
     it('should not block', () => {
@@ -47,6 +50,16 @@ describe('Fruit', () => {
         const cell = new Cell(1,1);
         const fruit = new Fruit(cell, 'apple', board);
         expect(fruit.getName()).toBe('apple');
-    });    
+    });
+    
+    it('should return DTO ', () => {
+        const cell = new Cell(1,1);
+        const fruit = new Fruit(cell, 'apple', board);
+        const dto = fruit.getDTO();
+        expect(dto).toEqual({
+            id: fruit.getId(),
+            type: 'fruit',
+        });
+    })
 
 });

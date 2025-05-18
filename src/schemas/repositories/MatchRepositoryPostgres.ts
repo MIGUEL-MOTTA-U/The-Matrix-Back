@@ -27,7 +27,7 @@ export default class MatchRepositoryPostgres implements MatchRepository {
     const matchDetails = validateMatchDetails({
       id: match.id,
       host,
-      guest: guest || null,
+      guest: guest ?? null,
       level: match.level,
       map: match.map,
       started: match.started,

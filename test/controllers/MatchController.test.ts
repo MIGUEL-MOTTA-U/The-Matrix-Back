@@ -83,5 +83,23 @@ describe('MatchController', () => {
       });
       expect(res.send).toHaveBeenCalledWith({ matchId: expect.any(String) });
     });
+
+    it('should update the level and map of an existing match', async () => {
+      const req = {
+        params: { matchId: 'match123' },
+        body: { level: 2, map: 'new-map' },
+      } as unknown as FastifyRequest;
+      const res = { send: vi.fn() } as unknown as FastifyReply;
+
+      mockMatchRepository.updateMatch.mockResolvedValue();
+
+      await matchController.handleUpdateMatch(req, res);
+
+      expect(mockMatchRepository.updateMatch).toHaveBeenCalledWith('match123', {
+        level: 2,
+        map: 'new-map',
+      });
+      expect(res.send).toHaveBeenCalledWith({ message: 'Match updated successfully' });
+    });
   });
 });

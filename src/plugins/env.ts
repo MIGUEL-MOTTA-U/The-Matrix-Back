@@ -48,6 +48,10 @@ const schema = {
       type: 'string',
       default: 'redis://localhost:10923', // We can run it with Docker
     },
+    TIME_TO_GENERATE_FRUIT: {
+      type: 'number',
+      default: 120, // 2 minutes
+    },
   },
 };
 
@@ -74,6 +78,7 @@ export type EnvConfig = {
   CORS_ORIGIN: string;
   LOG_LEVEL: string;
   REDIS_URL: string;
+  TIME_TO_GENERATE_FRUIT: number;
 };
 
 // Extender FastifyInstance para incluir config y poder hacer ---> fastify.config.PORT <---- por ejmplo

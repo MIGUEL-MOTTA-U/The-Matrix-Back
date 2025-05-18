@@ -43,7 +43,7 @@ class GameServiceImpl implements GameService {
    * @return {Promise<void>} A promise that resolves when the time is updated.
    */
   public async updateTimeMatch(matchId: string, time: UpdateTime): Promise<void> {
-    const match = this.matches.get(matchId);
+    const match = await this.getMatch(matchId);
     if (!match) throw new MatchError(MatchError.MATCH_NOT_FOUND);
     const socketP1 = this.connections.get(match.getHost());
     const socketP2 = this.connections.get(match.getGuest());
@@ -97,7 +97,10 @@ class GameServiceImpl implements GameService {
       matchStorage.level,
       matchStorage.map,
       matchStorage.host.id,
-      matchStorage.guest.id
+      matchStorage.guest.id,
+      matchStorage.paused,
+      matchStorage.fruitGenerated,
+      matchStorage.timeSeconds
     );
     match.loadBoard(matchStorage.board, matchStorage.host, matchStorage.guest);
     await match.startGame();
@@ -161,20 +164,14 @@ class GameServiceImpl implements GameService {
    * @throws {GameError} If the match or player is not found.
    */
   public async handleGameMessage(userId: string, matchId: string, message: Buffer): Promise<void> {
-    const { type, payload, player, socketP1, socketP2 } = this.validateMessage(
+    const { type, payload, player, gameMatch, socketP1, socketP2 } = await this.validateMessage(
       userId,
       matchId,
       message
     );
-    const gameMatch = this.matches.get(matchId);
     if (await this.gameFinished(gameMatch, socketP1, socketP2)) return;
-    if (!player.isAlive())
-      return socketP1.send(
-        this.parseToString({
-          type: 'update-state',
-          payload: validatePlayerState({ id: player.getId(), state: 'dead' }),
-        })
-      );
+    if (await this.isPaused(socketP1, socketP2, gameMatch, type)) return;
+    if (this.playerDead(player, socketP1)) return;
 
     switch (type) {
       case 'movement': {
@@ -191,6 +188,24 @@ class GameServiceImpl implements GameService {
           logger.warn(`An error occurred while trying to move player ${userId} ${payload}`);
           logger.error(error);
         }
+        break;
+      }
+      case 'pause': {
+        await gameMatch.pauseMatch();
+        this.notifyPlayers(
+          socketP1,
+          socketP2,
+          validateGameMessageOutput({ type: 'paused', payload: true })
+        );
+        break;
+      }
+      case 'resume': {
+        await gameMatch.resumeMatch();
+        this.notifyPlayers(
+          socketP1,
+          socketP2,
+          validateGameMessageOutput({ type: 'paused', payload: false })
+        );
         break;
       }
       case 'rotate': {
@@ -333,12 +348,12 @@ class GameServiceImpl implements GameService {
   }
 
   private async gameFinished(
-    gameMatch: Match | undefined,
+    gameMatch: Match,
     socketP1: WebSocket | undefined,
     socketP2: WebSocket | undefined
   ): Promise<boolean> {
-    if (gameMatch && !gameMatch.isRunning()) return true;
-    if (gameMatch?.checkWin()) {
+    if (!gameMatch.isRunning()) return true;
+    if (gameMatch.checkWin()) {
       this.notifyPlayers(socketP1, socketP2, {
         type: 'end',
         payload: validateEndMatch({ result: 'win' }),
@@ -347,7 +362,7 @@ class GameServiceImpl implements GameService {
       await this.removeMatch(gameMatch, socketP1, socketP2);
       return true;
     }
-    if (gameMatch?.checkLose()) {
+    if (gameMatch.checkLose()) {
       this.notifyPlayers(socketP1, socketP2, {
         type: 'end',
         payload: validateEndMatch({ result: 'lose' }),
@@ -360,7 +375,7 @@ class GameServiceImpl implements GameService {
   }
 
   private async removeMatch(
-    gameMatch: Match | undefined,
+    gameMatch: Match,
     socketP1: WebSocket | undefined,
     socketP2: WebSocket | undefined
   ): Promise<void> {
@@ -370,7 +385,6 @@ class GameServiceImpl implements GameService {
     });
     socketP1?.close();
     socketP2?.close();
-    if (!gameMatch) return;
     this.matches.delete(gameMatch.getId());
     this.removeConnection(gameMatch.getHost());
     this.removeConnection(gameMatch.getGuest());
@@ -380,21 +394,21 @@ class GameServiceImpl implements GameService {
     return;
   }
 
-  private validateMessage(
+  private async validateMessage(
     userId: string,
     matchId: string,
     message: Buffer
-  ): {
+  ): Promise<{
     type: string;
     payload: string;
     gameMatch: Match;
     player: Player;
     socketP1: WebSocket;
     socketP2: WebSocket | undefined;
-  } {
+  }> {
     const { type, payload } = validateGameMesssageInput(JSON.parse(message.toString()));
 
-    const gameMatch = this.matches.get(matchId);
+    const gameMatch = await this.getMatch(matchId);
     if (!gameMatch) throw new MatchError(MatchError.MATCH_NOT_FOUND); // Not found in the matches map
     const socketP1 = this.connections.get(userId);
     const otherPlayeId =
@@ -461,6 +475,34 @@ class GameServiceImpl implements GameService {
 
   private parseToString(data: GameMessageOutput): string {
     return JSON.stringify(data);
+  }
+
+  private async isPaused(
+    socketP1: WebSocket | undefined,
+    socketP2: WebSocket | undefined,
+    gameMatch: Match,
+    type: string
+  ): Promise<boolean> {
+    const paused = (await gameMatch.isPaused()) && type !== 'resume';
+    if (paused)
+      this.notifyPlayers(
+        socketP1,
+        socketP2,
+        validateGameMessageOutput({ type: 'paused', payload: true })
+      );
+    return paused;
+  }
+
+  private playerDead(player: Player, socketP1: WebSocket): boolean {
+    const alive = player.isAlive();
+    if (!alive)
+      socketP1.send(
+        this.parseToString({
+          type: 'update-state',
+          payload: validatePlayerState({ id: player.getId(), state: 'dead' }),
+        })
+      );
+    return !alive;
   }
 }
 export default GameServiceImpl;

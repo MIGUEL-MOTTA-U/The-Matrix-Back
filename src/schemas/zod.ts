@@ -173,11 +173,13 @@ interface MatchDTO {
   board: BoardDTO;
   typeFruits: string[];
 }
-interface MatchStorage extends Omit<MatchDTO, 'board' | 'hostId' | 'guestId'> {
+interface MatchStorage extends Omit<MatchDTO, 'board' | 'hostId' | 'guestId' | 'typeFruits'> {
   host: PlayerStorage;
   guest: PlayerStorage;
   board: BoardStorage;
   timeSeconds: number;
+  fruitGenerated: boolean;
+  paused: boolean;
 }
 
 interface PlayerStorage {
@@ -210,7 +212,9 @@ interface GameMessageOutput {
     | 'error'
     | 'update-all'
     | 'update-fruits'
-    | 'update-frozen-cells';
+    | 'update-frozen-cells'
+    | 'paused'
+    | 'update-special-fruit';
   payload:
     | PlayerMove
     | EndMatch
@@ -220,10 +224,12 @@ interface GameMessageOutput {
     | UpdateAll
     | UpdateFruits
     | PlayerState
-    | FrozenCells;
+    | FrozenCells
+    | boolean
+    | CellDTO;
 }
 interface GameMessageInput {
-  type: 'movement' | 'exec-power' | 'rotate' | 'set-color';
+  type: 'movement' | 'exec-power' | 'rotate' | 'set-color' | 'pause' | 'resume';
   payload: Direction | string;
 }
 interface PlayerState {
@@ -301,7 +307,7 @@ type Direction = (typeof directionsConst)[number];
 type PlayerType = 'HOST' | 'GUEST';
 type EnemyState = (typeof enemiesStatesConst)[number];
 type EnemiesTypes = (typeof enemiesConst)[number];
-type ItemsTypes = 'rock' | 'fruit';
+type ItemsTypes = 'rock' | 'fruit' | 'specialfruit';
 export type {
   MatchInputDTO,
   MatchDetails,
@@ -339,6 +345,8 @@ export type {
 };
 export {
   enemiesConst,
+  enemiesStatesConst,
+  directionsConst,
   validateString,
   validateMatchInputDTO,
   validateCoordinates,

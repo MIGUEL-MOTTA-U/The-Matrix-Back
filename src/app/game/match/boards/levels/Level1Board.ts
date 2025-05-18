@@ -2,7 +2,6 @@ import type { Direction } from '../../../../../schemas/zod.js';
 import { config } from '../../../../../server.js';
 import type Enemy from '../../../characters/enemies/Enemy.js';
 import Troll from '../../../characters/enemies/Troll.js';
-import type Match from '../../Match.js';
 import Board from '../Board.js';
 import type Cell from '../CellBoard.js';
 /**

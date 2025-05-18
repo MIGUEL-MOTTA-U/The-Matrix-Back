@@ -1,4 +1,5 @@
 import type { CellDTO, Direction, EnemiesTypes } from '../../../../schemas/zod.js';
+import { logger } from '../../../../server.js';
 import Enemy from './Enemy.js';
 /**
  * @class SquidBlue
@@ -18,15 +19,18 @@ export default class SquidBlue extends Enemy {
   public async calculateMovement(): Promise<void> {
     const canBreakFrozen = true;
     const bestDirection =
-      this.board.getBestDirectionToPlayers(this.cell, canBreakFrozen) || this.orientation;
+      this.board.getBestDirectionToPlayers(this.cell, canBreakFrozen) ?? this.orientation;
     try {
       const changes = await this.execPower(bestDirection);
       if (changes.length > 0) await this.notifyPlayers('update-frozen-cells', changes);
       await this.moveAlongPath(bestDirection);
       const enemyDTO = this.getCharacterUpdate(null);
       await this.notifyPlayers('update-enemy', enemyDTO);
-    } catch (_error) {
+    } catch (error) {
       this.enemyState = 'stopped';
+      logger.debug(
+        `SquidBlue ${this.id} cannot move in the direction ${bestDirection}. Error: ${error}`
+      );
     }
   }
 

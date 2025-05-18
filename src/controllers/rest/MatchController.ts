@@ -56,4 +56,17 @@ export default class MatchController {
     await this.userRepository.updateUser(userIdParsed, { matchId: matchDetails.id });
     return res.send({ matchId: matchDetails.id });
   }
+
+  /**
+   * Handles the request to update a match.
+   * @param {FastifyRequest} req The request from the client.
+   * @param {FastifyReply} res The response to be sent to the client.
+   * @return {Promise<void>} A promise that resolves when the match is updated.
+   */
+  public async handleUpdateMatch(req: FastifyRequest, res: FastifyReply): Promise<void> {
+    const { matchId } = req.params as { matchId: string };
+    const matchData = req.body as Partial<MatchDetails>;
+    await this.matchRepository.updateMatch(matchId, matchData);
+    return res.send({ message: 'Match updated successfully' });
+  }
 }
