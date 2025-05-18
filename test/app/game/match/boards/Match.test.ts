@@ -287,7 +287,6 @@ describe('Match', () => {
           board: [],
         },
         timeSeconds: 300,
-        typeFruits: ['strawberry', 'banana'],
         fruitGenerated: false,
         paused: false,
       };

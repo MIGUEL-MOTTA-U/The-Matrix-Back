@@ -133,9 +133,9 @@ describe('Board', () => {
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
       expect(board['FRUITS_CONTAINER']).toEqual(boardStorage.fruitsContainer);
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
-      expect(board['fruitsNumber']).toBe(boardStorage.fruitsNumber);
+      expect(board['currentNumberFruits']).toBe(boardStorage.fruitsNumber);
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
-      expect(board['fruitsRounds']).toBe(boardStorage.fruitsRound);
+      expect(board['remainingFruitRounds']).toBe(boardStorage.fruitsRound);
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
       expect(board['currentRound']).toBe(boardStorage.currentRound);
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
@@ -188,9 +188,9 @@ describe('Board', () => {
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
       board['FRUITS_CONTAINER'] = ['strawberry', 'banana', 'apple'];
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
-      board['fruitsNumber'] = 10;
+      board['currentNumberFruits'] = 10;
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
-      board['fruitsRounds'] = 3;
+      board['remainingFruitRounds'] = 3;
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
       board['currentRound'] = 1;
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
@@ -317,9 +317,9 @@ describe('Board', () => {
     it('should return true when conditions are met', () => {
       // Setup winning conditions
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
-      board['fruitsNumber'] = 0;
+      board['currentNumberFruits'] = 0;
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
-      board['fruitsRounds'] = 0;
+      board['remainingFruitRounds'] = 0;
       hostMock.isAlive = vi.fn(() => true);
 
       expect(board.checkWin()).toBe(true);
@@ -327,27 +327,27 @@ describe('Board', () => {
 
     it('should return false when fruits remain', () => {
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
-      board['fruitsNumber'] = 5;
+      board['currentNumberFruits'] = 5;
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
-      board['fruitsRounds'] = 0;
+      board['remainingFruitRounds'] = 0;
 
       expect(board.checkWin()).toBe(false);
     });
 
     it('should return false when rounds remain', () => {
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
-      board['fruitsNumber'] = 0;
+      board['currentNumberFruits'] = 0;
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
-      board['fruitsRounds'] = 2;
+      board['remainingFruitRounds'] = 2;
 
       expect(board.checkWin()).toBe(false);
     });
 
     it('should return false when both players are dead', () => {
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
-      board['fruitsNumber'] = 0;
+      board['currentNumberFruits'] = 0;
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
-      board['fruitsRounds'] = 0;
+      board['remainingFruitRounds'] = 0;
       //hostMock.isAlive.mockReturnValue(false);
       hostMock.isAlive = guestMock.isAlive = vi.fn(() => false);
 
@@ -361,7 +361,7 @@ describe('Board', () => {
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
       board['currentFruitType'] = 'strawberry';
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
-      board['fruitsNumber'] = 5;
+      board['currentNumberFruits'] = 5;
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
       board['currentRound'] = 2;
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes

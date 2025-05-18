@@ -48,7 +48,9 @@ export default class Match {
     map: string,
     host: string,
     guest: string,
-    paused = false
+    paused = false,
+    fruitGenerated = false,
+    timeSeconds = config.MATCH_TIME_SECONDS
   ) {
     this.gameService = gameService;
     this.id = id;
@@ -61,7 +63,8 @@ export default class Match {
     this.started = false;
     this.paused = paused;
     this.fruitGenerated = false;
-    this.timeSeconds = config.MATCH_TIME_SECONDS; // default time in seconds is 300
+    this.fruitGenerated = fruitGenerated;
+    this.timeSeconds = timeSeconds; // default time in seconds is 300
     this.running = true;
   }
 
@@ -104,7 +107,6 @@ export default class Match {
       guest: guestStorage,
       board: boardStorage,
       timeSeconds: this.timeSeconds,
-      typeFruits: this.board.getFruitTypes(),
       fruitGenerated: this.fruitGenerated,
       paused: this.paused,
     };
@@ -321,6 +323,16 @@ export default class Match {
         await this.stopTime();
         return;
       }
+      if (!this.fruitGenerated && this.isTimeToGenerateFruit()) {
+        const coordinates = await this.board.generateSpecialFruit();
+        this.fruitGenerated = coordinates !== null;
+        if (coordinates) {
+          await this.notifyPlayers({
+            type: 'update-special-fruit',
+            payload: coordinates,
+          });
+        }
+      }
       await this.updateTimeMatch();
     });
 
@@ -365,5 +377,10 @@ export default class Match {
         state: this.board.getGuest()?.getState(),
       }),
     ];
+  }
+
+  private isTimeToGenerateFruit(): boolean {
+    const timeToGenerateFruit = config.TIME_TO_GENERATE_FRUIT;
+    return this.timeSeconds < timeToGenerateFruit;
   }
 }

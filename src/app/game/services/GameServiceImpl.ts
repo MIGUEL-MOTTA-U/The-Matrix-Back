@@ -98,7 +98,9 @@ class GameServiceImpl implements GameService {
       matchStorage.map,
       matchStorage.host.id,
       matchStorage.guest.id,
-      matchStorage.paused
+      matchStorage.paused,
+      matchStorage.fruitGenerated,
+      matchStorage.timeSeconds
     );
     match.loadBoard(matchStorage.board, matchStorage.host, matchStorage.guest);
     await match.startGame();

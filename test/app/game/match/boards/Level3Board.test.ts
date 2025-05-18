@@ -91,7 +91,7 @@ describe('Level3Board', () => {
             boardMock = new Level3Board(match, map, level);
             boardMock.initialize();
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
-            const fruitsRounds = boardMock["fruitsRounds"];
+            const fruitsRounds = boardMock["remainingFruitRounds"];
             // fruitsRounds equals FRUIT_TYPE.length in Level3Board
             expect(fruitsRounds).toEqual(3 - 1);
         });

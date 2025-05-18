@@ -36,7 +36,6 @@ describe('GameCacheRedis tests', () => {
     level: 1,
     map: 'testmap',
     timeSeconds: 300,
-    typeFruits: ['apple', 'banana'],
     host: {
       id: 'host1',
       color: 'red',
@@ -120,7 +119,6 @@ describe('GameCacheRedis tests', () => {
         level: 1,
         map: 'testmap',
         timeSeconds: 300,
-        typeFruits: ['apple', 'banana'],
         host: {
           id: 'host1',
           color: 'red',

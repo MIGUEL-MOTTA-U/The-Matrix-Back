@@ -41,5 +41,4 @@ export default class UserController {
     const user = await this.userRepository.getUserById(parsedId);
     return res.send(user);
   }
-
 }

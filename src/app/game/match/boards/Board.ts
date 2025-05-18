@@ -13,6 +13,7 @@ import {
   type Direction,
   type GameMessageOutput,
   type PathResultWithDirection,
+  type PlayerState,
   type PlayerStorage,
   type PlayersPaths,
   type UpdateFruits,
@@ -29,6 +30,7 @@ import type Match from '../Match.js';
 import Cell from './CellBoard.js';
 import Fruit from './Fruit.js';
 import Rock from './Rock.js';
+import SpecialFruit from './SpecialFruit.js';
 /**
  * @abstract class Board
  * Abstract class representing a game board.
@@ -45,6 +47,7 @@ abstract class Board {
   protected readonly match: Match;
   protected readonly board: Cell[][];
   protected readonly enemies: Map<string, Enemy>;
+  protected ENEMIES_SPEED = 1000; // Milliseconds
   protected NUMENEMIES = 0;
   protected FRUITS = 0;
   protected ROCKS = 0;
@@ -52,8 +55,8 @@ abstract class Board {
   protected FRUITS_CONTAINER: string[] = [];
   protected host: Player | null = null;
   protected guest: Player | null = null;
-  protected fruitsNumber = 0;
-  protected fruitsRounds = 0;
+  protected currentNumberFruits = 0;
+  protected remainingFruitRounds = 0;
   protected currentRound = 0;
   protected workers: Worker[] = [];
   protected currentFruitType: string | undefined;
@@ -61,9 +64,40 @@ abstract class Board {
   protected fruitsCoordinates: number[][] = [];
   protected playersStartCoordinates: number[][] = [];
   protected rocksCoordinates: number[][] = [];
-  protected ENEMIES_SPEED = 1000; // Milliseconds
   protected abstract getBoardEnemy(cell: Cell, id?: string, orientation?: Direction): Enemy;
   protected abstract loadContext(): void;
+
+  /**
+   * Generates a special fruit on the board.
+   *
+   * @return {Promise<CellDTO | null>} A promise that resolves to the generated fruit's cell DTO or null if no cell is available.
+   */
+  public async generateSpecialFruit(): Promise<CellDTO | null> {
+    return await this.mutex.runExclusive(async () => {
+      for (const cellArray of this.board) {
+        for (const cell of cellArray) {
+          if (!cell.blocked() && cell.getCharacter() === null && cell.getItem() === null) {
+            const fruit = new SpecialFruit(cell, 'specialfruit', this);
+            cell.setItem(fruit);
+            return cell.getCellDTO();
+          }
+        }
+      }
+      return null;
+    });
+  }
+
+  /**
+   * Revives the players on the board.
+   *
+   * @return {PlayerState | null} The state of the revived player or null if no player was revived.
+   */
+  public revivePlayers(): PlayerState | null {
+    if (!this.host || !this.guest) throw new BoardError(BoardError.USER_NOT_DEFINED);
+    const deadPlayer = !this.host.isAlive() ? this.host : !this.guest.isAlive() ? this.guest : null;
+    deadPlayer?.reborn();
+    return deadPlayer?.getCharacterState() ?? null;
+  }
 
   /**
    * Default Constructor for the Board class.
@@ -85,12 +119,14 @@ abstract class Board {
     this.setUpPlayers(host.id, guest.id, host, guest);
     this.FRUIT_TYPE = boardStorage.fruitType;
     this.FRUITS_CONTAINER = boardStorage.fruitsContainer;
-    this.fruitsNumber = boardStorage.fruitsNumber;
-    this.fruitsRounds = boardStorage.fruitsRound;
+    this.currentNumberFruits = boardStorage.fruitsNumber;
+    this.remainingFruitRounds = boardStorage.fruitsRound;
     this.currentRound = boardStorage.currentRound;
     this.currentFruitType = boardStorage.currentFruitType;
     this.rocksCoordinates = boardStorage.rocksCoordinates;
     this.fruitsCoordinates = boardStorage.fruitsCoordinates;
+    this.ROCKS = this.rocksCoordinates.length;
+    this.FRUITS = this.fruitsCoordinates.length;
     this.loadCells(boardStorage.board);
   }
   /**
@@ -116,8 +152,8 @@ abstract class Board {
       return {
         fruitType: this.FRUIT_TYPE,
         fruitsContainer: this.FRUITS_CONTAINER,
-        fruitsNumber: this.fruitsNumber,
-        fruitsRound: this.fruitsRounds,
+        fruitsNumber: this.currentNumberFruits,
+        fruitsRound: this.remainingFruitRounds,
         currentRound: this.currentRound,
         currentFruitType: this.calcultateCurrentFruitType(),
         rocksCoordinates: this.rocksCoordinates,
@@ -147,6 +183,7 @@ abstract class Board {
       if (item) cellBoard.setItem(this.boardItemFactory(item, cellBoard));
       if (cell.frozen) cellBoard.setFrozen(true);
     }
+    this.NUMENEMIES = this.enemies.size;
   }
 
   /**
@@ -192,8 +229,8 @@ abstract class Board {
   public checkWin(): boolean {
     if (!this.host || !this.guest) throw new BoardError(BoardError.USER_NOT_DEFINED);
     return (
-      this.fruitsNumber === 0 &&
-      this.fruitsRounds === 0 &&
+      this.currentNumberFruits === 0 &&
+      this.remainingFruitRounds === 0 &&
       (this.host.isAlive() || this.guest.isAlive())
     );
   }
@@ -207,8 +244,8 @@ abstract class Board {
   public async removeFruit({ x, y }: CellCoordinates): Promise<void> {
     await this.mutex.runExclusive(async () => {
       this.board[x][y].setItem(null);
-      this.fruitsNumber--;
-      if (this.fruitsNumber === 0 && this.FRUIT_TYPE.length > 0) {
+      this.currentNumberFruits--;
+      if (this.currentNumberFruits === 0 && this.FRUIT_TYPE.length > 0) {
         this.setUpFruits();
         await this.match.notifyPlayers({ type: 'update-fruits', payload: this.getUpdateFruits() });
       }
@@ -225,7 +262,7 @@ abstract class Board {
     const nextFruitType = this.FRUIT_TYPE[0] ? this.FRUIT_TYPE[0] : null;
     return validateUpdateFruits({
       fruitType: this.currentFruitType,
-      fruitsNumber: this.fruitsNumber,
+      fruitsNumber: this.currentNumberFruits,
       cells: this.cellsBoardDTO().filter((cell: CellDTO) => cell.item !== null),
       currentRound: this.currentRound,
       nextFruitType: nextFruitType,
@@ -274,7 +311,7 @@ abstract class Board {
    * @return {number} The number of fruits on the board.
    */
   public getFruitsNumber(): number {
-    return this.fruitsNumber;
+    return this.currentNumberFruits;
   }
 
   /**
@@ -527,7 +564,7 @@ abstract class Board {
    * This method sets up the fruits in the board
    */
   protected setUpFruits(): void {
-    this.fruitsNumber = this.FRUITS;
+    this.currentNumberFruits = this.FRUITS;
     this.currentFruitType = this.FRUIT_TYPE[0];
     for (let i = 0; i < this.FRUITS; i++) {
       const x = this.fruitsCoordinates[i][0];
@@ -536,11 +573,11 @@ abstract class Board {
         const fruit = new Fruit(this.board[x][y], this.FRUIT_TYPE[0], this);
         this.board[x][y].setItem(fruit);
       } else {
-        this.fruitsNumber--;
+        this.currentNumberFruits--;
       }
     }
     this.FRUIT_TYPE.shift();
-    this.fruitsRounds--;
+    this.remainingFruitRounds--;
     this.currentRound++;
   }
 
@@ -622,7 +659,7 @@ abstract class Board {
     this.FRUITS = this.fruitsCoordinates.length;
     this.FRUITS_CONTAINER = [...this.FRUIT_TYPE];
     this.NUMENEMIES = this.enemiesCoordinates.length;
-    this.fruitsRounds = this.FRUIT_TYPE.length;
+    this.remainingFruitRounds = this.FRUIT_TYPE.length;
   }
 }
 export default Board;

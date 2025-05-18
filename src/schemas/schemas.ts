@@ -10,7 +10,7 @@ const matchInputDTOSchema = z.object({
   map: z.string().nonempty(),
 });
 const enemiesTypesSchema = z.enum(['troll', 'cow', 'log-man', 'squid-blue', 'squid-green']);
-const itemsTypesSchema = z.enum(['rock', 'fruit']);
+const itemsTypesSchema = z.enum(['rock', 'fruit', 'specialfruit']);
 const boardItemSchema = z.object({
   type: z.union([enemiesTypesSchema, itemsTypesSchema, z.enum(['player'])]),
   id: z.string(),
@@ -105,6 +105,7 @@ const gameMessageOutputSchema = z.object({
     'update-fruits',
     'update-frozen-cells',
     'paused',
+    'update-special-fruit',
   ]),
   payload: z.union([
     playerStateSchema,
@@ -117,6 +118,7 @@ const gameMessageOutputSchema = z.object({
     fruitsSchema,
     updateFrozenCellsSchema,
     z.boolean(),
+    cellDTOSchema,
   ]),
 });
 
@@ -187,7 +189,6 @@ const MatchStorageSchema = z.object({
   level: z.number().nonnegative(),
   map: z.string().nonempty(),
   timeSeconds: z.number().nonnegative(),
-  typeFruits: z.array(z.string()),
   host: PlayerStorageSchema,
   guest: PlayerStorageSchema,
   board: BoardStorageSchema,

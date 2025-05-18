@@ -173,7 +173,7 @@ interface MatchDTO {
   board: BoardDTO;
   typeFruits: string[];
 }
-interface MatchStorage extends Omit<MatchDTO, 'board' | 'hostId' | 'guestId'> {
+interface MatchStorage extends Omit<MatchDTO, 'board' | 'hostId' | 'guestId' | 'typeFruits'> {
   host: PlayerStorage;
   guest: PlayerStorage;
   board: BoardStorage;
@@ -213,7 +213,8 @@ interface GameMessageOutput {
     | 'update-all'
     | 'update-fruits'
     | 'update-frozen-cells'
-    | 'paused';
+    | 'paused'
+    | 'update-special-fruit';
   payload:
     | PlayerMove
     | EndMatch
@@ -224,7 +225,8 @@ interface GameMessageOutput {
     | UpdateFruits
     | PlayerState
     | FrozenCells
-    | boolean;
+    | boolean
+    | CellDTO;
 }
 interface GameMessageInput {
   type: 'movement' | 'exec-power' | 'rotate' | 'set-color' | 'pause' | 'resume';
@@ -305,7 +307,7 @@ type Direction = (typeof directionsConst)[number];
 type PlayerType = 'HOST' | 'GUEST';
 type EnemyState = (typeof enemiesStatesConst)[number];
 type EnemiesTypes = (typeof enemiesConst)[number];
-type ItemsTypes = 'rock' | 'fruit';
+type ItemsTypes = 'rock' | 'fruit' | 'specialfruit';
 export type {
   MatchInputDTO,
   MatchDetails,

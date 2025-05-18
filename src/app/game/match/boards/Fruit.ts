@@ -12,6 +12,7 @@ import type Cell from './CellBoard.js';
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 export default class Fruit extends BoardItem {
+  protected name: string;
   /**
    * Converts the fruit into a BoardItemDTO object.
    *
@@ -39,8 +40,6 @@ export default class Fruit extends BoardItem {
     this.board.removeFruit(this.cell.getCoordinates());
     return this.id;
   }
-
-  private name: string;
 
   /**
    * Creates a new fruit instance.
