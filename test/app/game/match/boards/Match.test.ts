@@ -351,4 +351,5 @@ describe('Match', () => {
       expect(match.checkLose()).toBe(false);
     });
   });
+  
 });

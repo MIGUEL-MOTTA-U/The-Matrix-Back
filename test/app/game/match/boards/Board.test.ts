@@ -75,7 +75,6 @@ describe('Board', () => {
 
   describe('loadBoard', () => {
     it('should load board from storage data', () => {
-      // Setup mock data
       const boardStorage: BoardStorage = {
         fruitType: ['strawberry', 'banana'],
         fruitsContainer: ['strawberry', 'banana', 'apple'],
@@ -182,7 +181,6 @@ describe('Board', () => {
 
   describe('getBoardStorage', () => {
     it('should return the board storage data', async () => {
-      // Setup test data
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
       board['FRUIT_TYPE'] = ['strawberry', 'banana'];
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
@@ -277,7 +275,6 @@ describe('Board', () => {
 
   describe('getBoardDTO', () => {
     it('should return the board DTO with correct data', () => {
-      // Setup board properties
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
       board['NUMENEMIES'] = 4;
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
@@ -315,7 +312,6 @@ describe('Board', () => {
 
   describe('checkWin', () => {
     it('should return true when conditions are met', () => {
-      // Setup winning conditions
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
       board['currentNumberFruits'] = 0;
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
@@ -357,7 +353,6 @@ describe('Board', () => {
 
   describe('getUpdateFruits', () => {
     it('should return correct update fruits information', () => {
-      // Setup test data
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
       board['currentFruitType'] = 'strawberry';
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
@@ -435,7 +430,6 @@ describe('Board', () => {
       mockCell1.getCellDTO.mockReturnValue(cellDTO1);
       mockCell2.getCellDTO.mockReturnValue(cellDTO2);
 
-      // Setup mock board
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
       board['board'].splice(0, board['board'].length);
       // biome-ignore lint/complexity/useLiteralKeys: Testing purposes
@@ -588,4 +582,99 @@ describe('Board', () => {
       expect(board['workers']).toEqual([]);
     });
   });
+
+
+describe('generateSpecialFruit', () => {
+  it('should generate a special fruit on an available cell', async () => {
+    const mockCell1 = mockDeep<Cell>();
+    const mockCell2 = mockDeep<Cell>();
+    
+    mockCell1.blocked.mockReturnValue(true);
+    mockCell2.blocked.mockReturnValue(false);
+    mockCell2.getCharacter.mockReturnValue(null);
+    mockCell2.getItem.mockReturnValue(null);
+    
+    const cellDTO = {
+      coordinates: { x: 0, y: 1 },
+      item: { type: 'specialfruit', id: 'special-1' },
+      character: null,
+      frozen: false
+    };
+    mockCell2.getCellDTO.mockReturnValue(cellDTO);
+
+    const boardCells = board.getBoard()
+    boardCells.push([mockCell1, mockCell2]);
+    
+    vi.mock('../../../../../src/app/game/match/boards/SpecialFruit.js', () => ({
+      default: vi.fn().mockImplementation(() => ({
+        type: 'specialfruit',
+        id: 'special-1'
+      }))
+    }));
+    
+    const result = await board.generateSpecialFruit();
+    
+    expect(mockCell2.setItem).toHaveBeenCalled();
+    expect(result).toEqual(cellDTO);
+  });
+  
+  it('should return null when no cell is available', async () => {
+    const mockCell = mockDeep<Cell>();
+    mockCell.blocked.mockReturnValue(true);
+    
+    
+    const result = await board.generateSpecialFruit();
+    
+    expect(result).toBeNull();
+  });
+});
+
+describe('revivePlayers', () => {
+  it('should revive a dead player and return their state', () => {
+    hostMock.isAlive = vi.fn().mockReturnValue(true);
+    guestMock.isAlive = vi.fn().mockReturnValue(false);
+    
+    const playerState = { state: 'alive' };
+    guestMock.reborn = vi.fn();
+    guestMock.getCharacterState = vi.fn().mockReturnValue(playerState);
+    
+    const result = board.revivePlayers();
+    
+    expect(guestMock.reborn).toHaveBeenCalled();
+    expect(result).toEqual(playerState);
+  });
+  
+  it('should revive the host if both players are dead (host has priority)', () => {
+    hostMock.isAlive = vi.fn().mockReturnValue(false);
+    guestMock.isAlive = vi.fn().mockReturnValue(false);
+    
+    const playerState = { state: 'alive' };
+    hostMock.reborn = vi.fn();
+    hostMock.getCharacterState = vi.fn().mockReturnValue(playerState);
+    
+    const result = board.revivePlayers();
+    
+    expect(hostMock.reborn).toHaveBeenCalled();
+    expect(guestMock.reborn).not.toHaveBeenCalled();
+    expect(result).toEqual(playerState);
+  });
+  
+  it('should return null if all players are alive', () => {
+    hostMock.isAlive = vi.fn().mockReturnValue(true);
+    guestMock.isAlive = vi.fn().mockReturnValue(true);
+    
+    const result = board.revivePlayers();
+    
+    expect(hostMock.reborn).not.toHaveBeenCalled();
+    expect(guestMock.reborn).not.toHaveBeenCalled();
+    expect(result).toBeNull();
+  });
+  
+  it('should throw error if players are not defined', () => {
+    Object.defineProperty(board, 'host', { value: null });
+    Object.defineProperty(board, 'guest', { value: null });
+    
+    expect(() => board.revivePlayers()).toThrow();
+  });
+});
 });
