@@ -236,6 +236,14 @@ class GameServiceImpl implements GameService {
         });
         break;
       }
+      case 'update-all': {
+        const updateAll = gameMatch.getMatchUpdate();
+        this.notifyPlayers(socketP1, socketP2, {
+          type: 'update-all',
+          payload: updateAll,
+        });
+        break;
+      }
       default: {
         throw new MatchError(MatchError.INVALID_MESSAGE_TYPE);
       }

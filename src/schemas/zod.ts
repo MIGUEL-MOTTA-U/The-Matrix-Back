@@ -229,7 +229,7 @@ interface GameMessageOutput {
     | CellDTO;
 }
 interface GameMessageInput {
-  type: 'movement' | 'exec-power' | 'rotate' | 'set-color' | 'pause' | 'resume';
+  type: 'movement' | 'exec-power' | 'rotate' | 'set-color' | 'pause' | 'resume' | 'update-all';
   payload: Direction | string;
 }
 interface PlayerState {
