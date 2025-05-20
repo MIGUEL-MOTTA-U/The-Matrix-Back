@@ -4,6 +4,65 @@ import type UserController from '../controllers/rest/UserController.js';
 export async function restRoutes(fastify: FastifyInstance): Promise<void> {
   const userController = fastify.diContainer.resolve<UserController>('userController');
   const matchController = fastify.diContainer.resolve<MatchController>('matchController');
+
+  fastify.get('/health', async (_req, res) => {
+    return res.send().status(200);
+  });
+
+  fastify.get('/login', async (_req, res) => {
+    const scopes = [
+      `api://${fastify.config.AZURE_API_APP_ID}/access_as_user`,
+      'openid',
+      'offline_access',
+    ].join(' ');
+
+    const authUrl = `https://login.microsoftonline.com/${fastify.config.AZURE_TENANT_ID}/oauth2/v2.0/authorize?client_id=${fastify.config.AZURE_CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent('http://localhost:5000/rest/redirect')}&scope=${encodeURIComponent(scopes)}&state=abc123`;
+
+    return res.redirect(authUrl);
+  });
+
+  fastify.get('/redirect', async (req, res) => {
+    const query = req.query as unknown as { code: string };
+    const code = (query.code as string) || '';
+    const result = await fastify.msalClient.acquireTokenByCode({
+      code,
+      redirectUri: 'http://localhost:5000/rest/redirect',
+      scopes: [
+        `api://${fastify.config.AZURE_API_APP_ID}/access_as_user`,
+        'openid',
+        'offline_access',
+      ],
+    });
+
+    if (!result || !result.accessToken) {
+      return res.status(500).send({ error: 'Token exchange failed' });
+    }
+
+    return res.send({ accessToken: result.accessToken });
+  });
+
+  fastify.addHook('preHandler', async (req, reply) => {
+    // Excluir rutas públicas
+    const publicPaths = ['health', 'login', 'redirect'];
+    console.log('Request URL:', req.url.split('/')[2]);
+    if (
+      publicPaths.includes(req.url.split('/')[2]) ||
+      publicPaths.includes(req.url.split('/')[2].split('?')[0])
+    ) {
+      console.log('Public path, skipping auth');
+      return;
+    }
+    const auth = req.headers.authorization;
+    if (!auth) return reply.status(401).send({ error: 'Unauthorized' });
+    const token = auth.split(' ')[1];
+    try {
+      await fastify.verifyToken(token);
+    } catch (err) {
+      fastify.log.error(err);
+      return reply.status(403).send({ error: 'Forbidden' });
+    }
+  });
+
   fastify.post('/users', async (req, res) => {
     await userController.handleCreateUser(req, res);
   });
@@ -22,9 +81,5 @@ export async function restRoutes(fastify: FastifyInstance): Promise<void> {
 
   fastify.put('/users/:userId/matches/:matchId', async (req, res) => {
     await matchController.handleUpdateMatch(req, res);
-  });
-
-  fastify.get('/health', async (_req, res) => {
-    return res.send().status(200);
   });
 }

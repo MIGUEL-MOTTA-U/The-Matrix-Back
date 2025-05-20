@@ -52,6 +52,22 @@ const schema = {
       type: 'number',
       default: 120, // 2 minutes
     },
+    AZURE_CLIENT_ID: {
+      type: 'string',
+      default: 'azure-client-id',
+    },
+    AZURE_CLIENT_SECRET: {
+      type: 'string',
+      default: 'azure-client-secret',
+    },
+    AZURE_TENANT_ID: {
+      type: 'string',
+      default: 'azure-tenant-id',
+    },
+    AZURE_API_APP_ID: {
+      type: 'string',
+      default: 'azure-api-app-id',
+    },
   },
 };
 
@@ -79,6 +95,10 @@ export type EnvConfig = {
   LOG_LEVEL: string;
   REDIS_URL: string;
   TIME_TO_GENERATE_FRUIT: number;
+  AZURE_CLIENT_ID: string;
+  AZURE_CLIENT_SECRET: string;
+  AZURE_TENANT_ID: string;
+  AZURE_API_APP_ID: string;
 };
 
 // Extender FastifyInstance para incluir config y poder hacer ---> fastify.config.PORT <---- por ejmplo

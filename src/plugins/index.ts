@@ -1,5 +1,6 @@
 import fastifyCors from '@fastify/cors';
 import type { FastifyInstance } from 'fastify';
+import authPlugin from './auth.js';
 import { configureDI } from './di.js';
 import { configureEnv } from './env.js';
 import { handleError } from './errorsHandler.js';
@@ -11,6 +12,8 @@ import { configureWebSocket } from './websocket.js';
 export async function registerPlugins(server: FastifyInstance): Promise<void> {
   // Set up environment variables
   await configureEnv(server);
+  // Set up authentication
+  await server.register(authPlugin);
   // Set up error handler
   server.setErrorHandler(handleError);
   // Configurar CORS
