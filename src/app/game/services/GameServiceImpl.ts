@@ -361,28 +361,35 @@ class GameServiceImpl implements GameService {
     socketP2: WebSocket | undefined
   ): Promise<boolean> {
     if (!gameMatch.isRunning()) return true;
-    if (gameMatch.checkWin()) {
-      this.notifyPlayers(socketP1, socketP2, {
-        type: 'end',
-        payload: validateEndMatch({ result: 'win' }),
-      });
+    if (gameMatch.checkWin() || gameMatch.checkLose()) {
+      const result = gameMatch.checkWin() ? 'win' : 'lose';
+      this.notifyEndGame(socketP1, socketP2, result);
       await gameMatch.stopGame();
-      await this.removeMatch(gameMatch, socketP1, socketP2);
-      return true;
-    }
-    if (gameMatch.checkLose()) {
-      this.notifyPlayers(socketP1, socketP2, {
-        type: 'end',
-        payload: validateEndMatch({ result: 'lose' }),
-      });
-      await gameMatch.stopGame();
-      await this.removeMatch(gameMatch, socketP1, socketP2);
+      await this.matchRepository.updateMatch(gameMatch.getId(), { started: false });
+      if (result === 'win') {
+        await this.matchRepository.updateMatch(gameMatch.getId(), {
+          level: gameMatch.getLevel() + 1,
+        });
+      }
+      await this.endSession(gameMatch, socketP1, socketP2);
+      await this.removeMatch(gameMatch);
       return true;
     }
     return false;
   }
 
-  private async removeMatch(
+  private notifyEndGame(
+    socketP1: WebSocket | undefined,
+    socketP2: WebSocket | undefined,
+    result: string
+  ): void {
+    this.notifyPlayers(socketP1, socketP2, {
+      type: 'end',
+      payload: validateEndMatch({ result }),
+    });
+  }
+
+  private async endSession(
     gameMatch: Match,
     socketP1: WebSocket | undefined,
     socketP2: WebSocket | undefined
@@ -393,13 +400,15 @@ class GameServiceImpl implements GameService {
     });
     socketP1?.close();
     socketP2?.close();
-    this.matches.delete(gameMatch.getId());
     this.removeConnection(gameMatch.getHost());
     this.removeConnection(gameMatch.getGuest());
+  }
+
+  private async removeMatch(gameMatch: Match): Promise<void> {
+    this.matches.delete(gameMatch.getId());
     await this.userRepository.updateUser(gameMatch.getHost(), { matchId: null, role: 'HOST' });
     await this.userRepository.updateUser(gameMatch.getGuest(), { matchId: null, role: 'HOST' });
-    this.matchRepository.removeMatch(gameMatch.getId());
-    return;
+    await this.matchRepository.removeMatch(gameMatch.getId());
   }
 
   private async validateMessage(

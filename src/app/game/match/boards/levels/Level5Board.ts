@@ -21,6 +21,12 @@ export default class Level5Board extends Board {
       [9, 1],
       [9, 14],
     ];
+    this.enemiesCoordinates = [
+      [7, 7],
+      [7, 8],
+      [8, 7],
+      [8, 8],
+    ];
     this.fruitsCoordinates = [
       [0, 7],
       [0, 9],
