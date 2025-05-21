@@ -68,6 +68,10 @@ const schema = {
       type: 'string',
       default: 'azure-api-app-id',
     },
+    MATCH_TIME_OUT_SECONDS: {
+      type: 'number',
+      default: 180, // 3 minutes
+    },
   },
 };
 
@@ -99,6 +103,7 @@ export type EnvConfig = {
   AZURE_CLIENT_SECRET: string;
   AZURE_TENANT_ID: string;
   AZURE_API_APP_ID: string;
+  MATCH_TIME_OUT_SECONDS: number;
 };
 
 // Extender FastifyInstance para incluir config y poder hacer ---> fastify.config.PORT <---- por ejmplo

@@ -214,7 +214,8 @@ interface GameMessageOutput {
     | 'update-fruits'
     | 'update-frozen-cells'
     | 'paused'
-    | 'update-special-fruit';
+    | 'update-special-fruit'
+    | 'timeout';
   payload:
     | PlayerMove
     | EndMatch
@@ -226,7 +227,8 @@ interface GameMessageOutput {
     | PlayerState
     | FrozenCells
     | boolean
-    | CellDTO;
+    | CellDTO
+    | Info;
 }
 interface GameMessageInput {
   type: 'movement' | 'exec-power' | 'rotate' | 'set-color' | 'pause' | 'resume' | 'update-all';

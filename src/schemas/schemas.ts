@@ -106,6 +106,7 @@ const gameMessageOutputSchema = z.object({
     'update-frozen-cells',
     'paused',
     'update-special-fruit',
+    'timeout',
   ]),
   payload: z.union([
     playerStateSchema,
@@ -119,6 +120,7 @@ const gameMessageOutputSchema = z.object({
     updateFrozenCellsSchema,
     z.boolean(),
     cellDTOSchema,
+    infoSchema,
   ]),
 });
 

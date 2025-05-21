@@ -4,6 +4,7 @@ import type MatchRepository from '../../../schemas/MatchRepository.js';
 import type { MatchDetails } from '../../../schemas/zod.js';
 import { logger } from '../../../server.js';
 import type Match from '../../game/match/Match.js';
+import type SocketConnectionsService from '../../shared/SocketConnectionService.js';
 import type MatchMakingService from './MatchMakingService.js';
 import type WebsocketService from './WebSocketService.js';
 
@@ -16,7 +17,7 @@ import type WebsocketService from './WebSocketService.js';
  */
 export default class WebsocketServiceImpl implements WebsocketService {
   private readonly matchRepository: MatchRepository;
-  private readonly connections: Map<string, WebSocket>;
+  private readonly connections: SocketConnectionsService;
   private readonly matchesHosted: Map<string, WebSocket>;
   private matchMakingService?: MatchMakingService;
 
@@ -24,10 +25,10 @@ export default class WebsocketServiceImpl implements WebsocketService {
    * Creates a new instance of WebsocketService.
    * Initializes the connections map and the matchmaking service.
    */
-  constructor(matchRepository: MatchRepository) {
+  constructor(matchRepository: MatchRepository, connections: SocketConnectionsService) {
     this.matchRepository = matchRepository;
-    this.connections = new Map();
     this.matchesHosted = new Map();
+    this.connections = connections;
   }
 
   /**
@@ -46,7 +47,7 @@ export default class WebsocketServiceImpl implements WebsocketService {
    * @param {WebSocket} socket The WebSocket connection to register.
    */
   public registerConnection(userId: string, socket: WebSocket): void {
-    this.connections.set(userId, socket);
+    this.connections.registerConnection(userId, socket);
   }
 
   /**
@@ -55,7 +56,7 @@ export default class WebsocketServiceImpl implements WebsocketService {
    * @param {string} userId The ID of the user to remove the connection for.
    */
   public removeConnection(userId: string): void {
-    this.connections.delete(userId);
+    this.connections.removeConnection(userId);
   }
 
   /**
@@ -74,14 +75,13 @@ export default class WebsocketServiceImpl implements WebsocketService {
 
   /**
    * This method is checking if a user is connected.
-   * 
+   *
    * @param {string} userId The ID of the user to check.
    * @returns {boolean} True if the user is connected, false otherwise.
    */
-  public isConnected(userId: string) : boolean {
-    return this.connections.has(userId);
-  };
-
+  public isConnected(userId: string): boolean {
+    return this.connections.isConnected(userId);
+  }
 
   /**
    * This method is used to keep playing a match.
@@ -106,15 +106,15 @@ export default class WebsocketServiceImpl implements WebsocketService {
    */
   public async notifyMatchFound(match: Match): Promise<void> {
     try {
-      const hostSocket = this.connections.get(match.getHost());
-      const guestSocket = this.connections.get(match.getGuest());
+      const hostSocket = this.connections.getConnection(match.getHost());
+      const guestSocket = this.connections.getConnection(match.getGuest());
       if (!(hostSocket && guestSocket))
         throw new WebSocketError(WebSocketError.PLAYER_NOT_CONNECTED);
       const message = { message: 'match-found', match: match.getMatchDTO() };
       hostSocket.send(JSON.stringify(message));
       guestSocket.send(JSON.stringify(message));
-      this.connections.get(match.getGuest())?.close();
-      this.connections.get(match.getHost())?.close();
+      this.connections.getConnection(match.getGuest())?.close();
+      this.connections.getConnection(match.getHost())?.close();
       this.removeConnection(match.getHost());
       this.removeConnection(match.getGuest());
       this.matchRepository.updateMatch(match.getId(), {
@@ -159,7 +159,7 @@ export default class WebsocketServiceImpl implements WebsocketService {
     if (this.matchesHosted.has(matchId)) {
       throw new WebSocketError(WebSocketError.MATCH_ALREADY_BEEN_HOSTED);
     }
-    if (this.connections.has(hostId)) {
+    if (this.connections.isConnected(hostId)) {
       throw new WebSocketError(WebSocketError.PLAYER_ALREADY_IN_MATCHMAKING);
     }
 

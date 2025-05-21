@@ -7,6 +7,7 @@ import GameServiceImpl from '../../../../src/app/game/services/GameServiceImpl.j
 import type { MatchStorage, MatchDetails, PlayerMove, UpdateEnemy, UpdateTime } from '../../../../src/schemas/zod.js';
 import type Match from '../../../../src/app/game/match/Match.js';
 import type GameCacheRedis from '../../../../src/schemas/repositories/GameCacheRedis.js';
+import SocketConnections from '../../../../src/app/shared/SocketConnectionsServiceImpl.js';
 
 vi.mock('../../../../src/server.js', () => {
   return {
@@ -19,15 +20,16 @@ vi.mock('../../../../src/server.js', () => {
     config: {},
   };
 });
-
+const connections = new SocketConnections();
 const matchRepository = mockDeep<MatchRepository>();
 const userRepository = mockDeep<UserRepository>();
 const gameCache = mockDeep<GameCacheRedis>();
 gameCache.getMatch.mockResolvedValue(null);
 gameCache.saveMatch.mockResolvedValue(undefined);
-const gameServiceImpl = new GameServiceImpl(matchRepository, userRepository, gameCache);
+const gameServiceImpl = new GameServiceImpl(matchRepository, userRepository, gameCache, connections);
 beforeEach(() => {
   vi.clearAllMocks();
+  connections.clearConnections();
 });
 
 describe('GameServiceImpl', () => {
@@ -123,9 +125,9 @@ describe('GameServiceImpl', () => {
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
 
@@ -173,9 +175,9 @@ describe('GameServiceImpl', () => {
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
 
@@ -223,9 +225,9 @@ describe('GameServiceImpl', () => {
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
       await gameServiceImpl.handleGameMessage(userId, matchId, message);
@@ -272,9 +274,9 @@ describe('GameServiceImpl', () => {
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
       await gameServiceImpl.handleGameMessage(userId, matchId, message);
@@ -327,9 +329,9 @@ describe('GameServiceImpl', () => {
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
       await gameServiceImpl.handleGameMessage(userId, matchId, message);
@@ -376,9 +378,9 @@ describe('GameServiceImpl', () => {
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
 
@@ -426,9 +428,9 @@ describe('GameServiceImpl', () => {
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
 
       await gameServiceImpl.handleGameMessage(userId, matchId, message);
 
@@ -474,9 +476,9 @@ describe('GameServiceImpl', () => {
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
 
       await gameServiceImpl.handleGameMessage(userId, matchId, message);
 
@@ -534,9 +536,9 @@ describe('GameServiceImpl', () => {
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
       
@@ -592,9 +594,9 @@ describe('GameServiceImpl', () => {
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['validateMessage'] = vi.fn().mockReturnValue({
         type: 'unsupported message',
@@ -644,9 +646,9 @@ describe('GameServiceImpl', () => {
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set(hostId, mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection(hostId, mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set(guestId, mockSocketP2 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection(guestId, mockSocketP2 as unknown as WebSocket);
 
       await gameServiceImpl.updatePlayers(matchId, hostId, guestId, { type: 'update-enemy', payload: data });
 
@@ -707,35 +709,35 @@ describe('GameServiceImpl', () => {
       expect(result).toBe(false);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      expect(gameServiceImpl['connections'].get(user)).toBe(socket);
+      expect(gameServiceImpl['connections'].getConnection(user)).toBe(socket);
     });
 
     it('should update an existing connection and return true if user was already connected', () => {
       const user = 'user1';
-      const oldSocket = { readyState: WebSocket.OPEN };
-      const newSocket = { readyState: WebSocket.OPEN };
+      const oldSocket = { readyState: WebSocket.OPEN, close: vi.fn() };
+      const newSocket = { readyState: WebSocket.OPEN, close: vi.fn() };
 
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set(user, oldSocket as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection(user, oldSocket as unknown as WebSocket);
 
       const result = gameServiceImpl.registerConnection(user, newSocket as unknown as WebSocket);
 
       expect(result).toBe(true);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      expect(gameServiceImpl['connections'].get(user)).toBe(newSocket);
+      expect(gameServiceImpl['connections'].getConnection(user)).toBe(newSocket);
     });
   });
 
   describe('removeConnection', () => {
     it('should remove a user connection', () => {
       const user = 'user1';
-      const socket = { readyState: WebSocket.OPEN };
+      const socket = { readyState: WebSocket.OPEN, close: vi.fn() };
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set(user, socket as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection(user, socket as unknown as WebSocket);
 
       gameServiceImpl.removeConnection(user);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      expect(gameServiceImpl['connections'].has(user)).toBe(false);
+      expect(gameServiceImpl['connections'].isConnected(user)).toBe(false);
     });
   });
 

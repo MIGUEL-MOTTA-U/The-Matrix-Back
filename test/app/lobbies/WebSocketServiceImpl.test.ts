@@ -7,6 +7,7 @@ import type MatchRepository from '../../../src/schemas/MatchRepository.js';
 import type MatchMakingService from '../../../src/app/lobbies/services/MatchMakingService.js';
 import type Match from '../../../src/app/game/match/Match.js';
 import type { MatchDetails, MatchDTO } from '../../../src/schemas/zod.js';
+import SocketConnections from '../../../src/app/shared/SocketConnectionsServiceImpl.js';
 
 vi.mock('../../../src/server.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -14,14 +15,14 @@ vi.mock('../../../src/server.js', () => ({
 
 const matchRepository = mockDeep<MatchRepository>();
 const matchMakingService = mockDeep<MatchMakingService>();
-const webSocketServiceImpl = new WebSocketServiceImpl(matchRepository);
+const connections = new SocketConnections();
+const webSocketServiceImpl = new WebSocketServiceImpl(matchRepository, connections);
 webSocketServiceImpl.setMatchMakingService(matchMakingService);
 describe('WebSocketServiceImpl', () => {
   beforeEach(() => {
     mockReset(matchRepository);
     mockReset(matchMakingService);
-    // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-    webSocketServiceImpl['connections'].clear();
+    connections.clearConnections();
   });
 
   it('should register a connection', () => {
@@ -29,7 +30,7 @@ describe('WebSocketServiceImpl', () => {
     const socket = mockDeep<WebSocket>() as unknown as WebSocket;
     webSocketServiceImpl.registerConnection(userId, socket);
     // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-    expect(webSocketServiceImpl['connections'].get(userId)).toBe(socket);
+    expect(webSocketServiceImpl['connections'].getConnection(userId)).toBe(socket);
   });
 
   it('should remove a connection', () => {
@@ -38,7 +39,7 @@ describe('WebSocketServiceImpl', () => {
     webSocketServiceImpl.registerConnection(userId, socket);
     webSocketServiceImpl.removeConnection(userId);
     // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-    expect(webSocketServiceImpl['connections'].has(userId)).toBe(false);
+    expect(webSocketServiceImpl['connections'].isConnected(userId)).toBe(false);
   });
 
   it('should call matchMakingService.searchMatch with match details', async () => {
@@ -84,9 +85,9 @@ describe('WebSocketServiceImpl', () => {
     expect(hostSocket.close).toHaveBeenCalled();
     expect(guestSocket.close).toHaveBeenCalled();
     // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-    expect(webSocketServiceImpl['connections'].has('host1')).toBe(false);
+    expect(webSocketServiceImpl['connections'].isConnected('host1')).toBe(false);
     // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-    expect(webSocketServiceImpl['connections'].has('guest1')).toBe(false);
+    expect(webSocketServiceImpl['connections'].isConnected('guest1')).toBe(false);
     expect(matchRepository.updateMatch).toHaveBeenCalledWith(match.getId(), { started: true });
   });
 

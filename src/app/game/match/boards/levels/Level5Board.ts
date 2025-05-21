@@ -26,7 +26,7 @@ export default class Level5Board extends Board {
       [7, 8],
       [8, 7],
       [8, 8],
-    ]
+    ];
     this.fruitsCoordinates = [
       [0, 7],
       [0, 9],

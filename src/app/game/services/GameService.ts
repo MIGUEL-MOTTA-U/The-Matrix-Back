@@ -13,7 +13,7 @@ export default interface GameService {
   createMatch(match: MatchDetails): Promise<Match>;
   registerConnection(user: string, socket: WebSocket): boolean;
   removeConnection(user: string): void;
-  handleGameMessage(user: string, matchId: string, message: Buffer): Promise<void>;
+  handleGameMessage(userId: string, matchId: string, message: Buffer): Promise<void>;
   getMatch(matchId: string): Promise<Match | undefined>;
   checkMatchDetails(matchDetails: MatchDetails): void;
   getMatchUpdate(matchId: string): Promise<UpdateAll>;
