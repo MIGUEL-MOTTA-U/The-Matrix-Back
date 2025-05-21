@@ -7,6 +7,8 @@ export default interface WebSocketService {
   registerConnection: (userId: string, socket: WebSocket) => void;
   removeConnection: (userId: string) => void;
   matchMaking: (match: MatchDetails) => Promise<void>;
+  keepPlaying: (match: MatchDetails, userId: string) => Promise<void>;
+  isConnected: (userId: string) => boolean;
   notifyMatchFound: (match: Match) => Promise<void>;
   setMatchMakingService(matchMakingService: MatchMakingService): void;
   validateMatchToJoin: (matchId: string, guestId: string) => Promise<void>;

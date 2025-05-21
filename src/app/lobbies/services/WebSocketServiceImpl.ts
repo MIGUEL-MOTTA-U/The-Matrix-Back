@@ -73,6 +73,31 @@ export default class WebsocketServiceImpl implements WebsocketService {
   }
 
   /**
+   * This method is checking if a user is connected.
+   * 
+   * @param {string} userId The ID of the user to check.
+   * @returns {boolean} True if the user is connected, false otherwise.
+   */
+  public isConnected(userId: string) : boolean {
+    return this.connections.has(userId);
+  };
+
+
+  /**
+   * This method is used to keep playing a match.
+   *
+   * @param {MatchDetails} match The match details to keep playing.
+   * @param {string} userId The ID of the user to keep playing.
+   * @returns {Promise<void>} A promise that resolves when the keep playing request is processed.
+   */
+  public async keepPlaying(match: MatchDetails, userId: string): Promise<void> {
+    if (!this.matchMakingService) {
+      throw new WebSocketError(WebSocketError.MATCHMAKING_SERVICE_NOT_INITIALIZED);
+    }
+    await this.matchMakingService.keepPlaying(match, userId);
+  }
+
+  /**
    * This method is used to notify the players that a match has been found.
    *
    * @param {Match} match The Match to play the following game

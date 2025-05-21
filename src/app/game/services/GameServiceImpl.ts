@@ -32,6 +32,7 @@ class GameServiceImpl implements GameService {
   private readonly userRepository: UserRepository;
   private readonly matchRepository: MatchRepository;
   private readonly matches: Map<string, Match>;
+  private readonly matchesFinishedInWaiting: Map<string, boolean>;
   private readonly connections: Map<string, WebSocket>;
   private readonly gameCache: GameCache;
 
@@ -69,6 +70,7 @@ class GameServiceImpl implements GameService {
     this.userRepository = userRepository;
     this.matches = new Map<string, Match>();
     this.connections = new Map();
+    this.matchesFinishedInWaiting = new Map<string, boolean>();
     this.gameCache = gameCache;
   }
   public async saveMatch(matchId: string, matchStorage: MatchStorage): Promise<void> {
@@ -372,10 +374,21 @@ class GameServiceImpl implements GameService {
         });
       }
       await this.endSession(gameMatch, socketP1, socketP2);
+      this.matches.delete(gameMatch.getId());
       await this.removeMatch(gameMatch);
       return true;
     }
     return false;
+  }
+
+  private removeMatchAfterDelay(matchId: string, timeSeconds: number): void {
+    setTimeout(async () => {
+      const match = await this.getMatch(matchId);
+      if (match) {
+        await this.removeMatch(match);
+        this.matches.delete(matchId);
+      }
+    }, timeSeconds * 1000);
   }
 
   private notifyEndGame(
@@ -405,7 +418,6 @@ class GameServiceImpl implements GameService {
   }
 
   private async removeMatch(gameMatch: Match): Promise<void> {
-    this.matches.delete(gameMatch.getId());
     await this.userRepository.updateUser(gameMatch.getHost(), { matchId: null, role: 'HOST' });
     await this.userRepository.updateUser(gameMatch.getGuest(), { matchId: null, role: 'HOST' });
     await this.matchRepository.removeMatch(gameMatch.getId());
