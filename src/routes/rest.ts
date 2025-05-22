@@ -20,7 +20,6 @@ export async function restRoutes(fastify: FastifyInstance): Promise<void> {
     ].join(' ');
 
     const authUrl = `https://login.microsoftonline.com/${fastify.config.AZURE_TENANT_ID}/oauth2/v2.0/authorize?client_id=${fastify.config.AZURE_CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(`${fastify.config.REDIRECT_URL}`)}&scope=${encodeURIComponent(scopes)}&state=abc123`;
-
     return res.redirect(authUrl);
   });
 

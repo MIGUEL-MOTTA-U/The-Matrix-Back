@@ -123,7 +123,8 @@ export default class MatchMakingController {
       this.websocketService.publishMatch(matchDetails.id, socket);
 
       socket.on('message', async (message: Buffer) => {
-        await this.websocketService.handleMatchMessage(matchDetails, hostId, message);
+        const matchDetailsUpdated = await this.matchRepository.getMatchById(matchDetails.id);
+        await this.websocketService.handleMatchMessage(matchDetailsUpdated, hostId, message);
         this.extendExpiration(matchDetails.id, hostId);
       });
 
