@@ -6,6 +6,7 @@ import type MatchMakingService from '../app/lobbies/services/MatchMakingService.
 import MatchMaking from '../app/lobbies/services/MatchmakingImpl.js';
 import type WebSocketService from '../app/lobbies/services/WebSocketService.js';
 import WebsocketServiceImpl from '../app/lobbies/services/WebSocketServiceImpl.js';
+import SocketConnections from '../app/shared/SocketConnectionsServiceImpl.js';
 import MatchController from '../controllers/rest/MatchController.js';
 import UserController from '../controllers/rest/UserController.js';
 import GameController from '../controllers/websockets/GameController.js';
@@ -18,6 +19,7 @@ const registerDependencies = (server: FastifyInstance) => {
   container.register({
     redis: asValue(server.redis),
     prisma: asValue(server.prisma),
+    connections: asClass(SocketConnections, { lifetime: Lifetime.SINGLETON }),
     gameCache: asClass(GameCacheRedis, { lifetime: Lifetime.SINGLETON }),
     userRepository: asClass(UserRepositoryPostgres, { lifetime: Lifetime.SINGLETON }),
     matchRepository: asClass(MatchRepositoryPostgres, { lifetime: Lifetime.SINGLETON }),

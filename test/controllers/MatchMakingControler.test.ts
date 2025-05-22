@@ -10,6 +10,7 @@ import type MatchRepository from '../../src/schemas/MatchRepository.js';
 import type MatchMakingService from '../../src/app/lobbies/services/MatchMakingService.js';
 import { logger } from '../../src/server.js';
 import type WebSocketService from '../../src/app/lobbies/services/WebSocketService.js';
+import SocketConnections from '../../src/app/shared/SocketConnectionsServiceImpl.js';
 
 vi.mock('../../src/server.js', () => ({
   logger: {
@@ -30,7 +31,8 @@ vi.mock('../../src/schemas/zod.js', () => ({
 const userRepository = mockDeep<UserRepository>();
 const matchRepository = mockDeep<MatchRepository>();
 const matchMakingService = mockDeep<MatchMakingService>();
-const mockWebSocketService: WebSocketService = new WebsocketServiceImpl(matchRepository);
+const connections = new SocketConnections();
+const mockWebSocketService: WebSocketService = new WebsocketServiceImpl(matchRepository, connections);
 mockWebSocketService.setMatchMakingService(matchMakingService);
 mockWebSocketService.registerConnection = vi.fn();
 mockWebSocketService.matchMaking = vi.fn();

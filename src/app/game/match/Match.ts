@@ -69,12 +69,21 @@ export default class Match {
   }
 
   /**
-   * Retrieves the board of the match.
+   * Initializes the board of the match.
    *
-   * @return {Board} The board of the match.
+   * @return {void} Initializes the board.
    */
   public initialize(): void {
     this.board.initialize();
+  }
+
+  /**
+   * Retrieves the board of the match.
+   *
+   * @return {number} The board of the match.
+   */
+  public getLevel(): number {
+    return this.level;
   }
 
   /**

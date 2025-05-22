@@ -88,6 +88,28 @@ class MatchMaking implements MatchMakingService {
     await this.matchRepository.removeMatch(ghostMatch);
   }
 
+  /**
+   * This method is used to keep playing a match.
+   * @param {MatchDetails} match The match details to keep playing
+   * @param {string} userId The user id to keep playing
+   * @returns {Promise<void>} A promise that resolves when the keep playing process is complete
+   */
+  public async keepPlaying(match: MatchDetails, userId: string): Promise<void> {
+    if (match.started) throw new MatchError(MatchError.MATCH_ALREADY_STARTED);
+    const guest = match.guest;
+    const host = match.host;
+    if (guest === null || guest === undefined) throw new MatchError(MatchError.PLAYER_NOT_FOUND);
+    if (host !== userId && guest !== userId) throw new MatchError(MatchError.PLAYER_NOT_FOUND);
+    if (this.webSocketService.isConnected(guest) && this.webSocketService.isConnected(host)) {
+      // Ambos estan conectados
+      logger.info(
+        `Match found for guest:${guest} host: ${host} for map: ${match.map} level: ${match.level}`
+      );
+      const matchGame = await this.createMatch(match);
+      await this.webSocketService.notifyMatchFound(matchGame);
+    }
+  }
+
   public async joinMatch(matchDetails: MatchDetails, guestId: string): Promise<MatchDTO> {
     matchDetails.guest = guestId;
     const match = await this.createMatch(matchDetails);

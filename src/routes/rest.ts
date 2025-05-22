@@ -50,12 +50,10 @@ export async function restRoutes(fastify: FastifyInstance): Promise<void> {
   fastify.addHook('preHandler', async (req, reply) => {
     // Excluir rutas públicas
     const publicPaths = ['health', 'login', 'redirect', 'logout'];
-    console.log('Request URL:', req.url.split('/')[2]);
     if (
       publicPaths.includes(req.url.split('/')[2]) ||
       publicPaths.includes(req.url.split('/')[2].split('?')[0])
     ) {
-      console.log('Public path, skipping auth');
       return;
     }
     const auth = req.headers.authorization;
