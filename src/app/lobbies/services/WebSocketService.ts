@@ -16,4 +16,14 @@ export default interface WebSocketService {
   validateMatchToPublish: (matchId: string, hostId: string) => Promise<void>;
   publishMatch: (matchId: string, hostSocket: WebSocket) => void;
   removePublishedMatch: (matchId: string) => void;
+  handleJoinGameMessage: (
+    matchDetails: MatchDetails,
+    guestId: string,
+    message: Buffer
+  ) => Promise<void>;
+  handleMatchMessage: (
+    matchDetails: MatchDetails,
+    hostId: string,
+    message: Buffer
+  ) => Promise<void>;
 }

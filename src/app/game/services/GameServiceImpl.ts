@@ -232,6 +232,7 @@ class GameServiceImpl implements GameService {
       case 'set-color': {
         player.setColor(payload);
         await this.userRepository.updateUser(userId, { color: payload });
+        gameMatch.updatePlayer(player.getId(), { color: payload });
         this.notifyPlayers(socketP1, socketP2, {
           type: 'update-state',
           payload: validatePlayerState({ id: player.getId(), state: 'alive', color: payload }),
@@ -375,6 +376,7 @@ class GameServiceImpl implements GameService {
       }
       await this.endSession(gameMatch, socketP1, socketP2);
       this.matches.delete(gameMatch.getId());
+      await this.gameCache.removeMatch(gameMatch.getId());
       this.removeMatchAfterDelay(gameMatch.getId(), config.MATCH_TIME_OUT_SECONDS);
       return true;
     }
@@ -506,7 +508,7 @@ class GameServiceImpl implements GameService {
     }
   }
 
-  private notifyPlayers(
+  public notifyPlayers(
     socketP1: WebSocket | undefined,
     socketP2: WebSocket | undefined,
     dataDTO: GameMessageOutput

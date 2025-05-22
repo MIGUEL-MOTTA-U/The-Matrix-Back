@@ -9,4 +9,5 @@ import type { MatchStorage } from '../zod.js';
 export default interface GameCache {
   saveMatch: (matchId: string, matchStorage: MatchStorage) => Promise<void>;
   getMatch: (matchId: string) => Promise<MatchStorage | null>;
+  removeMatch: (matchId: string) => Promise<void>;
 }

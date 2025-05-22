@@ -38,7 +38,8 @@ describe('MatchController', () => {
 
       mockUserRepository.getUserById.mockResolvedValue({
         matchId: 'match123',
-        id: ''
+        id: '',
+        status: 'READY'
       });
 
       await matchController.handleGetMatch(req, res);
@@ -61,6 +62,7 @@ describe('MatchController', () => {
       mockUserRepository.getUserById.mockResolvedValue({
         matchId: null,
         id: '',
+        status: 'READY'
       });
       mockMatchRepository.createMatch.mockResolvedValue();
       mockUserRepository.updateUser.mockResolvedValue();

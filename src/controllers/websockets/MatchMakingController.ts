@@ -92,7 +92,6 @@ export default class MatchMakingController {
       await this.extendExpiration(match.id, match.host);
       setTimeout(() => {}, 1000 * config.MATCH_TIME_OUT_SECONDS);
       socket.on('message', (_message: Buffer) => {
-        this.sendMessage(socket, validateInfo({ message: 'Waiting for other player to join' }));
         this.extendExpiration(match.id, match.host);
       });
 
@@ -123,8 +122,8 @@ export default class MatchMakingController {
       await this.websocketService.validateMatchToPublish(matchDetails.id, hostId);
       this.websocketService.publishMatch(matchDetails.id, socket);
 
-      socket.on('message', (_message: Buffer) => {
-        this.sendMessage(socket, validateInfo({ message: 'Match published successfully!' }));
+      socket.on('message', async (message: Buffer) => {
+        await this.websocketService.handleMatchMessage(matchDetails, hostId, message);
         this.extendExpiration(matchDetails.id, hostId);
       });
 
@@ -165,8 +164,8 @@ export default class MatchMakingController {
       guestSocket.on('error', (error: Error) => {
         this.logError(error);
       });
-      guestSocket.on('message', (_message: Buffer) => {
-        this.sendMessage(guestSocket, validateInfo({ message: 'Joining game...' }));
+      guestSocket.on('message', async (message: Buffer) => {
+        await this.websocketService.handleJoinGameMessage(matchDetails, guestId, message);
         this.extendExpiration(matchDetails.id, guestId);
       });
     } catch (error) {

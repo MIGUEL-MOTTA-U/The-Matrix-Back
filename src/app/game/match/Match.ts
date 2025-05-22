@@ -11,6 +11,7 @@ import {
   type PlayerStorage,
   type UpdateAll,
   type UpdateTime,
+  type UserQueue,
   validatePlayerState,
   validateUpdateAll,
   validateUpdateTime,
@@ -66,6 +67,14 @@ export default class Match {
     this.fruitGenerated = fruitGenerated;
     this.timeSeconds = timeSeconds; // default time in seconds is 300
     this.running = true;
+  }
+
+  public updatePlayer(id: string, userData: Partial<UserQueue>): void {
+    if (id === this.host) {
+      this.board.getHost()?.updatePlayer(userData);
+    } else if (id === this.guest) {
+      this.board.getHost()?.updatePlayer(userData);
+    }
   }
 
   /**

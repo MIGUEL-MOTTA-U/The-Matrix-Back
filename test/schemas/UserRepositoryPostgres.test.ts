@@ -9,22 +9,24 @@ import type { UserQueue } from '../../src/schemas/zod.js';
 
 // Mock de usuario para tests
 const mockUser: User = {
-    id: 'user123',
-    color: 'blue',
-    matchId: 'match456',
-    playerRole: 'HOST',
-    expiredAt: new Date(Date.now() + 1200000),
-    createdAt: new Date(),
-    name: 'Anonymous',
-    role: 'USER',
-    updatedAt: new Date(),
+  id: 'user123',
+  color: 'blue',
+  matchId: 'match456',
+  playerRole: 'HOST',
+  expiredAt: new Date(Date.now() + 1200000),
+  createdAt: new Date(),
+  name: 'Anonymous',
+  role: 'USER',
+  updatedAt: new Date(),
+  status: 'WAITING',
 };
   
   const mockUserQueue: UserQueue = {
     id: 'user123',
     color: 'blue',
     matchId: 'match456',
-    role: 'HOST'
+    role: 'HOST',
+    status: 'WAITING'
   };
   
   describe('UserRepositoryPostgres', () => {
@@ -152,8 +154,10 @@ const mockUser: User = {
         expect(user).toEqual({
           id: 'user123',
           color: 'blue',
+          name: 'Anonymous',
           matchId: 'match456',
-          role: 'HOST'
+          role: 'HOST',
+          status: 'WAITING',
         });
       });
   
@@ -173,7 +177,9 @@ const mockUser: User = {
         const userData: Partial<UserQueue> = { 
           color: 'red', 
           matchId: 'newMatch', 
-          role: 'HOST' 
+          role: 'HOST' ,
+          status: 'WAITING'
+
         };
         
         await userRepository.updateUser('user123', userData);
@@ -186,7 +192,8 @@ const mockUser: User = {
           data: {
             color: 'red',
             matchId: 'newMatch',
-            playerRole: 'HOST'
+            playerRole: 'HOST',
+            status: 'WAITING'
           }
         });
       });

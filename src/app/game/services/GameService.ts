@@ -28,4 +28,9 @@ export default interface GameService {
   ): Promise<void>;
   saveMatch(matchId: string, matchStorage: MatchStorage): Promise<void>;
   getMatchStorage(matchId: string): Promise<MatchStorage | null>;
+  notifyPlayers(
+    socketP1: WebSocket | undefined,
+    socketP2: WebSocket | undefined,
+    dataDTO: GameMessageOutput
+  ): void;
 }

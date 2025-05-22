@@ -1,7 +1,12 @@
 import { WebSocket } from 'ws';
 import WebSocketError from '../../../errors/WebSocketError.js';
 import type MatchRepository from '../../../schemas/MatchRepository.js';
-import type { MatchDetails } from '../../../schemas/zod.js';
+import {
+  type MatchDetails,
+  type UserQueue,
+  validateGameMesssageInput,
+  validateString,
+} from '../../../schemas/zod.js';
 import { logger } from '../../../server.js';
 import type Match from '../../game/match/Match.js';
 import type SocketConnectionsService from '../../shared/SocketConnectionService.js';
@@ -202,8 +207,78 @@ export default class WebsocketServiceImpl implements WebsocketService {
     });
     hostSocket.send(JSON.stringify({ message: 'match-found', match: matchDTO }));
     guestSocket.send(JSON.stringify({ message: 'match-found', match: matchDTO }));
-    hostSocket.close();
-    guestSocket.close();
+    // It's not a good idea let socket open, but it was required not to close it
+    //this.closeSessionWithDelay(hostSocket, guestSocket, 360);
+  }
+
+  private async handleMessage(message: Buffer): Promise<Partial<UserQueue>> {
+    const { type, payload } = validateGameMesssageInput(JSON.parse(message.toString()));
+    if (!this.matchMakingService) {
+      throw new WebSocketError(WebSocketError.MATCHMAKING_SERVICE_NOT_INITIALIZED);
+    }
+    let changes = {};
+    switch (type) {
+      case 'set-color': {
+        validateString(payload);
+        changes = { color: payload };
+        break;
+      }
+      case 'set-name': {
+        validateString(payload);
+        changes = { name: payload };
+        break;
+      }
+
+      case 'set-state': {
+        if (payload !== 'PLAYING' && payload !== 'WAITING' && payload !== 'READY')
+          throw new WebSocketError(WebSocketError.BAD_WEB_SOCKET_REQUEST);
+        changes = { status: payload };
+        break;
+      }
+      default: {
+        throw new WebSocketError(WebSocketError.BAD_WEB_SOCKET_REQUEST);
+      }
+    }
+    return changes;
+  }
+
+  public async handleMatchMessage(
+    matchDetails: MatchDetails,
+    hostId: string,
+    message: Buffer
+  ): Promise<void> {
+    if (!this.matchMakingService) {
+      throw new WebSocketError(WebSocketError.MATCHMAKING_SERVICE_NOT_INITIALIZED);
+    }
+    const changes = await this.handleMessage(message);
+    await this.matchMakingService.updatePlayer(matchDetails.id, hostId, changes);
+    const guestSocket = matchDetails.guest
+      ? this.connections.getConnection(matchDetails.guest)
+      : undefined;
+    const hostSocket = this.matchesHosted.get(matchDetails.id);
+    await this.matchMakingService.notifyPlayerUpdate(hostSocket, guestSocket, changes);
+  }
+
+  public async handleJoinGameMessage(
+    matchDetails: MatchDetails,
+    guestId: string,
+    message: Buffer
+  ): Promise<void> {
+    if (!this.matchMakingService) {
+      throw new WebSocketError(WebSocketError.MATCHMAKING_SERVICE_NOT_INITIALIZED);
+    }
+    const changes = await this.handleMessage(message);
+    await this.matchMakingService.updatePlayer(matchDetails.id, guestId, changes);
+    const hostSocket = this.matchesHosted.get(matchDetails.id);
+    const guestSocket = this.connections.getConnection(guestId);
+    await this.matchMakingService.notifyPlayerUpdate(hostSocket, guestSocket, changes);
+  }
+
+  private closeSessionWithDelay(hostSocket: WebSocket, guestSocket: WebSocket, time: number): void {
+    setTimeout(() => {
+      hostSocket.close();
+      guestSocket.close();
+    }, 1000 * time);
   }
 
   /**

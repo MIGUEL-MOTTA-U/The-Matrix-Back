@@ -215,7 +215,8 @@ interface GameMessageOutput {
     | 'update-frozen-cells'
     | 'paused'
     | 'update-special-fruit'
-    | 'timeout';
+    | 'timeout'
+    | 'player-update';
   payload:
     | PlayerMove
     | EndMatch
@@ -228,10 +229,20 @@ interface GameMessageOutput {
     | FrozenCells
     | boolean
     | CellDTO
-    | Info;
+    | Info
+    | Partial<UserQueue>;
 }
 interface GameMessageInput {
-  type: 'movement' | 'exec-power' | 'rotate' | 'set-color' | 'pause' | 'resume' | 'update-all';
+  type:
+    | 'movement'
+    | 'exec-power'
+    | 'rotate'
+    | 'set-color'
+    | 'pause'
+    | 'resume'
+    | 'update-all'
+    | 'set-name'
+    | 'set-state';
   payload: Direction | string;
 }
 interface PlayerState {
@@ -272,8 +283,10 @@ interface UpdateAll {
 interface UserQueue {
   role?: PlayerType;
   id: string;
+  name?: string;
   matchId: string | null;
   color?: string;
+  status: 'WAITING' | 'PLAYING' | 'READY';
 }
 
 interface UpdateFruits {

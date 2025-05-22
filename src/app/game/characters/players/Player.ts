@@ -5,6 +5,7 @@ import {
   type CellDTO,
   type PlayerMove,
   type PlayerStorage,
+  type UserQueue,
   validatePlayerMove,
 } from '../../../../schemas/zod.js';
 import type Cell from '../../match/boards/CellBoard.js';
@@ -21,6 +22,8 @@ import Character from '../Character.js';
  * Santiago Avellaneda, Andres Serrato, and Miguel Motta
  */
 class Player extends Character {
+  private status: 'WAITING' | 'PLAYING' | 'READY' = 'WAITING';
+  private name = 'Anonymous';
   /**
    * Retrieves the player's update information, including position, state, and consumed items.
    *
@@ -38,6 +41,12 @@ class Player extends Character {
       idItemConsumed,
       numberOfFruits,
     });
+  }
+
+  public updatePlayer(data: Partial<UserQueue>): void {
+    if (data.color) this.color = data.color;
+    if (data.status) this.status = data.status;
+    if (data.name) this.name = data.name;
   }
 
   public getPlayerStorage(): PlayerStorage {
