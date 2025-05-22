@@ -64,7 +64,7 @@ export default class Level5Board extends Board {
       ...this.getRowCoordinatesInRange(12, 9, 12),
     ];
     this.rocksCoordinates = [];
-    this.FRUIT_TYPE = ['grape', 'apple'];
+    this.FRUIT_TYPE = ['orange', 'watermelon'];
     this.ENEMIES_SPEED = config.ENEMIES_SPEED_MS;
     this.loadConstants();
   }

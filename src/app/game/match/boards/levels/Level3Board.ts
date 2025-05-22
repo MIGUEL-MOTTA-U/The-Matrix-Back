@@ -58,7 +58,7 @@ export default class Level3Board extends Board {
       ...this.getRowCoordinatesInRange(12, 0, 3),
       ...this.getRowCoordinatesInRange(12, 12, 15),
     ];
-    this.FRUIT_TYPE = ['banana', 'grape', 'apple'];
+    this.FRUIT_TYPE = ['banana', 'grape', 'orange'];
     this.ENEMIES_SPEED = config.ENEMIES_SPEED_MS + 500; // 1.5s slower than the other levels
     this.loadConstants();
   }
