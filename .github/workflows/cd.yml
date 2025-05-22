@@ -36,11 +36,11 @@ jobs:
       
       - name: Prisma Migrate
         env: 
-          DB_URI: ${{ secrets.DB_URI_PROD }}
-          DB_DIRECT_URL: ${{ secrets.DB_DIRECT_URL_PROD }}
-          DB_USER: ${{ secrets.DB_USER_PROD }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD_PROD }}
-          DB_NAME: ${{ secrets.DB_NAME_PROD }}
+          DB_URI: ${{ secrets.DB_URI }}
+          DB_DIRECT_URL: ${{ secrets.DB_DIRECT_URL }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_NAME: ${{ secrets.DB_NAME }}
         run: pnpm prisma:migrate:deploy
 
       - name: Zip artifact for deployment
