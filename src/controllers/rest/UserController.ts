@@ -24,7 +24,9 @@ export default class UserController {
    */
   public async handleCreateUser(_req: FastifyRequest, res: FastifyReply): Promise<void> {
     const userId: string = uuidv4();
-    await this.userRepository.createUser(validateUserQueue({ id: userId, matchId: null }));
+    await this.userRepository.createUser(
+      validateUserQueue({ id: userId, matchId: null, status: 'WAITING' })
+    );
     return res.send({ userId });
   }
 
