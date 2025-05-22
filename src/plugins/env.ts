@@ -80,6 +80,14 @@ const schema = {
       type: 'number',
       default: 60, // 1 minute
     },
+    SERVICE_BUS_CONNECTION_STRING: {
+      type: 'string',
+      default: '',
+    },
+    SERVICE_BUS_QUEUE_NAME: {
+      type: 'string',
+      default: '',
+    },
   },
 };
 
@@ -114,6 +122,8 @@ export type EnvConfig = {
   MATCH_TIME_OUT_SECONDS: number;
   REDIRECT_URL: string;
   LOGOUT_REDIRECT_URL: string;
+  SERVICE_BUS_CONNECTION_STRING: string;
+  SERVICE_BUS_QUEUE_NAME: string;
 };
 
 // Extender FastifyInstance para incluir config y poder hacer ---> fastify.config.PORT <---- por ejmplo

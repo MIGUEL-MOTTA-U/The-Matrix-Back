@@ -1,3 +1,4 @@
+import { ServiceBusClient } from '@azure/service-bus';
 import { fastifyAwilixPlugin } from '@fastify/awilix';
 import { Lifetime, asClass, asValue } from 'awilix';
 import type { FastifyInstance } from 'fastify';
@@ -14,9 +15,14 @@ import MatchMakingController from '../controllers/websockets/MatchMakingControll
 import GameCacheRedis from '../schemas/repositories/GameCacheRedis.js';
 import MatchRepositoryPostgres from '../schemas/repositories/MatchRepositoryPostgres.js';
 import UserRepositoryPostgres from '../schemas/repositories/UserRepositoryPostgres.js';
+import LoggerService from '../utils/LoggerService.js';
 import { container } from './diContainer.js';
 const registerDependencies = (server: FastifyInstance) => {
+  const sbClient = new ServiceBusClient(server.config.SERVICE_BUS_CONNECTION_STRING);
   container.register({
+    sbClient: asValue(sbClient),
+    sender: asValue(sbClient.createSender(server.config.SERVICE_BUS_QUEUE_NAME)),
+    loggerService: asClass(LoggerService, { lifetime: Lifetime.SINGLETON }),
     redis: asValue(server.redis),
     prisma: asValue(server.prisma),
     connections: asClass(SocketConnections, { lifetime: Lifetime.SINGLETON }),

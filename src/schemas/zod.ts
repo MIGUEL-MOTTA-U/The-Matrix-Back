@@ -160,6 +160,14 @@ interface PlayersPaths {
 interface Info {
   message: string;
 }
+
+interface Log {
+  service: string;
+  ip: string;
+  timestamp: string;
+  userId: string;
+  trace: string;
+}
 interface CellCoordinates {
   x: number;
   y: number;
@@ -357,6 +365,7 @@ export type {
   PlayerStorage,
   EnemiesTypes,
   ItemsTypes,
+  Log,
 };
 export {
   enemiesConst,

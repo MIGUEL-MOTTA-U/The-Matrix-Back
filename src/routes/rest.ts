@@ -1,9 +1,12 @@
 import type { FastifyInstance } from 'fastify';
+import type LoggerService from 'src/utils/LoggerService.js';
 import type MatchController from '../controllers/rest/MatchController.js';
 import type UserController from '../controllers/rest/UserController.js';
+import type { Log } from '../schemas/zod.js';
 export async function restRoutes(fastify: FastifyInstance): Promise<void> {
   const userController = fastify.diContainer.resolve<UserController>('userController');
   const matchController = fastify.diContainer.resolve<MatchController>('matchController');
+  const loggerService = fastify.diContainer.resolve<LoggerService>('loggerService');
 
   fastify.get('/health', async (_req, res) => {
     return res.send().status(200);
@@ -49,6 +52,17 @@ export async function restRoutes(fastify: FastifyInstance): Promise<void> {
 
   fastify.addHook('preHandler', async (req, reply) => {
     // Excluir rutas públicas
+    const ip = req.ip;
+    const logObject: Log = {
+      service: 'api',
+      ip: ip,
+      timestamp: new Date().toISOString(),
+      userId: req.hostname,
+      trace: req.headers['x-trace-id'] as string,
+    };
+
+    loggerService.registerLog(logObject);
+
     const publicPaths = ['health', 'login', 'redirect', 'logout'];
     if (
       publicPaths.includes(req.url.split('/')[2]) ||

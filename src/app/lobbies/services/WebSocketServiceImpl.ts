@@ -141,13 +141,14 @@ export default class WebsocketServiceImpl implements WebsocketService {
   public async validateMatchToJoin(matchId: string, guestId: string): Promise<void> {
     const match = await this.matchRepository.getMatchById(matchId);
     const hostWebSocket = this.matchesHosted.get(match.id);
-    if (match.guest !== null) {
-      throw new WebSocketError(WebSocketError.MATCH_ALREADY_STARTED);
-    }
     if (match.host === guestId) {
       throw new WebSocketError(WebSocketError.PLAYER_ALREADY_IN_MATCH);
     }
-    if (match.started) throw new WebSocketError(WebSocketError.MATCH_ALREADY_STARTED);
+    if (
+      match.started &&
+      (match.guest !== guestId || match.guest === null || match.guest === undefined)
+    )
+      throw new WebSocketError(WebSocketError.MATCH_ALREADY_STARTED);
     if (hostWebSocket === undefined || hostWebSocket.readyState !== WebSocket.OPEN) {
       throw new WebSocketError(WebSocketError.PLAYER_NOT_CONNECTED);
     }
