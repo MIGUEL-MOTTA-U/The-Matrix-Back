@@ -11,6 +11,7 @@ import {
   type PlayerStorage,
   type UpdateAll,
   type UpdateTime,
+  type UserQueue,
   validatePlayerState,
   validateUpdateAll,
   validateUpdateTime,
@@ -68,13 +69,30 @@ export default class Match {
     this.running = true;
   }
 
+  public updatePlayer(id: string, userData: Partial<UserQueue>): void {
+    if (id === this.host) {
+      this.board.getHost()?.updatePlayer(userData);
+    } else if (id === this.guest) {
+      this.board.getHost()?.updatePlayer(userData);
+    }
+  }
+
   /**
-   * Retrieves the board of the match.
+   * Initializes the board of the match.
    *
-   * @return {Board} The board of the match.
+   * @return {void} Initializes the board.
    */
   public initialize(): void {
     this.board.initialize();
+  }
+
+  /**
+   * Retrieves the board of the match.
+   *
+   * @return {number} The board of the match.
+   */
+  public getLevel(): number {
+    return this.level;
   }
 
   /**

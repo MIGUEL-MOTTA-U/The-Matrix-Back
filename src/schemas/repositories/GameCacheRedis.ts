@@ -17,6 +17,13 @@ export default class GameCacheRedis implements GameCache {
   constructor(redis: FastifyRedis) {
     this.redis = redis;
   }
+  public async removeMatch(matchId: string): Promise<void> {
+    const key = `match:${matchId}`;
+    await this.redis.del(key).catch((error) => {
+      logger.warn(`Error deleting match: ${matchId}`);
+      logger.error(error);
+    });
+  }
   /**
    * This method retrieves a match from the Redis cache.
    * It uses a hash to store the match data, with the key being the match ID.

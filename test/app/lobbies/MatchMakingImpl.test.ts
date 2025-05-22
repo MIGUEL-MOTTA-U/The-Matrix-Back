@@ -59,11 +59,12 @@ describe('MatchMaking', () => {
       
       // Corregir la definición para que coincida con UserQueue
       const mockQueue = new AsyncQueue<UserQueue>();
-      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({ 
-        id: 'user1', 
+      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({
+        id: 'user1',
         matchId: 'match2',
         role: 'HOST',
-        color: 'blue'
+        color: 'blue',
+        status: 'WAITING'
       });
       
       // biome-ignore lint/complexity/useLiteralKeys: For Testing purposes
@@ -88,11 +89,12 @@ describe('MatchMaking', () => {
       };
       
       const mockQueue = new AsyncQueue<UserQueue>();
-      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({ 
-        id: 'user1', 
+      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({
+        id: 'user1',
         matchId: 'match2',
         role: 'HOST',
-        color: 'blue'
+        color: 'blue',
+        status: 'WAITING'
       });
       vi.spyOn(mockQueue, 'dequeue').mockResolvedValue(undefined);
       vi.spyOn(mockQueue, 'enqueue').mockResolvedValue(undefined);
@@ -102,7 +104,7 @@ describe('MatchMaking', () => {
       
       await matchMaking.searchMatch(matchDetails);
       
-      expect(mockQueue.enqueue).toHaveBeenCalledWith({ id: 'user1', matchId: 'match1' });
+      expect(mockQueue.enqueue).toHaveBeenCalledWith({ id: 'user1', matchId: 'match1', status: 'WAITING' });
       
       expect(matchRepository.updateMatch).not.toHaveBeenCalled();
       expect(webSocketService.notifyMatchFound).not.toHaveBeenCalled();
@@ -116,13 +118,17 @@ describe('MatchMaking', () => {
           map: 'jungle'
       };
       const mockQueue = new AsyncQueue<UserQueue>();
-      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({ 
-        id: 'user1', 
+      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({
+        id: 'user1',
         matchId: 'match2',
         role: 'HOST',
-        color: 'blue'
+        color: 'blue',
+        status: 'WAITING'
       });
-      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({ id: 'user1', matchId: 'different-match' });
+      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({
+        id: 'user1', matchId: 'different-match',
+        status: 'WAITING'
+      });
       vi.spyOn(mockQueue, 'enqueue').mockResolvedValue(undefined);
       
       // biome-ignore lint/complexity/useLiteralKeys: For Testing purposes
@@ -130,7 +136,7 @@ describe('MatchMaking', () => {
       
       await matchMaking.searchMatch(matchDetails);
 
-      expect(mockQueue.enqueue).toHaveBeenCalledWith({ id: 'user1', matchId: 'match1' });
+      expect(mockQueue.enqueue).toHaveBeenCalledWith({ id: 'user1', matchId: 'match1', status: 'WAITING' });
       expect(matchRepository.updateMatch).not.toHaveBeenCalled();
       expect(webSocketService.notifyMatchFound).not.toHaveBeenCalled();
     });
@@ -178,11 +184,12 @@ describe('MatchMaking', () => {
       };
       
       const mockQueue = new AsyncQueue<UserQueue>();
-      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({ 
-        id: 'user1', 
+      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({
+        id: 'user1',
         matchId: 'match2',
         role: 'HOST',
-        color: 'blue'
+        color: 'blue',
+        status: 'WAITING'
       });
       vi.spyOn(mockQueue, 'dequeue').mockRejectedValue(new Error('Queue error'));
       

@@ -25,6 +25,7 @@ const mockMatch: Match & { players: User[] } = {
       name: 'Player1',
       role: 'USER',
       updatedAt: new Date(),
+      status: 'READY'
     },
     {
       id: 'user456',
@@ -36,6 +37,7 @@ const mockMatch: Match & { players: User[] } = {
       name: 'Player2',
       role: 'USER',
       updatedAt: new Date(),
+      status: 'WAITING'
     },
   ],
 };

@@ -85,7 +85,7 @@ describe('LogMan tests', () => {
         await logMan["rollToDirection"]("right", 3);
         
         // biome-ignore lint/complexity/useLiteralKeys: <explanation>
-        expect(logMan["moveAlongPath"]).toHaveBeenCalledTimes(1);
+        expect(logMan["moveAlongPath"]).toHaveBeenCalledTimes(3);
         // biome-ignore lint/complexity/useLiteralKeys: <explanation>
         expect(logMan["orientation"]).toBe("right");
         // biome-ignore lint/complexity/useLiteralKeys: <explanation>

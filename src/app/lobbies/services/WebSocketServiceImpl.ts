@@ -1,9 +1,15 @@
 import { WebSocket } from 'ws';
 import WebSocketError from '../../../errors/WebSocketError.js';
 import type MatchRepository from '../../../schemas/MatchRepository.js';
-import type { MatchDetails } from '../../../schemas/zod.js';
+import {
+  type MatchDetails,
+  type UserQueue,
+  validateGameMesssageInput,
+  validateString,
+} from '../../../schemas/zod.js';
 import { logger } from '../../../server.js';
 import type Match from '../../game/match/Match.js';
+import type SocketConnectionsService from '../../shared/SocketConnectionService.js';
 import type MatchMakingService from './MatchMakingService.js';
 import type WebsocketService from './WebSocketService.js';
 
@@ -16,7 +22,7 @@ import type WebsocketService from './WebSocketService.js';
  */
 export default class WebsocketServiceImpl implements WebsocketService {
   private readonly matchRepository: MatchRepository;
-  private readonly connections: Map<string, WebSocket>;
+  private readonly connections: SocketConnectionsService;
   private readonly matchesHosted: Map<string, WebSocket>;
   private matchMakingService?: MatchMakingService;
 
@@ -24,10 +30,10 @@ export default class WebsocketServiceImpl implements WebsocketService {
    * Creates a new instance of WebsocketService.
    * Initializes the connections map and the matchmaking service.
    */
-  constructor(matchRepository: MatchRepository) {
+  constructor(matchRepository: MatchRepository, connections: SocketConnectionsService) {
     this.matchRepository = matchRepository;
-    this.connections = new Map();
     this.matchesHosted = new Map();
+    this.connections = connections;
   }
 
   /**
@@ -46,7 +52,7 @@ export default class WebsocketServiceImpl implements WebsocketService {
    * @param {WebSocket} socket The WebSocket connection to register.
    */
   public registerConnection(userId: string, socket: WebSocket): void {
-    this.connections.set(userId, socket);
+    this.connections.registerConnection(userId, socket);
   }
 
   /**
@@ -55,7 +61,7 @@ export default class WebsocketServiceImpl implements WebsocketService {
    * @param {string} userId The ID of the user to remove the connection for.
    */
   public removeConnection(userId: string): void {
-    this.connections.delete(userId);
+    this.connections.removeConnection(userId);
   }
 
   /**
@@ -73,6 +79,30 @@ export default class WebsocketServiceImpl implements WebsocketService {
   }
 
   /**
+   * This method is checking if a user is connected.
+   *
+   * @param {string} userId The ID of the user to check.
+   * @returns {boolean} True if the user is connected, false otherwise.
+   */
+  public isConnected(userId: string): boolean {
+    return this.connections.isConnected(userId);
+  }
+
+  /**
+   * This method is used to keep playing a match.
+   *
+   * @param {MatchDetails} match The match details to keep playing.
+   * @param {string} userId The ID of the user to keep playing.
+   * @returns {Promise<void>} A promise that resolves when the keep playing request is processed.
+   */
+  public async keepPlaying(match: MatchDetails, userId: string): Promise<void> {
+    if (!this.matchMakingService) {
+      throw new WebSocketError(WebSocketError.MATCHMAKING_SERVICE_NOT_INITIALIZED);
+    }
+    await this.matchMakingService.keepPlaying(match, userId);
+  }
+
+  /**
    * This method is used to notify the players that a match has been found.
    *
    * @param {Match} match The Match to play the following game
@@ -81,15 +111,15 @@ export default class WebsocketServiceImpl implements WebsocketService {
    */
   public async notifyMatchFound(match: Match): Promise<void> {
     try {
-      const hostSocket = this.connections.get(match.getHost());
-      const guestSocket = this.connections.get(match.getGuest());
+      const hostSocket = this.connections.getConnection(match.getHost());
+      const guestSocket = this.connections.getConnection(match.getGuest());
       if (!(hostSocket && guestSocket))
         throw new WebSocketError(WebSocketError.PLAYER_NOT_CONNECTED);
       const message = { message: 'match-found', match: match.getMatchDTO() };
       hostSocket.send(JSON.stringify(message));
       guestSocket.send(JSON.stringify(message));
-      this.connections.get(match.getGuest())?.close();
-      this.connections.get(match.getHost())?.close();
+      this.connections.getConnection(match.getGuest())?.close();
+      this.connections.getConnection(match.getHost())?.close();
       this.removeConnection(match.getHost());
       this.removeConnection(match.getGuest());
       this.matchRepository.updateMatch(match.getId(), {
@@ -111,13 +141,14 @@ export default class WebsocketServiceImpl implements WebsocketService {
   public async validateMatchToJoin(matchId: string, guestId: string): Promise<void> {
     const match = await this.matchRepository.getMatchById(matchId);
     const hostWebSocket = this.matchesHosted.get(match.id);
-    if (match.guest !== null) {
-      throw new WebSocketError(WebSocketError.MATCH_ALREADY_STARTED);
-    }
     if (match.host === guestId) {
       throw new WebSocketError(WebSocketError.PLAYER_ALREADY_IN_MATCH);
     }
-    if (match.started) throw new WebSocketError(WebSocketError.MATCH_ALREADY_STARTED);
+    if (
+      match.started &&
+      (match.guest !== guestId || match.guest === null || match.guest === undefined)
+    )
+      throw new WebSocketError(WebSocketError.MATCH_ALREADY_STARTED);
     if (hostWebSocket === undefined || hostWebSocket.readyState !== WebSocket.OPEN) {
       throw new WebSocketError(WebSocketError.PLAYER_NOT_CONNECTED);
     }
@@ -134,7 +165,7 @@ export default class WebsocketServiceImpl implements WebsocketService {
     if (this.matchesHosted.has(matchId)) {
       throw new WebSocketError(WebSocketError.MATCH_ALREADY_BEEN_HOSTED);
     }
-    if (this.connections.has(hostId)) {
+    if (this.connections.isConnected(hostId)) {
       throw new WebSocketError(WebSocketError.PLAYER_ALREADY_IN_MATCHMAKING);
     }
 
@@ -177,8 +208,82 @@ export default class WebsocketServiceImpl implements WebsocketService {
     });
     hostSocket.send(JSON.stringify({ message: 'match-found', match: matchDTO }));
     guestSocket.send(JSON.stringify({ message: 'match-found', match: matchDTO }));
-    hostSocket.close();
-    guestSocket.close();
+    // It's not a good idea let socket open, but it was required not to close it
+    //this.closeSessionWithDelay(hostSocket, guestSocket, 360);
+  }
+
+  private async handleMessage(message: Buffer): Promise<Partial<UserQueue>> {
+    const { type, payload } = validateGameMesssageInput(JSON.parse(message.toString()));
+    if (!this.matchMakingService) {
+      throw new WebSocketError(WebSocketError.MATCHMAKING_SERVICE_NOT_INITIALIZED);
+    }
+    let changes = {};
+    switch (type) {
+      case 'set-color': {
+        validateString(payload);
+        changes = { color: payload };
+        break;
+      }
+      case 'set-name': {
+        validateString(payload);
+        changes = { name: payload };
+        break;
+      }
+
+      case 'set-state': {
+        if (payload !== 'PLAYING' && payload !== 'WAITING' && payload !== 'READY')
+          throw new WebSocketError(WebSocketError.BAD_WEB_SOCKET_REQUEST);
+        changes = { status: payload };
+        break;
+      }
+      default: {
+        throw new WebSocketError(WebSocketError.BAD_WEB_SOCKET_REQUEST);
+      }
+    }
+    return changes;
+  }
+
+  public async handleMatchMessage(
+    matchDetails: MatchDetails,
+    hostId: string,
+    message: Buffer
+  ): Promise<void> {
+    if (!this.matchMakingService) {
+      throw new WebSocketError(WebSocketError.MATCHMAKING_SERVICE_NOT_INITIALIZED);
+    }
+    const changes = await this.handleMessage(message);
+    changes.matchId = matchDetails.id;
+    changes.id = hostId;
+    await this.matchMakingService.updatePlayer(matchDetails.id, hostId, changes);
+    const guestSocket = matchDetails.guest
+      ? this.connections.getConnection(matchDetails.guest)
+      : undefined;
+    const hostSocket = undefined;
+    await this.matchMakingService.notifyPlayerUpdate(hostSocket, guestSocket, changes);
+  }
+
+  public async handleJoinGameMessage(
+    matchDetails: MatchDetails,
+    guestId: string,
+    message: Buffer
+  ): Promise<void> {
+    if (!this.matchMakingService) {
+      throw new WebSocketError(WebSocketError.MATCHMAKING_SERVICE_NOT_INITIALIZED);
+    }
+    const changes = await this.handleMessage(message);
+    changes.matchId = matchDetails.id;
+    changes.id = guestId;
+    await this.matchMakingService.updatePlayer(matchDetails.id, guestId, changes);
+    const hostSocket = this.connections.getConnection(matchDetails.host);
+    const guestSocket = undefined;
+    await this.matchMakingService.notifyPlayerUpdate(hostSocket, guestSocket, changes);
+  }
+
+  private closeSessionWithDelay(hostSocket: WebSocket, guestSocket: WebSocket, time: number): void {
+    setTimeout(() => {
+      hostSocket.close();
+      guestSocket.close();
+    }, 1000 * time);
   }
 
   /**

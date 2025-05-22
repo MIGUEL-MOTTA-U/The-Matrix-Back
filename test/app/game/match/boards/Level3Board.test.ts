@@ -72,10 +72,10 @@ describe('Level3Board', () => {
             boardMock.initialize();
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
             const fruitsType = boardMock["FRUIT_TYPE"];
-            expect(fruitsType).toEqual(['grape', 'apple']);
+            expect(fruitsType).toEqual(['grape', 'orange']);
             // biome-ignore lint/complexity/useLiteralKeys: <explanation>
             const fruitsContainer = boardMock["FRUITS_CONTAINER"];
-            expect(fruitsContainer).toEqual(['banana', 'grape', 'apple']);
+            expect(fruitsContainer).toEqual(['banana', 'grape', 'orange']);
         });
 
         it('should set up enemies speed', () => {

@@ -60,11 +60,12 @@ describe('UserController', () => {
       userRepository.getUserById.mockResolvedValue({
         id: 'fixed-uuid',
         matchId: 'matchId',
+        status: 'READY'
       });
       
       await controller.handleGetUser(req, res);
 
-      expect(res.send).toHaveBeenCalledWith({ id: 'fixed-uuid', matchId: 'matchId' });
+      expect(res.send).toHaveBeenCalledWith({ id: 'fixed-uuid', matchId: 'matchId', status: 'READY' });
     });
   });
 

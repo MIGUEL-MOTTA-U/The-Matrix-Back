@@ -45,7 +45,7 @@ export default class Level2Board extends Board {
       ...this.getRowCoordinatesInRange(10, 1, 4),
       ...this.getRowCoordinatesInRange(10, 11, 14),
     ];
-    this.FRUIT_TYPE = ['banana', 'grape'];
+    this.FRUIT_TYPE = ['banana', 'orange'];
     this.ENEMIES_SPEED = config.ENEMIES_SPEED_MS;
     this.loadConstants();
   }

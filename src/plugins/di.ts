@@ -1,3 +1,4 @@
+import { ServiceBusClient } from '@azure/service-bus';
 import { fastifyAwilixPlugin } from '@fastify/awilix';
 import { Lifetime, asClass, asValue } from 'awilix';
 import type { FastifyInstance } from 'fastify';
@@ -6,6 +7,7 @@ import type MatchMakingService from '../app/lobbies/services/MatchMakingService.
 import MatchMaking from '../app/lobbies/services/MatchmakingImpl.js';
 import type WebSocketService from '../app/lobbies/services/WebSocketService.js';
 import WebsocketServiceImpl from '../app/lobbies/services/WebSocketServiceImpl.js';
+import SocketConnections from '../app/shared/SocketConnectionsServiceImpl.js';
 import MatchController from '../controllers/rest/MatchController.js';
 import UserController from '../controllers/rest/UserController.js';
 import GameController from '../controllers/websockets/GameController.js';
@@ -13,11 +15,17 @@ import MatchMakingController from '../controllers/websockets/MatchMakingControll
 import GameCacheRedis from '../schemas/repositories/GameCacheRedis.js';
 import MatchRepositoryPostgres from '../schemas/repositories/MatchRepositoryPostgres.js';
 import UserRepositoryPostgres from '../schemas/repositories/UserRepositoryPostgres.js';
+import LoggerService from '../utils/LoggerService.js';
 import { container } from './diContainer.js';
 const registerDependencies = (server: FastifyInstance) => {
+  const sbClient = new ServiceBusClient(server.config.SERVICE_BUS_CONNECTION_STRING);
   container.register({
+    sbClient: asValue(sbClient),
+    sender: asValue(sbClient.createSender(server.config.SERVICE_BUS_QUEUE_NAME)),
+    loggerService: asClass(LoggerService, { lifetime: Lifetime.SINGLETON }),
     redis: asValue(server.redis),
     prisma: asValue(server.prisma),
+    connections: asClass(SocketConnections, { lifetime: Lifetime.SINGLETON }),
     gameCache: asClass(GameCacheRedis, { lifetime: Lifetime.SINGLETON }),
     userRepository: asClass(UserRepositoryPostgres, { lifetime: Lifetime.SINGLETON }),
     matchRepository: asClass(MatchRepositoryPostgres, { lifetime: Lifetime.SINGLETON }),

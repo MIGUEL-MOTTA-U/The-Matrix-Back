@@ -153,7 +153,8 @@ describe('validateUserQueue', () => {
   it('should validate correct user queue data', () => {
     const validData = {
       id: 'user1',
-      matchId: 'match1'
+      matchId: 'match1',
+      status: 'WAITING',
     };
     expect(validateUserQueue(validData)).toEqual(validData);
   });

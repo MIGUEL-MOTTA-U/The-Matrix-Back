@@ -1,3 +1,4 @@
+import type WebSocket from 'ws';
 import MatchError from '../../../errors/MatchError.js';
 import type MatchRepository from '../../../schemas/MatchRepository.js';
 import type UserRepository from '../../../schemas/UserRepository.js';
@@ -45,6 +46,22 @@ class MatchMaking implements MatchMakingService {
     this.gameService = gameService;
     this.webSocketService = webSocketService;
   }
+  public async notifyPlayerUpdate(
+    host: WebSocket | undefined,
+    guest: WebSocket | undefined,
+    userData: Partial<UserQueue>
+  ): Promise<void> {
+    this.gameService.notifyPlayers(host, guest, { type: 'player-update', payload: userData });
+  }
+  public async updatePlayer(
+    matchId: string,
+    userId: string,
+    userData: Partial<UserQueue>
+  ): Promise<void> {
+    await this.userRepository.updateUser(userId, userData);
+    const match = await this.gameService.getMatch(matchId);
+    if (match) match.updatePlayer(userId, userData);
+  }
 
   /**
    * This method is used to search for a match with the given match details.
@@ -55,7 +72,11 @@ class MatchMaking implements MatchMakingService {
     const queue = this.queue.get(key);
     if (queue === undefined) {
       const newQueue = new AsyncQueue<UserQueue>();
-      await newQueue.enqueue({ id: matchDetails.host, matchId: matchDetails.id });
+      await newQueue.enqueue({
+        id: matchDetails.host,
+        matchId: matchDetails.id,
+        status: 'WAITING',
+      });
       this.queue.add(key, newQueue);
       logger.info(
         `No queue found for ${matchDetails.host} so it was enqueued for map: ${matchDetails.map} level: ${matchDetails.level}`
@@ -69,7 +90,7 @@ class MatchMaking implements MatchMakingService {
       logger.info(
         `Match not found for ${guest} so it was enqueued for match: ${JSON.stringify(matchDetails)}`
       );
-      await queue.enqueue({ id: guest, matchId: matchDetails.id });
+      await queue.enqueue({ id: guest, matchId: matchDetails.id, status: 'WAITING' });
       return;
     }
     const { id: hostId, matchId } = validateUserQueue(host);
@@ -86,6 +107,28 @@ class MatchMaking implements MatchMakingService {
     await this.updateMatch(matchId, hostId, guest);
     await this.webSocketService.notifyMatchFound(match);
     await this.matchRepository.removeMatch(ghostMatch);
+  }
+
+  /**
+   * This method is used to keep playing a match.
+   * @param {MatchDetails} match The match details to keep playing
+   * @param {string} userId The user id to keep playing
+   * @returns {Promise<void>} A promise that resolves when the keep playing process is complete
+   */
+  public async keepPlaying(match: MatchDetails, userId: string): Promise<void> {
+    if (match.started) throw new MatchError(MatchError.MATCH_ALREADY_STARTED);
+    const guest = match.guest;
+    const host = match.host;
+    if (guest === null || guest === undefined) throw new MatchError(MatchError.PLAYER_NOT_FOUND);
+    if (host !== userId && guest !== userId) throw new MatchError(MatchError.PLAYER_NOT_FOUND);
+    if (this.webSocketService.isConnected(guest) && this.webSocketService.isConnected(host)) {
+      // Ambos estan conectados
+      logger.info(
+        `Match found for guest:${guest} host: ${host} for map: ${match.map} level: ${match.level}`
+      );
+      const matchGame = await this.createMatch(match);
+      await this.webSocketService.notifyMatchFound(matchGame);
+    }
   }
 
   public async joinMatch(matchDetails: MatchDetails, guestId: string): Promise<MatchDTO> {

@@ -13,7 +13,7 @@ export default interface GameService {
   createMatch(match: MatchDetails): Promise<Match>;
   registerConnection(user: string, socket: WebSocket): boolean;
   removeConnection(user: string): void;
-  handleGameMessage(user: string, matchId: string, message: Buffer): Promise<void>;
+  handleGameMessage(userId: string, matchId: string, message: Buffer): Promise<void>;
   getMatch(matchId: string): Promise<Match | undefined>;
   checkMatchDetails(matchDetails: MatchDetails): void;
   getMatchUpdate(matchId: string): Promise<UpdateAll>;
@@ -28,4 +28,9 @@ export default interface GameService {
   ): Promise<void>;
   saveMatch(matchId: string, matchStorage: MatchStorage): Promise<void>;
   getMatchStorage(matchId: string): Promise<MatchStorage | null>;
+  notifyPlayers(
+    socketP1: WebSocket | undefined,
+    socketP2: WebSocket | undefined,
+    dataDTO: GameMessageOutput
+  ): void;
 }

@@ -7,6 +7,8 @@ export default interface WebSocketService {
   registerConnection: (userId: string, socket: WebSocket) => void;
   removeConnection: (userId: string) => void;
   matchMaking: (match: MatchDetails) => Promise<void>;
+  keepPlaying: (match: MatchDetails, userId: string) => Promise<void>;
+  isConnected: (userId: string) => boolean;
   notifyMatchFound: (match: Match) => Promise<void>;
   setMatchMakingService(matchMakingService: MatchMakingService): void;
   validateMatchToJoin: (matchId: string, guestId: string) => Promise<void>;
@@ -14,4 +16,14 @@ export default interface WebSocketService {
   validateMatchToPublish: (matchId: string, hostId: string) => Promise<void>;
   publishMatch: (matchId: string, hostSocket: WebSocket) => void;
   removePublishedMatch: (matchId: string) => void;
+  handleJoinGameMessage: (
+    matchDetails: MatchDetails,
+    guestId: string,
+    message: Buffer
+  ) => Promise<void>;
+  handleMatchMessage: (
+    matchDetails: MatchDetails,
+    hostId: string,
+    message: Buffer
+  ) => Promise<void>;
 }

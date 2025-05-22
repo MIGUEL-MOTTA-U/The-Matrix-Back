@@ -160,6 +160,14 @@ interface PlayersPaths {
 interface Info {
   message: string;
 }
+
+interface Log {
+  service: string;
+  ip: string;
+  timestamp: string;
+  userId: string;
+  trace: string;
+}
 interface CellCoordinates {
   x: number;
   y: number;
@@ -214,7 +222,9 @@ interface GameMessageOutput {
     | 'update-fruits'
     | 'update-frozen-cells'
     | 'paused'
-    | 'update-special-fruit';
+    | 'update-special-fruit'
+    | 'timeout'
+    | 'player-update';
   payload:
     | PlayerMove
     | EndMatch
@@ -226,10 +236,21 @@ interface GameMessageOutput {
     | PlayerState
     | FrozenCells
     | boolean
-    | CellDTO;
+    | CellDTO
+    | Info
+    | Partial<UserQueue>;
 }
 interface GameMessageInput {
-  type: 'movement' | 'exec-power' | 'rotate' | 'set-color' | 'pause' | 'resume' | 'update-all';
+  type:
+    | 'movement'
+    | 'exec-power'
+    | 'rotate'
+    | 'set-color'
+    | 'pause'
+    | 'resume'
+    | 'update-all'
+    | 'set-name'
+    | 'set-state';
   payload: Direction | string;
 }
 interface PlayerState {
@@ -270,8 +291,10 @@ interface UpdateAll {
 interface UserQueue {
   role?: PlayerType;
   id: string;
+  name?: string;
   matchId: string | null;
   color?: string;
+  status: 'WAITING' | 'PLAYING' | 'READY';
 }
 
 interface UpdateFruits {
@@ -342,6 +365,7 @@ export type {
   PlayerStorage,
   EnemiesTypes,
   ItemsTypes,
+  Log,
 };
 export {
   enemiesConst,

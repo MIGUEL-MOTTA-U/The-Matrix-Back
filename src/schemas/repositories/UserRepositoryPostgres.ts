@@ -17,6 +17,8 @@ export default class UserRepositoryPostgres implements UserRepository {
       color: user.color,
       matchId: user.matchId,
       role: user.playerRole as PlayerType,
+      name: user.name,
+      status: user.status as 'WAITING' | 'PLAYING' | 'READY',
     };
     return userQueue;
   }
@@ -25,12 +27,15 @@ export default class UserRepositoryPostgres implements UserRepository {
     if (!user) throw new MatchError(MatchError.PLAYER_NOT_FOUND);
     const matchId: string | null =
       userData.matchId && userData.matchId.length > 0 ? userData.matchId : null;
+    const status = (userData.status?.toUpperCase() as 'WAITING' | 'PLAYING' | 'READY') ?? 'WAITING';
     await this.prisma.user.update({
       where: { id: userId },
       data: {
         color: userData.color,
         matchId: matchId,
         playerRole: userData.role,
+        status: status,
+        name: userData.name,
       },
     });
   }
@@ -50,7 +55,9 @@ export default class UserRepositoryPostgres implements UserRepository {
         color: user.color,
         matchId: user.matchId,
         playerRole: role,
+        name: user.name,
         expiredAt: new Date(Date.now() + 20 * 60 * 1000), // 20 minutes
+        status: user.status ?? 'WAITING',
       },
     });
   }
@@ -61,7 +68,9 @@ export default class UserRepositoryPostgres implements UserRepository {
         id: user.id,
         color: user.color,
         matchId: user.matchId,
+        name: user.name,
         role: user.playerRole as PlayerType,
+        status: user.status,
       });
     });
   }
