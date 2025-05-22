@@ -252,6 +252,8 @@ export default class WebsocketServiceImpl implements WebsocketService {
       throw new WebSocketError(WebSocketError.MATCHMAKING_SERVICE_NOT_INITIALIZED);
     }
     const changes = await this.handleMessage(message);
+    changes.matchId = matchDetails.id;
+    changes.id = hostId;
     await this.matchMakingService.updatePlayer(matchDetails.id, hostId, changes);
     const guestSocket = matchDetails.guest
       ? this.connections.getConnection(matchDetails.guest)
@@ -269,9 +271,13 @@ export default class WebsocketServiceImpl implements WebsocketService {
       throw new WebSocketError(WebSocketError.MATCHMAKING_SERVICE_NOT_INITIALIZED);
     }
     const changes = await this.handleMessage(message);
+    changes.matchId = matchDetails.id;
+    changes.id = guestId;
     await this.matchMakingService.updatePlayer(matchDetails.id, guestId, changes);
-    const hostSocket = this.matchesHosted.get(matchDetails.id);
-    const guestSocket = this.connections.getConnection(guestId);
+    const hostSocket = this.connections.getConnection(matchDetails.host);
+    const guestSocket = matchDetails.guest
+      ? this.connections.getConnection(matchDetails.guest)
+      : undefined;
     await this.matchMakingService.notifyPlayerUpdate(hostSocket, guestSocket, changes);
   }
 

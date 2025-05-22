@@ -121,11 +121,20 @@ export default class MatchMakingController {
       if (matchDetails.host !== hostId) throw new MatchError(MatchError.PLAYER_ALREADY_IN_MATCH);
       await this.websocketService.validateMatchToPublish(matchDetails.id, hostId);
       this.websocketService.publishMatch(matchDetails.id, socket);
+      this.websocketService.registerConnection(hostId, socket);
+      this.sendMessage(
+        socket,
+        validateInfo({ message: 'Connected and waiting for other player...' })
+      );
 
       socket.on('message', async (message: Buffer) => {
-        const matchDetailsUpdated = await this.matchRepository.getMatchById(matchDetails.id);
-        await this.websocketService.handleMatchMessage(matchDetailsUpdated, hostId, message);
-        this.extendExpiration(matchDetails.id, hostId);
+        try {
+          const matchDetailsUpdated = await this.matchRepository.getMatchById(matchDetails.id);
+          await this.websocketService.handleMatchMessage(matchDetailsUpdated, hostId, message);
+          this.extendExpiration(matchDetails.id, hostId);
+        } catch (error) {
+          this.handleError(error, socket);
+        }
       });
 
       socket.on('close', () => {
@@ -134,14 +143,7 @@ export default class MatchMakingController {
       });
 
       socket.on('error', (error: Error) => {
-        this.logError(error);
-        const errorMatch = validateErrorMatch({ error: 'Internal server error' });
-        const messageOutput: GameMessageOutput = validateGameMessageOutput({
-          type: 'error',
-          payload: errorMatch,
-        });
-        this.sendMessage(socket, messageOutput);
-        socket.close();
+        this.handleError(error, socket);
       });
     } catch (error) {
       this.handleError(error, socket);
@@ -162,12 +164,20 @@ export default class MatchMakingController {
       if (matchDetails.host === guestId) throw new MatchError(MatchError.PLAYER_ALREADY_IN_MATCH);
       await this.websocketService.validateMatchToJoin(matchDetails.id, guestId);
       await this.websocketService.joinGame(matchDetails, guestId, guestSocket);
+      this.websocketService.registerConnection(guestId, guestSocket);
       guestSocket.on('error', (error: Error) => {
         this.logError(error);
       });
       guestSocket.on('message', async (message: Buffer) => {
-        await this.websocketService.handleJoinGameMessage(matchDetails, guestId, message);
-        this.extendExpiration(matchDetails.id, guestId);
+        try {
+          await this.websocketService.handleJoinGameMessage(matchDetails, guestId, message);
+          this.extendExpiration(matchDetails.id, guestId);
+        } catch (error) {
+          this.handleError(error, guestSocket);
+        }
+      });
+      guestSocket.on('close', () => {
+        this.websocketService.removeConnection(guestId);
       });
     } catch (error) {
       this.handleError(error, guestSocket);

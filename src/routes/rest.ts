@@ -60,7 +60,7 @@ export async function restRoutes(fastify: FastifyInstance): Promise<void> {
       trace: req.headers['x-trace-id'] as string,
     };
 
-    loggerService.registerLog(logObject);
+    await loggerService.registerLog(logObject);
 
     const publicPaths = ['health', 'login', 'redirect', 'logout'];
     if (
