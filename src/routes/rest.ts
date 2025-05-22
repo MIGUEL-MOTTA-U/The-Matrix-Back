@@ -16,9 +16,15 @@ export async function restRoutes(fastify: FastifyInstance): Promise<void> {
       'offline_access',
     ].join(' ');
 
-    const authUrl = `https://login.microsoftonline.com/${fastify.config.AZURE_TENANT_ID}/oauth2/v2.0/authorize?client_id=${fastify.config.AZURE_CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent('http://localhost:5000/rest/redirect')}&scope=${encodeURIComponent(scopes)}&state=abc123`;
+    const authUrl = `https://login.microsoftonline.com/${fastify.config.AZURE_TENANT_ID}/oauth2/v2.0/authorize?client_id=${fastify.config.AZURE_CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(`${fastify.config.REDIRECT_URL}`)}&scope=${encodeURIComponent(scopes)}&state=abc123`;
 
     return res.redirect(authUrl);
+  });
+
+  fastify.get('/logout', async (_req, res) => {
+    const postLogoutRedirectUri = fastify.config.LOGOUT_REDIRECT_URL;
+    const logoutUrl = `https://login.microsoftonline.com/${fastify.config.AZURE_TENANT_ID}/oauth2/v2.0/logout?post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}`;
+    return res.redirect(logoutUrl);
   });
 
   fastify.get('/redirect', async (req, res) => {
@@ -26,7 +32,7 @@ export async function restRoutes(fastify: FastifyInstance): Promise<void> {
     const code = (query.code as string) || '';
     const result = await fastify.msalClient.acquireTokenByCode({
       code,
-      redirectUri: 'http://localhost:5000/rest/redirect',
+      redirectUri: fastify.config.REDIRECT_URL,
       scopes: [
         `api://${fastify.config.AZURE_API_APP_ID}/access_as_user`,
         'openid',
@@ -43,13 +49,11 @@ export async function restRoutes(fastify: FastifyInstance): Promise<void> {
 
   fastify.addHook('preHandler', async (req, reply) => {
     // Excluir rutas públicas
-    const publicPaths = ['health', 'login', 'redirect'];
-    console.log('Request URL:', req.url.split('/')[2]);
+    const publicPaths = ['health', 'login', 'redirect', 'logout'];
     if (
       publicPaths.includes(req.url.split('/')[2]) ||
       publicPaths.includes(req.url.split('/')[2].split('?')[0])
     ) {
-      console.log('Public path, skipping auth');
       return;
     }
     const auth = req.headers.authorization;

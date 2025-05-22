@@ -26,11 +26,9 @@ export default fp(async (server: FastifyInstance) => {
   server.decorate('verifyToken', async (token: string) => {
     const expectedAudiences = [
       `api://${server.config.AZURE_API_APP_ID}/access_as_user`,
-      `api://${server.config.AZURE_API_APP_ID}`,
       server.config.AZURE_API_APP_ID,
     ];
     const { payload } = await jwtVerify(token, jwks, {
-      issuer: `${msalConfig.auth.authority}/v2.0`,
       audience: expectedAudiences,
     });
     return payload;
