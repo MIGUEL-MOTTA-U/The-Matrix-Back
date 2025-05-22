@@ -43,7 +43,7 @@ export default class MatchController {
     const { userId } = req.params as { userId: string };
     const userIdParsed = validateString(userId);
     const user = await this.userRepository.getUserById(userIdParsed);
-    if (user.matchId.length !== 0) {
+    if (user.matchId !== null) {
       throw new MatchError(MatchError.PLAYER_ALREADY_IN_MATCH);
     }
     const matchInputDTO = validateMatchInputDTO(req.body as string);
@@ -52,20 +52,21 @@ export default class MatchController {
       host: userIdParsed,
       ...matchInputDTO,
     };
-    this.matchRepository.createMatch(matchDetails);
-    this.userRepository.updateUser(userIdParsed, { matchId: matchDetails.id });
+    await this.matchRepository.createMatch(matchDetails);
+    await this.userRepository.updateUser(userIdParsed, { matchId: matchDetails.id });
     return res.send({ matchId: matchDetails.id });
   }
 
   /**
-   * Handles the request to join a match.
-   *
+   * Handles the request to update a match.
    * @param {FastifyRequest} req The request from the client.
    * @param {FastifyReply} res The response to be sent to the client.
-   * @return {Promise<void>} A promise that resolves when the user joins the match.
-   * @throws {MatchError} If the user is not found, the match is not found, or the user is already in a match.
+   * @return {Promise<void>} A promise that resolves when the match is updated.
    */
-  public async handleJoinMatch(_req: FastifyRequest, _res: FastifyReply): Promise<void> {
-    // TODO
+  public async handleUpdateMatch(req: FastifyRequest, res: FastifyReply): Promise<void> {
+    const { matchId } = req.params as { matchId: string };
+    const matchData = req.body as Partial<MatchDetails>;
+    await this.matchRepository.updateMatch(matchId, matchData);
+    return res.send({ message: 'Match updated successfully' });
   }
 }

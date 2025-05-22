@@ -89,6 +89,40 @@ const validateInfo = (data: unknown): Info => {
   return schema.parse(data);
 };
 
+const validateCustomMapKey = (data: unknown): CustomMapKey => {
+  const schema = objects.customMapKeySchema;
+  return schema.parse(data);
+};
+
+const validatePathResult = (data: unknown): PathResult => {
+  const schema = objects.pathResultSchema;
+  return schema.parse(data);
+};
+
+const validatePathResultWithDirection = (data: unknown): PathResultWithDirection => {
+  const schema = objects.PathResultWithDirectionSchema;
+  return schema.parse(data);
+};
+
+const parseCoordinatesToString = (coordinates: CellCoordinates): string => {
+  return `${coordinates.x},${coordinates.y}`;
+};
+
+const parseStringToCoordinates = (coordinates: string): CellCoordinates => {
+  const [x, y] = coordinates.split(',').map(Number);
+  return { x, y };
+};
+
+const validateBoardStorage = (data: unknown): BoardStorage => {
+  const schema = objects.BoardStorageSchema;
+  return schema.parse(data);
+};
+
+const validateMatchStorage = (data: unknown): MatchStorage => {
+  const schema = objects.MatchStorageSchema;
+  return schema.parse(data);
+};
+
 interface MatchInputDTO {
   level: number;
   map: string;
@@ -111,15 +145,28 @@ interface CellDTO {
   coordinates: CellCoordinates;
   item: BoardItemDTO | null;
   character: BoardItemDTO | null;
+  frozen: boolean;
 }
 interface BoardItemDTO {
-  type: string;
+  type: EnemiesTypes | ItemsTypes | 'player';
   id: string;
-  orientation?: string;
+  orientation?: Direction;
   color?: string;
+}
+interface PlayersPaths {
+  hostPath: PathResultWithDirection | null;
+  guestPath: PathResultWithDirection | null;
 }
 interface Info {
   message: string;
+}
+
+interface Log {
+  service: string;
+  ip: string;
+  timestamp: string;
+  userId: string;
+  trace: string;
 }
 interface CellCoordinates {
   x: number;
@@ -134,6 +181,35 @@ interface MatchDTO {
   board: BoardDTO;
   typeFruits: string[];
 }
+interface MatchStorage extends Omit<MatchDTO, 'board' | 'hostId' | 'guestId' | 'typeFruits'> {
+  host: PlayerStorage;
+  guest: PlayerStorage;
+  board: BoardStorage;
+  timeSeconds: number;
+  fruitGenerated: boolean;
+  paused: boolean;
+}
+
+interface PlayerStorage {
+  id: string;
+  color: string;
+  coordinates: CellCoordinates;
+  direction: Direction;
+  state: 'dead' | 'alive';
+}
+
+interface BoardStorage {
+  fruitType: string[];
+  fruitsContainer: string[];
+  fruitsNumber: number;
+  fruitsRound: number;
+  currentRound: number;
+  currentFruitType: string;
+  rocksCoordinates: number[][];
+  fruitsCoordinates: number[][];
+  board: CellDTO[];
+}
+
 interface GameMessageOutput {
   type:
     | 'update-state'
@@ -143,7 +219,12 @@ interface GameMessageOutput {
     | 'update-time'
     | 'error'
     | 'update-all'
-    | 'update-fruits';
+    | 'update-fruits'
+    | 'update-frozen-cells'
+    | 'paused'
+    | 'update-special-fruit'
+    | 'timeout'
+    | 'player-update';
   payload:
     | PlayerMove
     | EndMatch
@@ -152,11 +233,25 @@ interface GameMessageOutput {
     | ErrorMatch
     | UpdateAll
     | UpdateFruits
-    | PlayerState;
+    | PlayerState
+    | FrozenCells
+    | boolean
+    | CellDTO
+    | Info
+    | Partial<UserQueue>;
 }
 interface GameMessageInput {
-  type: 'movement' | 'exec-power' | 'rotate' | 'set-color';
-  payload: 'up' | 'down' | 'left' | 'right' | string;
+  type:
+    | 'movement'
+    | 'exec-power'
+    | 'rotate'
+    | 'set-color'
+    | 'pause'
+    | 'resume'
+    | 'update-all'
+    | 'set-name'
+    | 'set-state';
+  payload: Direction | string;
 }
 interface PlayerState {
   id: string;
@@ -169,12 +264,13 @@ interface EndMatch {
 interface UpdateEnemy {
   enemyId: string;
   coordinates: CellCoordinates;
-  direction: 'up' | 'down' | 'left' | 'right';
+  direction: Direction;
+  enemyState: EnemyState;
 }
 interface PlayerMove {
   id: string;
   coordinates: CellCoordinates;
-  direction: 'up' | 'down' | 'left' | 'right';
+  direction: Direction;
   state: 'alive' | 'dead';
   idItemConsumed?: string;
   numberOfFruits?: number;
@@ -193,9 +289,12 @@ interface UpdateAll {
 }
 
 interface UserQueue {
+  role?: PlayerType;
   id: string;
-  matchId: string;
+  name?: string;
+  matchId: string | null;
   color?: string;
+  status: 'WAITING' | 'PLAYING' | 'READY';
 }
 
 interface UpdateFruits {
@@ -206,6 +305,32 @@ interface UpdateFruits {
   nextFruitType: string | null;
 }
 
+interface CustomMapKey {
+  map: string;
+  level: number;
+}
+
+interface PathResult {
+  distance: number;
+  path: CellCoordinates[];
+}
+
+interface PathResultWithDirection extends PathResult {
+  direction: Direction;
+}
+
+interface FrozenCells {
+  cells: CellDTO[];
+  direction: Direction;
+}
+const enemiesConst = ['troll', 'cow', 'log-man', 'squid-blue', 'squid-green'];
+const enemiesStatesConst = ['walking', 'roling', 'stopped'];
+const directionsConst = ['up', 'down', 'left', 'right'];
+type Direction = (typeof directionsConst)[number];
+type PlayerType = 'HOST' | 'GUEST';
+type EnemyState = (typeof enemiesStatesConst)[number];
+type EnemiesTypes = (typeof enemiesConst)[number];
+type ItemsTypes = 'rock' | 'fruit' | 'specialfruit';
 export type {
   MatchInputDTO,
   MatchDetails,
@@ -227,8 +352,25 @@ export type {
   UpdateAll,
   UpdateFruits,
   Info,
+  CustomMapKey,
+  Direction,
+  PathResult,
+  PathResultWithDirection,
+  PlayerType,
+  FrozenCells,
+  PlayersPaths,
+  EnemyState,
+  MatchStorage,
+  BoardStorage,
+  PlayerStorage,
+  EnemiesTypes,
+  ItemsTypes,
+  Log,
 };
 export {
+  enemiesConst,
+  enemiesStatesConst,
+  directionsConst,
   validateString,
   validateMatchInputDTO,
   validateCoordinates,
@@ -247,4 +389,11 @@ export {
   validateBoardItemDTO,
   validateUpdateFruits,
   validateInfo,
+  validateCustomMapKey,
+  validatePathResult,
+  validatePathResultWithDirection,
+  parseCoordinatesToString,
+  parseStringToCoordinates,
+  validateBoardStorage,
+  validateMatchStorage,
 };

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { redis } from '../../src/server.js';
-import UserRepositoryRedis from '../../src/schemas/UserRepositoryRedis.js';
+import UserRepositoryRedis from '../../src/schemas/repositories/UserRepositoryRedis.js';
 import MatchError from '../../src/errors/MatchError.js';
 
 vi.mock('../../src/server.js', () => ({
@@ -77,7 +77,7 @@ describe('UserRepositoryRedis', () => {
 
   describe('createUser', () => {
     it('should create a user with expiration', async () => {
-      const user = { id: 'user123', matchId: 'match456' };
+      const user = { id: 'user123', matchId: 'match456', status: 'WAITING' } as const;
       await userRepository.createUser(user);
       expect(redis.hset).toHaveBeenCalledWith(
         'users:user123',

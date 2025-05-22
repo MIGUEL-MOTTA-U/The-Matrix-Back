@@ -5,15 +5,14 @@ import MatchController from '../../src/controllers/rest/MatchController.js';
 import type MatchRepository from '../../src/schemas/MatchRepository.js';
 import type UserRepository from '../../src/schemas/UserRepository.js';
 import { validateMatchInputDTO, validateString } from '../../src/schemas/zod.js';
-
 const mockMatchRepository = mock<MatchRepository>();
 const mockUserRepository = mock<UserRepository>();
 
-vi.mock('../../src/schemas/MatchRepositoryRedis', () => ({
+vi.mock('../../src/schemas/repositories/MatchRepositoryRedis', () => ({
   default: { getInstance: () => mockMatchRepository },
 }));
 
-vi.mock('../../src/schemas/UserRepositoryRedis', () => ({
+vi.mock('../../src/schemas/repositories/UserRepositoryRedis', () => ({
   default: { getInstance: () => mockUserRepository },
 }));
 
@@ -39,7 +38,8 @@ describe('MatchController', () => {
 
       mockUserRepository.getUserById.mockResolvedValue({
         matchId: 'match123',
-        id: ''
+        id: '',
+        status: 'READY'
       });
 
       await matchController.handleGetMatch(req, res);
@@ -60,8 +60,9 @@ describe('MatchController', () => {
       vi.mocked(validateString).mockReturnValue('user123');
       vi.mocked(validateMatchInputDTO).mockReturnValue({ level: 1, map: 'test-map' }); 
       mockUserRepository.getUserById.mockResolvedValue({
-        matchId: '',
+        matchId: null,
         id: '',
+        status: 'READY'
       });
       mockMatchRepository.createMatch.mockResolvedValue();
       mockUserRepository.updateUser.mockResolvedValue();
@@ -83,6 +84,24 @@ describe('MatchController', () => {
         matchId: expect.any(String),
       });
       expect(res.send).toHaveBeenCalledWith({ matchId: expect.any(String) });
+    });
+
+    it('should update the level and map of an existing match', async () => {
+      const req = {
+        params: { matchId: 'match123' },
+        body: { level: 2, map: 'new-map' },
+      } as unknown as FastifyRequest;
+      const res = { send: vi.fn() } as unknown as FastifyReply;
+
+      mockMatchRepository.updateMatch.mockResolvedValue();
+
+      await matchController.handleUpdateMatch(req, res);
+
+      expect(mockMatchRepository.updateMatch).toHaveBeenCalledWith('match123', {
+        level: 2,
+        map: 'new-map',
+      });
+      expect(res.send).toHaveBeenCalledWith({ message: 'Match updated successfully' });
     });
   });
 });

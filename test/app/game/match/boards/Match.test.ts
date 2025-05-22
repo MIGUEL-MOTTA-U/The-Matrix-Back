@@ -1,13 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import Match from '../../../../../src/app/game/match/Match.js';
-import BoardDifficulty1 from '../../../../../src/app/game/match/boards/BoardDifficulty1.js';
+import Level1Board from '../../../../../src/app/game/match/boards/levels/Level1Board.js';
 import { mockDeep } from 'vitest-mock-extended';
 import type GameService from '../../../../../src/app/game/services/GameService.js';
 import type Player from '../../../../../src/app/game/characters/players/Player.js';
 import type {
+  BoardStorage,
   CellDTO,
   GameMessageOutput,
+  MatchStorage,
   PlayerState,
+  PlayerStorage,
 } from '../../../../../src/schemas/zod.js';
 
 vi.mock('../../../../../src/server.js', () => ({
@@ -15,6 +18,7 @@ vi.mock('../../../../../src/server.js', () => ({
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
+    debug: vi.fn(),
   },
   config: {
     MATCH_TIME_SECONDS: 300,
@@ -22,20 +26,66 @@ vi.mock('../../../../../src/server.js', () => ({
   },
 }));
 
-vi.mock('../../../../../src/app/game/match/boards/BoardDifficulty1.js', () => ({
+vi.mock('../../../../../src/app/game/match/boards/levels/Level1Board.js', () => ({
   default: vi.fn().mockImplementation(() => ({
     initialize: vi.fn(),
     startGame: vi.fn(),
     stopGame: vi.fn(),
+    loadBoard: vi.fn(),
+    getPlayersStorage: vi.fn().mockReturnValue({
+      hostStorage: {
+        id: 'host-id',
+        coordinates: { x: 1, y: 1 },
+        color: 'blue',
+        direction: 'down',
+        state: 'alive',
+      },
+      guestStorage: {
+        id: 'guest-id',
+        coordinates: { x: 2, y: 2 },
+        color: 'red',
+        direction: 'up',
+        state: 'alive',
+      },
+    }),
+    getBoardStorage: vi.fn().mockResolvedValue({
+      fruitType: ['strawberry'],
+      fruitsContainer: ['strawberry', 'banana'],
+      fruitsNumber: 10,
+      fruitsRound: 2,
+      currentRound: 1,
+      currentFruitType: 'strawberry',
+      rocksCoordinates: [[1, 1]],
+      fruitsCoordinates: [[2, 2]],
+      board: [],
+    }),
     checkWin: vi.fn().mockReturnValue(false),
     checkLose: vi.fn().mockReturnValue(false),
     cellsBoardDTO: vi.fn().mockReturnValue([]),
-    getFruitTypes: vi.fn().mockReturnValue([]),
+    getFruitTypes: vi.fn().mockReturnValue(['strawberry', 'banana']),
     getBoardDTO: vi.fn().mockReturnValue({}),
     getHost: vi.fn(),
     getGuest: vi.fn(),
   })),
 }));
+
+// Mock Worker
+vi.mock('node:worker_threads', () => {
+  const EventEmitter = require('node:events');
+
+  class MockWorker extends EventEmitter {
+    terminate = vi.fn().mockResolvedValue(undefined);
+
+    constructor() {
+      super();
+      setTimeout(() => {
+        this.emit('message', { type: 'tick' });
+      }, 10);
+    }
+  }
+
+  return { Worker: vi.fn().mockImplementation(() => new MockWorker()) };
+});
 
 describe('Match', () => {
   let gameServiceMock: GameService;
@@ -46,9 +96,8 @@ describe('Match', () => {
     match = new Match(gameServiceMock, 'match-id', 1, 'map-1', 'host-id', 'guest-id');
   });
 
-  it('should initialize the match', async () => {
-    await match.initialize();
-    expect(BoardDifficulty1).toHaveBeenCalledWith(match, 'map-1', 1);
+  it('should initialize the match', () => {
+    expect(Level1Board).toHaveBeenCalledWith(match, 'map-1', 1);
     expect(match.isRunning()).toBe(true);
   });
 
@@ -84,7 +133,7 @@ describe('Match', () => {
       map: 'map-1',
       hostId: 'host-id',
       guestId: 'guest-id',
-      typeFruits: [],
+      typeFruits: ['strawberry', 'banana'],
       board: {},
     });
   });
@@ -103,9 +152,7 @@ describe('Match', () => {
 
   it('should notify players with updates', async () => {
     const updateData = { type: 'update' };
-    await match.notifyPlayers(
-      updateData as unknown as GameMessageOutput
-    );
+    await match.notifyPlayers(updateData as unknown as GameMessageOutput);
     expect(gameServiceMock.updatePlayers).toHaveBeenCalledWith(
       'match-id',
       'host-id',
@@ -125,6 +172,7 @@ describe('Match', () => {
         coordinates: { x: 0, y: 0 },
         item: null,
         character: null,
+        frozen: false,
       },
     ];
 
@@ -142,7 +190,6 @@ describe('Match', () => {
       cells: mockBoard,
     });
 
-    // Verify that the mocked methods were called
     expect(match.getUpdateTime).toHaveBeenCalled();
     // biome-ignore lint/suspicious/noExplicitAny: For testing purposes
     expect((match as any).board.cellsBoardDTO).toHaveBeenCalled();
@@ -157,4 +204,152 @@ describe('Match', () => {
       secondsLeft: 0,
     });
   });
+
+  describe('initialize', () => {
+    it('should initialize the board', () => {
+      match.initialize();
+
+      // biome-ignore lint/suspicious/noExplicitAny: For testing purposes
+      expect((match as any).board.initialize).toHaveBeenCalled();
+    });
+  });
+
+  describe('loadBoard', () => {
+    it('should load the board with storage data', () => {
+      const boardStorage: BoardStorage = {
+        fruitType: ['strawberry'],
+        fruitsContainer: ['strawberry', 'banana'],
+        fruitsNumber: 10,
+        fruitsRound: 2,
+        currentRound: 1,
+        currentFruitType: 'strawberry',
+        rocksCoordinates: [[1, 1]],
+        fruitsCoordinates: [[2, 2]],
+        board: [],
+      };
+
+      const hostStorage: PlayerStorage = {
+        id: 'host-id',
+        coordinates: { x: 1, y: 1 },
+        color: 'blue',
+        direction: 'down',
+        state: 'alive',
+      };
+
+      const guestStorage: PlayerStorage = {
+        id: 'guest-id',
+        coordinates: { x: 2, y: 2 },
+        color: 'red',
+        direction: 'up',
+        state: 'alive',
+      };
+
+      match.loadBoard(boardStorage, hostStorage, guestStorage);
+
+      // biome-ignore lint/suspicious/noExplicitAny: For testing purposes
+      expect((match as any).board.loadBoard).toHaveBeenCalledWith(
+        boardStorage,
+        hostStorage,
+        guestStorage
+      );
+    });
+  });
+
+  describe('getMatchStorage', () => {
+    it('should return the match storage data', async () => {
+      const expectedStorage: MatchStorage = {
+        id: 'match-id',
+        level: 1,
+        map: 'map-1',
+        host: {
+          id: 'host-id',
+          coordinates: { x: 1, y: 1 },
+          color: 'blue',
+          direction: 'down',
+          state: 'alive',
+        },
+        guest: {
+          id: 'guest-id',
+          coordinates: { x: 2, y: 2 },
+          color: 'red',
+          direction: 'up',
+          state: 'alive',
+        },
+        board: {
+          fruitType: ['strawberry'],
+          fruitsContainer: ['strawberry', 'banana'],
+          fruitsNumber: 10,
+          fruitsRound: 2,
+          currentRound: 1,
+          currentFruitType: 'strawberry',
+          rocksCoordinates: [[1, 1]],
+          fruitsCoordinates: [[2, 2]],
+          board: [],
+        },
+        timeSeconds: 300,
+        fruitGenerated: false,
+        paused: false,
+      };
+
+      const result = await match.getMatchStorage();
+      expect(result).toEqual(expectedStorage);
+    });
+  });
+
+  describe('pause and resume', () => {
+    it('should pause the match', async () => {
+      await match.pauseMatch();
+      const paused = await match.isPaused();
+      expect(paused).toBe(true);
+    });
+
+    it('should resume the match', async () => {
+      await match.pauseMatch();
+      let paused = await match.isPaused();
+      expect(paused).toBe(true);
+
+      await match.resumeMatch();
+      paused = await match.isPaused();
+      expect(paused).toBe(false);
+    });
+
+    it('should check if match is paused', async () => {
+      let paused = await match.isPaused();
+      expect(paused).toBe(false);
+
+      await match.pauseMatch();
+      paused = await match.isPaused();
+      expect(paused).toBe(true);
+    });
+  });
+
+  describe('time handling', () => {
+    it('should stop time when seconds reach zero', async () => {
+      Object.defineProperty(match, 'timeSeconds', { value: 0, writable: true });
+
+      await match.startGame();
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+
+      // biome-ignore lint/suspicious/noExplicitAny: For testing purposes
+      expect((match as any).worker).toBeNull();
+    });
+  });
+
+  describe('integration with board', () => {
+    it('should correctly integrate board and match time for checkLose', () => {
+      Object.defineProperty(match, 'timeSeconds', { value: 0 });
+      expect(match.checkLose()).toBe(true);
+
+      // biome-ignore lint/suspicious/noExplicitAny: For testing purposes
+      (match as any).board.checkLose.mockReturnValue(true);
+      Object.defineProperty(match, 'timeSeconds', { value: 100 });
+      expect(match.checkLose()).toBe(true);
+
+      // biome-ignore lint/suspicious/noExplicitAny: For testing purposes
+      (match as any).board.checkLose.mockReturnValue(false);
+      expect(match.checkLose()).toBe(false);
+    });
+  });
+  
 });

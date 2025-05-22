@@ -4,8 +4,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mockDeep } from 'vitest-mock-extended';
 import { WebSocket } from 'ws';
 import GameServiceImpl from '../../../../src/app/game/services/GameServiceImpl.js';
-import type { MatchDetails, PlayerMove, UpdateEnemy, UpdateTime } from 'src/schemas/zod.js';
+import type { MatchStorage, MatchDetails, PlayerMove, UpdateEnemy, UpdateTime } from '../../../../src/schemas/zod.js';
 import type Match from '../../../../src/app/game/match/Match.js';
+import type GameCacheRedis from '../../../../src/schemas/repositories/GameCacheRedis.js';
+import SocketConnections from '../../../../src/app/shared/SocketConnectionsServiceImpl.js';
 
 vi.mock('../../../../src/server.js', () => {
   return {
@@ -18,12 +20,16 @@ vi.mock('../../../../src/server.js', () => {
     config: {},
   };
 });
-
+const connections = new SocketConnections();
 const matchRepository = mockDeep<MatchRepository>();
 const userRepository = mockDeep<UserRepository>();
-const gameServiceImpl = new GameServiceImpl(matchRepository, userRepository);
+const gameCache = mockDeep<GameCacheRedis>();
+gameCache.getMatch.mockResolvedValue(null);
+gameCache.saveMatch.mockResolvedValue(undefined);
+const gameServiceImpl = new GameServiceImpl(matchRepository, userRepository, gameCache, connections);
 beforeEach(() => {
   vi.clearAllMocks();
+  connections.clearConnections();
 });
 
 describe('GameServiceImpl', () => {
@@ -63,9 +69,20 @@ describe('GameServiceImpl', () => {
       const matchId = 'match1';
       const message = Buffer.from(JSON.stringify({ type: 'movement', payload: 'up' }));
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(undefined),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
@@ -84,6 +101,7 @@ describe('GameServiceImpl', () => {
         moveUp: vi.fn().mockResolvedValue({ id: 'host1', position: { x: 0, y: 1 } }),
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -91,15 +109,27 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockResolvedValue(false),
         stopGame: vi.fn(),
         getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
 
       await gameServiceImpl.handleGameMessage(userId, matchId, message);
 
@@ -121,6 +151,7 @@ describe('GameServiceImpl', () => {
         moveDown: vi.fn().mockResolvedValue({ id: 'host1', position: { x: 0, y: 1 } }),
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -128,15 +159,27 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockResolvedValue(false),
         stopGame: vi.fn(),
         getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
 
       await gameServiceImpl.handleGameMessage(userId, matchId, message);
 
@@ -158,6 +201,7 @@ describe('GameServiceImpl', () => {
         moveRight: vi.fn().mockResolvedValue({ id: 'host1', position: { x: 0, y: 1 } }),
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -165,16 +209,27 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockResolvedValue(false),
         stopGame: vi.fn(),
         getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
-
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
       await gameServiceImpl.handleGameMessage(userId, matchId, message);
 
       expect(mockPlayer.moveRight).toHaveBeenCalled();
@@ -195,6 +250,7 @@ describe('GameServiceImpl', () => {
         moveLeft: vi.fn().mockResolvedValue({ id: 'host1', position: { x: 0, y: 1 } }),
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -202,16 +258,27 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockResolvedValue(false),
         stopGame: vi.fn(),
         getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
-
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
       await gameServiceImpl.handleGameMessage(userId, matchId, message);
 
       expect(mockPlayer.moveLeft).toHaveBeenCalled();
@@ -238,6 +305,7 @@ describe('GameServiceImpl', () => {
         changeOrientation: vi.fn().mockReturnValue(mockPalyerUpdate),
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -245,16 +313,27 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockResolvedValue(false),
         stopGame: vi.fn(),
         getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
-
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
       await gameServiceImpl.handleGameMessage(userId, matchId, message);
 
       expect(mockPlayer.changeOrientation).toHaveBeenCalled();
@@ -275,6 +354,7 @@ describe('GameServiceImpl', () => {
         changeOrientation: vi.fn().mockReturnValue(mockPalyerUpdate),
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -282,15 +362,27 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockResolvedValue(false),
         stopGame: vi.fn(),
         getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
 
       await gameServiceImpl.handleGameMessage(userId, matchId, message);
 
@@ -312,6 +404,7 @@ describe('GameServiceImpl', () => {
         changeOrientation: vi.fn().mockReturnValue(mockPalyerUpdate),
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -319,15 +412,25 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockResolvedValue(false),
         stopGame: vi.fn(),
         getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
 
       await gameServiceImpl.handleGameMessage(userId, matchId, message);
 
@@ -349,6 +452,7 @@ describe('GameServiceImpl', () => {
         changeOrientation: vi.fn().mockReturnValue(mockPalyerUpdate),
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -356,50 +460,104 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockResolvedValue(false),
         stopGame: vi.fn(),
         getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
 
       await gameServiceImpl.handleGameMessage(userId, matchId, message);
 
       expect(mockPlayer.changeOrientation).toHaveBeenCalled();
     });
 
-    it('Should Exec power', () => {
-      const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
-      const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
+    it('should handle exec-power message and notify players with frozen cells', async () => {
+      const userId = 'host1';
+      const matchId = 'match1';
+      const message = Buffer.from(JSON.stringify({ type: 'exec-power', payload: '' }));
+      
+      const frozenCells = [
+        { 
+          coordinates: { x: 5, y: 5 }, 
+          item: null,
+          character: null,
+          frozen: true,
+        }
+      ];
+      
+      const playerDirection = 'up';
+      
       const mockPlayer = {
         isAlive: vi.fn().mockReturnValue(true),
-        moveUp: vi.fn().mockResolvedValue({ id: 'host1', position: { x: 0, y: 1 } }),
+        execPower: vi.fn().mockResolvedValue(frozenCells),
+        getOrientation: vi.fn().mockReturnValue(playerDirection),
+        getId: vi.fn().mockReturnValue(userId)
       };
+      
       const mockMatch = {
-        isRunning: vi.fn().mockReturnValue(true),
-        checkLose: vi.fn().mockReturnValue(false),
-        checkWin: vi.fn().mockReturnValue(false),
+        isPaused: vi.fn().mockResolvedValue(false),
+        getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
-        getPlayer: vi.fn().mockReturnValue(mockPlayer),
+        isRunning: vi.fn().mockReturnValue(true),
+        checkWin: vi.fn().mockResolvedValue(false),
+        checkLose: vi.fn().mockReturnValue(false),
+        stopGame: vi.fn(),
+        getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
-      const matchId = 'match1';
+      
+      const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
+      const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
+      
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
-      // Should not fail
-      expect(
-        gameServiceImpl.handleGameMessage(
-          'host1',
-          matchId,
-          Buffer.from(JSON.stringify({ type: 'exec-power', payload: 'up' }))
-        )
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['gameFinished'] = vi.fn().mockReturnValue(false);
+      
+      await gameServiceImpl.handleGameMessage(userId, matchId, message);
+      
+      expect(mockPlayer.execPower).toHaveBeenCalled();
+      expect(mockPlayer.getOrientation).toHaveBeenCalled();
+      
+      const expectedPayload = { 
+        cells: frozenCells, 
+        direction: playerDirection 
+      };
+      
+      expect(mockSocketP1.send).toHaveBeenCalledWith(
+        JSON.stringify({ type: 'update-frozen-cells', payload: expectedPayload })
+      );
+      
+      expect(mockSocketP2.send).toHaveBeenCalledWith(
+        JSON.stringify({ type: 'update-frozen-cells', payload: expectedPayload })
       );
     });
 
@@ -412,6 +570,7 @@ describe('GameServiceImpl', () => {
         moveUp: vi.fn().mockResolvedValue({ id: 'host1', position: { x: 0, y: 1 } }),
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getPlayer: vi.fn().mockReturnValue(mockPlayer),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -419,15 +578,25 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockResolvedValue(false),
         stopGame: vi.fn(),
         getId: vi.fn().mockReturnValue(matchId),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN, close: vi.fn() };
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('host1', mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('host1', mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set('guest1', mockSocketP2 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection('guest1', mockSocketP2 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['validateMessage'] = vi.fn().mockReturnValue({
         type: 'unsupported message',
@@ -442,6 +611,8 @@ describe('GameServiceImpl', () => {
     });
   });
 
+  
+
   describe('updatePlayers', () => {
     it('should update players with the given data', async () => {
       const matchId = 'match1';
@@ -451,11 +622,23 @@ describe('GameServiceImpl', () => {
         enemyId: 'enemy1',
         coordinates: { x: 5, y: 5 },
         direction: 'up',
+        enemyState: 'walking'
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         isRunning: vi.fn().mockReturnValue(true),
         checkLose: vi.fn().mockReturnValue(false),
         checkWin: vi.fn().mockReturnValue(false),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       const mockSocketP1 = { send: vi.fn(), readyState: WebSocket.OPEN };
       const mockSocketP2 = { send: vi.fn(), readyState: WebSocket.OPEN };
@@ -463,9 +646,9 @@ describe('GameServiceImpl', () => {
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set(hostId, mockSocketP1 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection(hostId, mockSocketP1 as unknown as WebSocket);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set(guestId, mockSocketP2 as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection(guestId, mockSocketP2 as unknown as WebSocket);
 
       await gameServiceImpl.updatePlayers(matchId, hostId, guestId, { type: 'update-enemy', payload: data });
 
@@ -481,6 +664,7 @@ describe('GameServiceImpl', () => {
         enemyId: 'enemy1',
         coordinates: { x: 5, y: 5 },
         direction: 'up',
+        enemyState: 'walking'
       };
 
       await expect(gameServiceImpl.updatePlayers(matchId, hostId, guestId, {type: 'update-enemy' , payload: data})).rejects.toThrow(
@@ -525,35 +709,35 @@ describe('GameServiceImpl', () => {
       expect(result).toBe(false);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      expect(gameServiceImpl['connections'].get(user)).toBe(socket);
+      expect(gameServiceImpl['connections'].getConnection(user)).toBe(socket);
     });
 
     it('should update an existing connection and return true if user was already connected', () => {
       const user = 'user1';
-      const oldSocket = { readyState: WebSocket.OPEN };
-      const newSocket = { readyState: WebSocket.OPEN };
+      const oldSocket = { readyState: WebSocket.OPEN, close: vi.fn() };
+      const newSocket = { readyState: WebSocket.OPEN, close: vi.fn() };
 
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set(user, oldSocket as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection(user, oldSocket as unknown as WebSocket);
 
       const result = gameServiceImpl.registerConnection(user, newSocket as unknown as WebSocket);
 
       expect(result).toBe(true);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      expect(gameServiceImpl['connections'].get(user)).toBe(newSocket);
+      expect(gameServiceImpl['connections'].getConnection(user)).toBe(newSocket);
     });
   });
 
   describe('removeConnection', () => {
     it('should remove a user connection', () => {
       const user = 'user1';
-      const socket = { readyState: WebSocket.OPEN };
+      const socket = { readyState: WebSocket.OPEN, close: vi.fn() };
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      gameServiceImpl['connections'].set(user, socket as unknown as WebSocket);
+      gameServiceImpl['connections'].registerConnection(user, socket as unknown as WebSocket);
 
       gameServiceImpl.removeConnection(user);
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      expect(gameServiceImpl['connections'].has(user)).toBe(false);
+      expect(gameServiceImpl['connections'].isConnected(user)).toBe(false);
     });
   });
 
@@ -565,6 +749,7 @@ describe('GameServiceImpl', () => {
         secondsLeft: 50,
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getId: vi.fn().mockReturnValue(matchId),
         setTime: vi.fn(),
         isRunning: vi.fn().mockReturnValue(true),
@@ -572,6 +757,16 @@ describe('GameServiceImpl', () => {
         getGuest: vi.fn().mockReturnValue('guest1'),
         checkWin: vi.fn().mockReturnValue(false),
         checkLose: vi.fn().mockReturnValue(false),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       type GameServiceImplWithPrivateMethods = typeof gameServiceImpl & {
         notifyPlayers: (
@@ -641,27 +836,28 @@ describe('GameServiceImpl', () => {
     });
   });
   describe('getMatch', () => {
-    it('should return a match by its ID', () => {
+    it('should return a match by its ID', async () => {
       const matchId = 'match1';
-      const mockMatch = { id: matchId };
+      const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false), id: matchId };
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
 
-      const result = gameServiceImpl.getMatch(matchId);
+      const result = await gameServiceImpl.getMatch(matchId);
 
       expect(result).toBe(mockMatch);
     });
-    it('should return undefined if the match is not found', () => {
+    it('should return undefined if the match is not found', async () => {
       const matchId = 'invalidMatchId';
 
-      const result = gameServiceImpl.getMatch(matchId);
-
+      const result = await gameServiceImpl.getMatch(matchId);
+      expect(gameCache.getMatch).toHaveBeenCalledWith(matchId);
       expect(result).toBeUndefined();
     });
   });
 
   describe('get match update', () => {
-    it('should return the match update', () => {
+    it('should return the match update', async () => {
       const matchId = 'match1';
       const matchUpdate = {
         id: matchId,
@@ -670,6 +866,7 @@ describe('GameServiceImpl', () => {
         running: true,
       };
       const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
         getId: vi.fn().mockReturnValue(matchId),
         getHost: vi.fn().mockReturnValue('host1'),
         getGuest: vi.fn().mockReturnValue('guest1'),
@@ -677,21 +874,172 @@ describe('GameServiceImpl', () => {
         checkWin: vi.fn().mockReturnValue(false),
         checkLose: vi.fn().mockReturnValue(false),
         getMatchUpdate: vi.fn().mockReturnValue(matchUpdate),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
       };
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
 
-      const result = gameServiceImpl.getMatchUpdate(matchId);
+      const result = await gameServiceImpl.getMatchUpdate(matchId);
 
       expect(result).toEqual(matchUpdate);
     });
 
-    it('should throw error if the match is not found', () => {
+    it('should throw error if the match is not found', async () => {
       const matchId = 'invalidMatchId';
 
-      expect(() => gameServiceImpl.getMatchUpdate(matchId)).toThrow(
+      await expect(gameServiceImpl.getMatchUpdate(matchId)).rejects.toThrow(
         'The requested match was not found'
       );
     });
   });
+
+  describe('updateTime', () => {
+    it('should update the time of the match', async () => {
+      const matchId = 'match1';
+      const time: UpdateTime = {
+        minutesLeft: 1000,
+        secondsLeft: 50,
+      };
+      const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
+        getId: vi.fn().mockReturnValue(matchId),
+        setTime: vi.fn(),
+        isRunning: vi.fn().mockReturnValue(true),
+        getHost: vi.fn().mockReturnValue('host1'),
+        getGuest: vi.fn().mockReturnValue('guest1'),
+        checkWin: vi.fn().mockReturnValue(false),
+        checkLose: vi.fn().mockReturnValue(false),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
+      };
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
+
+      await gameServiceImpl.updateTimeMatch(matchId, time);
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      expect(gameServiceImpl["notifyPlayers"]).toHaveBeenCalled();
+      expect(mockMatch.checkWin).toHaveBeenCalled();
+      expect(mockMatch.checkLose).toHaveBeenCalled();
+    });
+
+    it('should throw error if the match is not found', async () => {
+      const matchId = 'invalidMatchId';
+      const time: UpdateTime = {
+        minutesLeft: 1000,
+        secondsLeft: 50,
+      };
+
+      await expect(gameServiceImpl.updateTimeMatch(matchId, time)).rejects.toThrow(
+        'The requested match was not found'
+      );
+    });
+
+    it('should notify if they loose', async () => {
+      const matchId = 'match1';
+      const time: UpdateTime = {
+        minutesLeft: 1000,
+        secondsLeft: 50,
+      };
+      const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
+        getId: vi.fn().mockReturnValue(matchId),
+        setTime: vi.fn(),
+        isRunning: vi.fn().mockReturnValue(true),
+        getHost: vi.fn().mockReturnValue('host1'),
+        getGuest: vi.fn().mockReturnValue('guest1'),
+        checkWin: vi.fn().mockReturnValue(false),
+        checkLose: vi.fn().mockReturnValue(true),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
+      };
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
+
+      await gameServiceImpl.updateTimeMatch(matchId, time);
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      expect(gameServiceImpl["notifyPlayers"]).toHaveBeenCalled();
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      expect(gameServiceImpl["notifyPlayers"]).toHaveBeenCalledTimes(2);
+    })
+
+    it('should notify if they win', async () => {
+      const matchId = 'match1';
+      const time: UpdateTime = {
+        minutesLeft: 1000,
+        secondsLeft: 50,
+      };
+      const mockMatch = {
+        isPaused: vi.fn().mockResolvedValue(false),
+        getId: vi.fn().mockReturnValue(matchId),
+        setTime: vi.fn(),
+        isRunning: vi.fn().mockReturnValue(true),
+        getHost: vi.fn().mockReturnValue('host1'),
+        getGuest: vi.fn().mockReturnValue('guest1'),
+        checkWin: vi.fn().mockReturnValue(true),
+        checkLose: vi.fn().mockReturnValue(false),
+        getMatchStorage: vi.fn().mockResolvedValue({
+          id: matchId,
+          level: 1,
+          map: 'test-map',
+          timeSeconds: 300,
+          typeFruits: [],
+          host: { id: 'host1' },
+          guest: { id: 'guest1' },
+          board: {},
+        }),
+      };
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      gameServiceImpl['matches'].set(matchId, mockMatch as unknown as Match);
+
+      await gameServiceImpl.updateTimeMatch(matchId, time);
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      expect(gameServiceImpl["notifyPlayers"]).toHaveBeenCalled();
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      expect(gameServiceImpl["notifyPlayers"]).toHaveBeenCalledTimes(2);
+      expect(mockMatch.checkLose).not.toHaveBeenCalled();
+    });
+  })
+
+  describe('save match', () => {
+    it('should save the match', async () => {
+      const matchId = 'match1';
+      const matchStorage = {
+        id: matchId,
+        level: 1,
+        map: 'test-map',
+        timeSeconds: 300,
+        typeFruits: [],
+        host: { id: 'host1' },
+        guest: { id: 'guest1' },
+        board: {},
+      } as unknown as MatchStorage;
+      await gameServiceImpl.saveMatch(matchId,matchStorage);
+      expect(gameCache.saveMatch).toHaveBeenCalledWith(matchId, matchStorage);
+    });
+  })
 });

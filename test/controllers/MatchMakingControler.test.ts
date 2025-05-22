@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import MatchMakingController from '../../src/controllers/websockets/MatchMakingController.js';
 import WebsocketServiceImpl from '../../src/app/lobbies/services/WebSocketServiceImpl.js';
-import { validateString, validateMatchDetails, } from '../../src/schemas/zod.js';
+import { validateString, validateMatchDetails } from '../../src/schemas/zod.js';
 import type { FastifyRequest } from 'fastify';
 import type { WebSocket } from 'ws';
 import { mockDeep } from 'vitest-mock-extended';
@@ -10,7 +10,7 @@ import type MatchRepository from '../../src/schemas/MatchRepository.js';
 import type MatchMakingService from '../../src/app/lobbies/services/MatchMakingService.js';
 import { logger } from '../../src/server.js';
 import type WebSocketService from '../../src/app/lobbies/services/WebSocketService.js';
-
+import SocketConnections from '../../src/app/shared/SocketConnectionsServiceImpl.js';
 
 vi.mock('../../src/server.js', () => ({
   logger: {
@@ -20,27 +20,26 @@ vi.mock('../../src/server.js', () => ({
   },
 }));
 
-
 vi.mock('../../src/schemas/zod.js', () => ({
   validateString: vi.fn((input) => input),
   validateMatchDetails: vi.fn((input) => input),
   validateInfo: vi.fn((input) => input),
   validateErrorMatch: vi.fn((input) => input),
+  validateGameMessageOutput: vi.fn((input) => input),
+  validateGameMesssageInput: vi.fn((input) => input),
 }));
 
 const userRepository = mockDeep<UserRepository>();
 const matchRepository = mockDeep<MatchRepository>();
 const matchMakingService = mockDeep<MatchMakingService>();
-const mockWebSocketService:WebSocketService = new WebsocketServiceImpl(matchRepository)//WebsocketService.getInstance(matchMakingService, matchRepository);
+const connections = new SocketConnections();
+const mockWebSocketService: WebSocketService = new WebsocketServiceImpl(matchRepository, connections);
 mockWebSocketService.setMatchMakingService(matchMakingService);
 mockWebSocketService.registerConnection = vi.fn();
 mockWebSocketService.matchMaking = vi.fn();
 mockWebSocketService.removeConnection = vi.fn();
-const controller = new MatchMakingController(
-  mockWebSocketService,
-  matchRepository,
-  userRepository
-);
+mockWebSocketService.joinGame = vi.fn();
+const controller = new MatchMakingController(mockWebSocketService, matchRepository, userRepository);
 
 describe('MatchMakingController', () => {
   type MockWebSocket = {
@@ -89,14 +88,15 @@ describe('MatchMakingController', () => {
     vi.resetAllMocks();
   });
 
-
   describe('handleMatchMaking', () => {
     it('should register connection, send initial message, and setup event listeners', async () => {
       await controller.handleMatchMaking(mockSocket as unknown as WebSocket, mockRequest);
 
       expect(validateString).toHaveBeenCalledWith('match123');
       expect(mockWebSocketService.registerConnection).toHaveBeenCalledWith('user123', mockSocket);
-      expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({ message: 'Connected and looking for a match...' }));
+      expect(mockSocket.send).toHaveBeenCalledWith(
+        JSON.stringify({ message: 'Connected and looking for a match...' })
+      );
       expect(mockWebSocketService.matchMaking).toHaveBeenCalledWith(validMatchDetails);
       expect(mockSocket.on).toHaveBeenCalledWith('message', expect.any(Function));
       expect(mockSocket.on).toHaveBeenCalledWith('close', expect.any(Function));
@@ -107,7 +107,9 @@ describe('MatchMakingController', () => {
       matchRepository.getMatchById.mockRejectedValue(new Error('Database error'));
       await controller.handleMatchMaking(mockSocket as unknown as WebSocket, mockRequest);
 
-      expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({ type: 'error', payload: { error: 'Internal server error' } }));
+      expect(mockSocket.send).toHaveBeenCalledWith(
+        JSON.stringify({ type: 'error', payload: { error: 'Internal server error' } })
+      );
       expect(mockSocket.close).toHaveBeenCalled();
     });
 
@@ -116,7 +118,9 @@ describe('MatchMakingController', () => {
 
       if (messageHandler) {
         messageHandler(Buffer.from('any message'));
-        expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({ message: 'Matchmaking in progress...' }));
+        expect(mockSocket.send).toHaveBeenCalledWith(
+          JSON.stringify({ message: 'Matchmaking in progress...' })
+        );
       } else {
         throw new Error('Message handler not registered');
       }
@@ -150,8 +154,207 @@ describe('MatchMakingController', () => {
 
       await controller.handleMatchMaking(mockSocket as unknown as WebSocket, mockRequest);
 
-      expect(mockSocket.send).toHaveBeenCalledWith(JSON.stringify({ type: 'error', payload: { error: 'Internal server error' } }));
+      expect(mockSocket.send).toHaveBeenCalledWith(
+        JSON.stringify({ type: 'error', payload: { error: 'Internal server error' } })
+      );
       expect(mockSocket.close).toHaveBeenCalled();
+    });
+  });
+
+  describe('handlePublishMatch', () => {
+    beforeEach(() => {
+      mockRequest = {
+        params: { matchId: 'match123', userId: 'user123' },
+      } as unknown as FastifyRequest;
+
+      userRepository.getUserById.mockResolvedValue({
+        id: 'user123', matchId: 'match123',
+        status: 'PLAYING'
+      });
+      mockWebSocketService.validateMatchToPublish = vi.fn().mockResolvedValue(undefined);
+      mockWebSocketService.publishMatch = vi.fn();
+      mockWebSocketService.removePublishedMatch = vi.fn();
+    });
+
+    it('should publish a match successfully', async () => {
+      await controller.handlePublishMatch(mockSocket as unknown as WebSocket, mockRequest);
+
+      expect(validateString).toHaveBeenCalledWith('match123');
+      expect(validateString).toHaveBeenCalledWith('user123');
+      expect(mockWebSocketService.validateMatchToPublish).toHaveBeenCalledWith(
+        'match123',
+        'user123'
+      );
+      expect(mockWebSocketService.publishMatch).toHaveBeenCalledWith('match123', mockSocket);
+      expect(mockSocket.on).toHaveBeenCalledWith('message', expect.any(Function));
+      expect(mockSocket.on).toHaveBeenCalledWith('close', expect.any(Function));
+      expect(mockSocket.on).toHaveBeenCalledWith('error', expect.any(Function));
+    });
+
+    it('should handle error when host ID does not match match host', async () => {
+      const mismatchedMatch = { ...validMatchDetails, host: 'differentUser' };
+      matchRepository.getMatchById.mockResolvedValue(mismatchedMatch);
+
+      await controller.handlePublishMatch(mockSocket as unknown as WebSocket, mockRequest);
+
+      expect(mockSocket.send).toHaveBeenCalledWith(
+        JSON.stringify({ type: 'error', payload: { error: 'Internal server error' } })
+      );
+      expect(mockSocket.close).toHaveBeenCalled();
+    });
+
+    it('should handle errors from validateMatchToPublish', async () => {
+      mockWebSocketService.validateMatchToPublish = vi
+        .fn()
+        .mockRejectedValue(new Error('Match validation failed'));
+
+      await controller.handlePublishMatch(mockSocket as unknown as WebSocket, mockRequest);
+
+      expect(mockSocket.send).toHaveBeenCalledWith(
+        JSON.stringify({ type: 'error', payload: { error: 'Internal server error' } })
+      );
+      expect(mockSocket.close).toHaveBeenCalled();
+    });
+
+    // it('should send success message on message event', async () => {
+    //   await controller.handlePublishMatch(mockSocket as unknown as WebSocket, mockRequest);
+
+    //   const messageHandler = mockSocket.on.mock.calls.find(([event]) => event === 'message')?.[1];
+    //   if (messageHandler) {
+    //     messageHandler(Buffer.from('any message'));
+    //     expect(mockSocket.send).toHaveBeenCalledWith(
+    //       JSON.stringify({ message: 'Match published successfully!' })
+    //     );
+    //     expect(matchRepository.extendSession).toHaveBeenCalledWith('match123', 10);
+    //   } else {
+    //     throw new Error('Message handler not registered');
+    //   }
+    // });
+
+    it('should remove published match on close event', async () => {
+      await controller.handlePublishMatch(mockSocket as unknown as WebSocket, mockRequest);
+
+      const closeHandler = mockSocket.on.mock.calls.find(([event]) => event === 'close')?.[1];
+      if (closeHandler) {
+        closeHandler();
+        expect(mockWebSocketService.removePublishedMatch).toHaveBeenCalledWith('match123');
+      } else {
+        throw new Error('Close handler not registered');
+      }
+    });
+
+    it('should handle error on socket error event', async () => {
+      await controller.handlePublishMatch(mockSocket as unknown as WebSocket, mockRequest);
+
+      const errorHandler = mockSocket.on.mock.calls.find(([event]) => event === 'error')?.[1];
+      if (errorHandler) {
+        const error = new Error('Socket error');
+        errorHandler(error);
+        expect(vi.mocked(logger.error)).toHaveBeenCalledWith(error);
+        expect(mockSocket.send).toHaveBeenCalled();
+        expect(mockSocket.close).toHaveBeenCalled();
+      } else {
+        throw new Error('Error handler not registered');
+      }
+    });
+  });
+
+  describe('handleJoinGame', () => {
+    beforeEach(() => {
+      mockRequest = {
+        params: { matchId: 'match123', userId: 'guest456' },
+      } as unknown as FastifyRequest;
+
+      userRepository.getUserById.mockResolvedValue({
+        id: 'guest456', matchId: null,
+        status: 'PLAYING'
+      });
+      mockWebSocketService.validateMatchToJoin = vi.fn().mockResolvedValue(undefined);
+      mockWebSocketService.joinGame = vi.fn().mockResolvedValue(undefined);
+    });
+
+    it('should join a game successfully', async () => {
+      await controller.handleJoinGame(mockSocket as unknown as WebSocket, mockRequest);
+
+      expect(validateString).toHaveBeenCalledWith('match123');
+      expect(validateString).toHaveBeenCalledWith('guest456');
+      expect(mockWebSocketService.validateMatchToJoin).toHaveBeenCalledWith('match123', 'guest456');
+      expect(mockWebSocketService.joinGame).toHaveBeenCalledWith(
+        validMatchDetails,
+        'guest456',
+        mockSocket
+      );
+      expect(mockSocket.on).toHaveBeenCalledWith('message', expect.any(Function));
+      expect(mockSocket.on).toHaveBeenCalledWith('error', expect.any(Function));
+    });
+
+    it('should handle error when guest tries to join their own match', async () => {
+      mockRequest = {
+        params: { matchId: 'match123', userId: 'user123' },
+      } as unknown as FastifyRequest;
+      userRepository.getUserById.mockResolvedValue({
+        id: 'user123', matchId: 'match123',
+        status: 'PLAYING'
+      });
+
+      await controller.handleJoinGame(mockSocket as unknown as WebSocket, mockRequest);
+
+      expect(mockSocket.send).toHaveBeenCalledWith(
+        JSON.stringify({ type: 'error', payload: { error: 'Internal server error' } })
+      );
+      expect(mockSocket.close).toHaveBeenCalled();
+    });
+
+    it('should handle errors from validateMatchToJoin', async () => {
+      mockWebSocketService.validateMatchToJoin = vi
+        .fn()
+        .mockRejectedValue(new Error('Match validation failed'));
+
+      await controller.handleJoinGame(mockSocket as unknown as WebSocket, mockRequest);
+
+      expect(mockSocket.send).toHaveBeenCalledWith(
+        JSON.stringify({ type: 'error', payload: { error: 'Internal server error' } })
+      );
+      expect(mockSocket.close).toHaveBeenCalled();
+    });
+
+    it('should handle errors from joinGame', async () => {
+      mockWebSocketService.joinGame = vi.fn().mockRejectedValue(new Error('Failed to join game'));
+
+      await controller.handleJoinGame(mockSocket as unknown as WebSocket, mockRequest);
+
+      expect(mockSocket.send).toHaveBeenCalledWith(
+        JSON.stringify({ type: 'error', payload: { error: 'Internal server error' } })
+      );
+      expect(mockSocket.close).toHaveBeenCalled();
+    });
+
+    // it('should send joining message on message event', async () => {
+    //   await controller.handleJoinGame(mockSocket as unknown as WebSocket, mockRequest);
+
+    //   const messageHandler = mockSocket.on.mock.calls.find(([event]) => event === 'message')?.[1];
+    //   if (messageHandler) {
+    //     messageHandler(Buffer.from('any message'));
+    //     expect(mockSocket.send).toHaveBeenCalledWith(
+    //       JSON.stringify({ message: 'Joining game...' })
+    //     );
+    //     expect(matchRepository.extendSession).toHaveBeenCalledWith('match123', 10);
+    //   } else {
+    //     throw new Error('Message handler not registered');
+    //   }
+    // });
+
+    it('should log error on socket error event', async () => {
+      await controller.handleJoinGame(mockSocket as unknown as WebSocket, mockRequest);
+
+      const errorHandler = mockSocket.on.mock.calls.find(([event]) => event === 'error')?.[1];
+      if (errorHandler) {
+        const error = new Error('Socket error');
+        errorHandler(error);
+        expect(vi.mocked(logger.error)).toHaveBeenCalledWith(error);
+      } else {
+        throw new Error('Error handler not registered');
+      }
     });
   });
 });

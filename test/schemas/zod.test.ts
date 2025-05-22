@@ -153,7 +153,8 @@ describe('validateUserQueue', () => {
   it('should validate correct user queue data', () => {
     const validData = {
       id: 'user1',
-      matchId: 'match1'
+      matchId: 'match1',
+      status: 'WAITING',
     };
     expect(validateUserQueue(validData)).toEqual(validData);
   });
@@ -175,9 +176,7 @@ describe('validateGameMessageOutput', () => {
       type: 'update-state',
       payload: {
         id: 'player1',
-        coordinates: { x: 1, y: 2 },
-        direction: 'up',
-        state: 'alive'
+        state: 'alive',
       }
     };
     expect(validateGameMessageOutput(validData)).toEqual(validData);
@@ -243,7 +242,8 @@ describe('validateUpdateEnemy', () => {
     const validData = {
       enemyId: 'enemy1',
       coordinates: { x: 1, y: 2 },
-      direction: 'up'
+      direction: 'up',
+      enemyState: 'walking'
     };
     expect(validateUpdateEnemy(validData)).toEqual(validData);
   });
@@ -324,16 +324,16 @@ describe('validateUpdateAll', () => {
 describe('validateBoardItemDTO', () => {
   it('should validate correct board item DTO', () => {
     const validData = {
-      type: 'item',
+      type: 'player',
       id: 'item1',
-      orientation: 'north',
+      orientation: 'up',
       color: 'blue'
     };
     expect(validateBoardItemDTO(validData)).toEqual(validData);
   });
 
   it('should throw error for missing fields', () => {
-    expect(() => validateBoardItemDTO({ type: 'item' })).toThrow();
+    expect(() => validateBoardItemDTO({ type: 'player' })).toThrow();
   });
 });
 
@@ -353,7 +353,8 @@ describe('validateCellDTO', () => {
     const validData = {
       coordinates: { x: 1, y: 2 },
       item: null,
-      character: null
+      character: null,
+      frozen: false
     };
     expect(validateCellDTO(validData)).toEqual(validData);
   });
@@ -414,23 +415,23 @@ describe('validateInfo', () => {
 describe('validateBoardItemDTO', () => {
   it('should validate correct board item DTO', () => {
     const validData = {
-      type: 'item',
+      type: 'player',
       id: 'item1',
-      orientation: 'north',
+      orientation: 'up',
       color: 'blue'
     };
     expect(validateBoardItemDTO(validData)).toEqual(validData);
   });
 
   it('should throw error for missing fields', () => {
-    expect(() => validateBoardItemDTO({ type: 'item' })).toThrow();
+    expect(() => validateBoardItemDTO({ type: 'player' })).toThrow();
   });
 
   it('should throw error for invalid data types', () => {
     const invalidData = {
-      type: 'item',
+      type: 'player',
       id: 123, // Invalid type for id
-      orientation: 'north',
+      orientation: 'up',
       color: 'blue'
     };
     expect(() => validateBoardItemDTO(invalidData)).toThrow();
@@ -455,7 +456,9 @@ describe('validateCellDTO', () => {
     const validData = {
       coordinates: { x: 1, y: 2 },
       item: null,
-      character: null
+      character: null,
+      frozen: false
+
     };
     expect(validateCellDTO(validData)).toEqual(validData);
   });

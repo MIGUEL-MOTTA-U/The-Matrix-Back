@@ -1,7 +1,7 @@
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { v4 as uuidv4 } from 'uuid';
 import type UserRepository from '../../schemas/UserRepository.js';
-import { validateString } from '../../schemas/zod.js';
+import { validateString, validateUserQueue } from '../../schemas/zod.js';
 
 /**
  * @class UserController
@@ -24,7 +24,9 @@ export default class UserController {
    */
   public async handleCreateUser(_req: FastifyRequest, res: FastifyReply): Promise<void> {
     const userId: string = uuidv4();
-    await this.userRepository.createUser({ id: userId, matchId: '' });
+    await this.userRepository.createUser(
+      validateUserQueue({ id: userId, matchId: null, status: 'WAITING' })
+    );
     return res.send({ userId });
   }
 
@@ -40,17 +42,5 @@ export default class UserController {
     const parsedId = validateString(userId);
     const user = await this.userRepository.getUserById(parsedId);
     return res.send(user);
-  }
-
-  /**
-   * Handles the request to retrieve all users.
-   *
-   * @param {FastifyRequest} _req The request from the client (not used).
-   * @param {FastifyReply} res The response to be sent to the client.
-   * @return {Promise<void>} A promise that resolves when all user data is retrieved and sent.
-   */
-  public async handleGetUsers(_req: FastifyRequest, res: FastifyReply): Promise<void> {
-    const usersData = await this.userRepository.getAllUsers();
-    return res.send(usersData);
   }
 }

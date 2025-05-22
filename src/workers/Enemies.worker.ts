@@ -1,12 +1,12 @@
-import { parentPort } from 'node:worker_threads';
-import { config } from '../server.js';
+import { parentPort, workerData } from 'node:worker_threads';
 
 if (!parentPort) {
   throw new Error('Este script debe ejecutarse como un worker thread');
 }
+const { enemiesSpeed } = workerData as { enemiesSpeed: number };
 
 const main = async () => {
   parentPort?.postMessage(1);
 };
 
-setInterval(main, config.ENEMIES_SPEED_MS);
+setInterval(main, enemiesSpeed);

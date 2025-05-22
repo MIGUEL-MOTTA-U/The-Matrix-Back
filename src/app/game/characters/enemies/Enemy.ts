@@ -1,4 +1,16 @@
-import { type PlayerMove, type UpdateEnemy, validateUpdateEnemy } from '../../../../schemas/zod.js';
+import CharacterError from '../../../../errors/CharacterError.js';
+import {
+  type BoardItemDTO,
+  type CellDTO,
+  type Direction,
+  type EnemiesTypes,
+  type EnemyState,
+  type UpdateEnemy,
+  validateGameMessageOutput,
+  validatePlayerState,
+  validateUpdateEnemy,
+} from '../../../../schemas/zod.js';
+import type Cell from '../../match/boards/CellBoard.js';
 import Character from '../Character.js';
 
 /**
@@ -9,8 +21,7 @@ import Character from '../Character.js';
  * @since 18/04/2025
  * @extends Character
  * @abstract
- * @author
- * Santiago Avellaneda, Andres Serrato, and Miguel Motta
+ * @author Santiago Avellaneda, Andres Serrato, and Miguel Motta
  */
 export default abstract class Enemy extends Character {
   /**
@@ -21,13 +32,23 @@ export default abstract class Enemy extends Character {
    * @return {Promise<void>} A promise that resolves when the movement is calculated.
    */
   public abstract calculateMovement(): Promise<void>;
-
+  public abstract getEnemyName(): EnemiesTypes;
+  protected enemyState: EnemyState = 'stopped';
   /**
    * Executes the enemy's special power.
    * Enemies do not have special powers, so this method does nothing.
    */
-  execPower(): void {
-    // Enemy has no power
+  public async execPower(_direction?: Direction): Promise<CellDTO[]> {
+    return [];
+  }
+
+  /**
+   * Retrieves the current state of the enemy.
+   *
+   * @return {EnemyState} The current state of the enemy.
+   */
+  public getEnemyState(): EnemyState {
+    return this.enemyState;
   }
 
   /**
@@ -50,7 +71,23 @@ export default abstract class Enemy extends Character {
       enemyId: this.id,
       coordinates: this.cell.getCoordinates(),
       direction: this.orientation,
+      enemyState: this.getEnemyState(),
     });
+  }
+
+  /**
+   * Validates if the Enemy can move to a given cell.
+   *
+   * @param {Cell | null} cell The cell to validate.
+   * @return {{ character: Character | null; cell: Cell }} An object containing the character in the cell (if any) and the cell itself.
+   * @throws {CharacterError} If the cell is null, blocked, or contains an unkillable character.
+   */
+  protected validateMove(cell: Cell | null): { character: Character | null; cell: Cell } {
+    if (!cell) throw new CharacterError(CharacterError.NULL_CELL); // If it's a border, it can't move.
+    if (cell.blocked() || cell.isFrozen()) throw new CharacterError(CharacterError.BLOCKED_CELL); // If it's a block object, it can't move.
+    const character = cell.getCharacter();
+    if (character?.kill()) throw new CharacterError(CharacterError.BLOCKED_CELL); // If it's another enemy, it can't move.
+    return { character, cell };
   }
 
   /**
@@ -63,6 +100,52 @@ export default abstract class Enemy extends Character {
   }
 
   /**
+   * Moves the Enemy to a new cell and interacts with any character present.
+   *
+   * @param {Cell} cellUp The new cell to move to.
+   * @param {Character | null} character The character in the new cell, if any.
+   * @return {Promise<null>} A promise that resolves when the move is completed.
+   */
+  protected async move(cellUp: Cell, character: Character | null): Promise<null | string> {
+    this.cell.setCharacter(null);
+    cellUp.setCharacter(this);
+    this.cell = cellUp;
+    if (character && !character.kill()) {
+      const died = character.die();
+      if (died)
+        this.board.notifyPlayers({
+          type: 'update-state',
+          payload: validatePlayerState(character.getCharacterState()),
+        });
+    }
+    this.enemyState = 'walking';
+    return null;
+  }
+
+  /**
+   * Moves the Enemy in a specified direction.
+   *
+   * @param {string} path The direction to move in ('up', 'down', 'left', 'right').
+   * @returns {Promise<void>} A promise that resolves when the Enemy moves in the specified direction.
+   */
+  protected async moveAlongPath(path: Direction): Promise<void> {
+    switch (path) {
+      case 'down':
+        await this.moveDown();
+        return;
+      case 'up':
+        await this.moveUp();
+        return;
+      case 'left':
+        await this.moveLeft();
+        return;
+      case 'right':
+        await this.moveRight();
+        return;
+    }
+  }
+
+  /**
    * Executes the logic when the enemy "dies".
    * Enemies cannot die, so this method always returns false.
    *
@@ -71,6 +154,18 @@ export default abstract class Enemy extends Character {
   die(): boolean {
     return false;
   }
+  /**
+   * Converts the Troll into a `BoardItemDTO` object.
+   *
+   * @return {BoardItemDTO} An object representing the Troll.
+   */
+  getDTO(): BoardItemDTO {
+    return {
+      type: this.getEnemyName(),
+      orientation: this.orientation,
+      id: this.id,
+    };
+  }
 
   /**
    * Restarts the enemy.
@@ -78,5 +173,9 @@ export default abstract class Enemy extends Character {
    */
   reborn(): void {
     // Enemy cannot reborn, because it can't die either
+  }
+
+  protected async notifyPlayers(type: string, payload: CellDTO[] | UpdateEnemy): Promise<void> {
+    await this.board.notifyPlayers(validateGameMessageOutput({ type, payload }));
   }
 }

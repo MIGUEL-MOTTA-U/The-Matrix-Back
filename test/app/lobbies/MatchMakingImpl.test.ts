@@ -3,64 +3,142 @@ import type WebSocketService from '../../../src/app/lobbies/services/WebSocketSe
 import type MatchRepository from '../../../src/schemas/MatchRepository.js';
 import type UserRepository from '../../../src/schemas/UserRepository.js';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mockDeep, mockReset, } from 'vitest-mock-extended';
-import type { MatchDetails } from '../../../src/schemas/zod.js';
+import { mockDeep } from 'vitest-mock-extended';
+import type { MatchDetails, UserQueue } from '../../../src/schemas/zod.js';
 import type GameService from '../../../src/app/game/services/GameService.js';
+import AsyncQueue from '../../../src/utils/AsyncQueue.js';
+import type Match from '../../../src/app/game/match/Match.js';
+
 const matchRepository = mockDeep<MatchRepository>();
 const userRepository = mockDeep<UserRepository>();
 const webSocketService = mockDeep<WebSocketService>();
 const gameService = mockDeep<GameService>();
- vi.mock('../../../src/server.js', () => ({
-     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
- }));
-beforeEach(() => {
-  vi.clearAllMocks();
-});
+
+vi.mock('../../../src/server.js', () => ({
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+}));
 
 describe('MatchMaking', () => {
     let matchMaking: MatchMaking;
   
     beforeEach(() => {
+      vi.clearAllMocks();
       matchMaking = new MatchMaking(
-        matchRepository,userRepository, webSocketService, gameService)
+        matchRepository, userRepository, webSocketService, gameService);
     });
   
-    it('should enqueue a user if no match is found', async () => {
+    it('should enqueue a user if no queue exists for the map/level combination', async () => {
       const matchDetails: MatchDetails = {
           id: 'match1',
           host: 'user1',
-          level: 0,
-          map: ''
+          level: 1,
+          map: 'desert'
       };
-  
+      
+      // biome-ignore lint/complexity/useLiteralKeys: For Testing purposes
+      const mockGet = vi.spyOn(matchMaking['queue'], 'get').mockReturnValue(undefined);
+      // biome-ignore lint/complexity/useLiteralKeys: For Testing purposes
+      const mockAdd = vi.spyOn(matchMaking['queue'], 'add').mockImplementation(vi.fn());
+      
       await matchMaking.searchMatch(matchDetails);
-  
+      
+      expect(mockGet).toHaveBeenCalledWith({ map: 'desert', level: 1 });
+      expect(mockAdd).toHaveBeenCalled();
+      
       expect(matchRepository.updateMatch).not.toHaveBeenCalled();
       expect(webSocketService.notifyMatchFound).not.toHaveBeenCalled();
-      expect(matchRepository.extendSession).not.toHaveBeenCalled();
     });
   
     it('should create a match if a host is found in the queue', async () => {
       const matchDetails: MatchDetails = {
           id: 'match1',
           host: 'user2',
-          level: 0,
-          map: ''
+          level: 2,
+          map: 'forest'
       };
-  
-      const host = { id: 'user1', matchId: 'match2' };
-      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      vi.spyOn(matchMaking['queue'], 'dequeue').mockResolvedValue(host);
-  
+      
+      // Corregir la definición para que coincida con UserQueue
+      const mockQueue = new AsyncQueue<UserQueue>();
+      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({
+        id: 'user1',
+        matchId: 'match2',
+        role: 'HOST',
+        color: 'blue',
+        status: 'WAITING'
+      });
+      
+      // biome-ignore lint/complexity/useLiteralKeys: For Testing purposes
+      vi.spyOn(matchMaking['queue'], 'get').mockReturnValue(mockQueue);
+      
+      const mockMatch = { id: 'match2' };
+      gameService.createMatch.mockResolvedValue(mockMatch as unknown as Match);
+      
       await matchMaking.searchMatch(matchDetails);
-  
+      
       expect(matchRepository.updateMatch).toHaveBeenCalledWith('match2', { host: 'user1', guest: 'user2' });
-      expect(webSocketService.notifyMatchFound).toHaveBeenCalled();
+      expect(webSocketService.notifyMatchFound).toHaveBeenCalledWith(mockMatch);
       expect(matchRepository.extendSession).toHaveBeenCalledWith('match2', 10);
     });
   
-    it('should throw an error when cancelMatchMaking is called', () => {
-      expect(() => matchMaking.cancelMatchMaking('user1')).toThrow('Method not implemented.');
+    it('should enqueue user if queue exists but is empty', async () => {
+      const matchDetails: MatchDetails = {
+          id: 'match1',
+          host: 'user1',
+          level: 3,
+          map: 'snow'
+      };
+      
+      const mockQueue = new AsyncQueue<UserQueue>();
+      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({
+        id: 'user1',
+        matchId: 'match2',
+        role: 'HOST',
+        color: 'blue',
+        status: 'WAITING'
+      });
+      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue(undefined);
+      vi.spyOn(mockQueue, 'enqueue').mockResolvedValue(undefined);
+      
+      // biome-ignore lint/complexity/useLiteralKeys: For Testing purposes
+      vi.spyOn(matchMaking['queue'], 'get').mockReturnValue(mockQueue);
+      
+      await matchMaking.searchMatch(matchDetails);
+      
+      expect(mockQueue.enqueue).toHaveBeenCalledWith({ id: 'user1', matchId: 'match1', status: 'WAITING' });
+      
+      expect(matchRepository.updateMatch).not.toHaveBeenCalled();
+      expect(webSocketService.notifyMatchFound).not.toHaveBeenCalled();
+    });
+  
+    it('should handle case when user matches with themselves', async () => {
+      const matchDetails: MatchDetails = {
+          id: 'match1',
+          host: 'user1',
+          level: 4,
+          map: 'jungle'
+      };
+      const mockQueue = new AsyncQueue<UserQueue>();
+      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({
+        id: 'user1',
+        matchId: 'match2',
+        role: 'HOST',
+        color: 'blue',
+        status: 'WAITING'
+      });
+      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({
+        id: 'user1', matchId: 'different-match',
+        status: 'WAITING'
+      });
+      vi.spyOn(mockQueue, 'enqueue').mockResolvedValue(undefined);
+      
+      // biome-ignore lint/complexity/useLiteralKeys: For Testing purposes
+      vi.spyOn(matchMaking['queue'], 'get').mockReturnValue(mockQueue);
+      
+      await matchMaking.searchMatch(matchDetails);
+
+      expect(mockQueue.enqueue).toHaveBeenCalledWith({ id: 'user1', matchId: 'match1', status: 'WAITING' });
+      expect(matchRepository.updateMatch).not.toHaveBeenCalled();
+      expect(webSocketService.notifyMatchFound).not.toHaveBeenCalled();
     });
   
     it('should update a match correctly', async () => {
@@ -72,10 +150,10 @@ describe('MatchMaking', () => {
     });
   
     it('should update a user correctly', async () => {
-    // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
+      // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
       await matchMaking['updateUser']('user1', 'match1');
   
-      expect(userRepository.updateUser).toHaveBeenCalledWith('user1', { matchId: 'match1' });
+      expect(userRepository.updateUser).toHaveBeenCalledWith('user1', { matchId: 'match1', role: 'GUEST' });
       expect(userRepository.extendSession).toHaveBeenCalledWith('user1', 10);
     });
   
@@ -86,39 +164,40 @@ describe('MatchMaking', () => {
           level: 0,
           map: ''
       };
+      
+      const mockMatch = { id: 'match1' };
+      gameService.createMatch.mockResolvedValue(mockMatch as unknown as Match);
+      
       // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      await matchMaking['createMatch'](matchDetails);
+      const result = await matchMaking['createMatch'](matchDetails);
   
-      expect(webSocketService.notifyMatchFound).not.toHaveBeenCalled(); // Ensure no notification is sent here
+      expect(result).toEqual(mockMatch);
+      expect(gameService.createMatch).toHaveBeenCalledWith(matchDetails);
     });
   
-    it('should log an error if queue dequeue fails', async () => {
-    // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      vi.spyOn(matchMaking['queue'], 'dequeue').mockRejectedValue(new Error('Queue error'));
-  
+    it('should handle error if queue operation fails', async () => {
       const matchDetails: MatchDetails = {
           id: 'match1',
           host: 'user1',
-          level: 0,
-          map: ''
+          level: 5,
+          map: 'cave'
       };
-  
+      
+      const mockQueue = new AsyncQueue<UserQueue>();
+      vi.spyOn(mockQueue, 'dequeue').mockResolvedValue({
+        id: 'user1',
+        matchId: 'match2',
+        role: 'HOST',
+        color: 'blue',
+        status: 'WAITING'
+      });
+      vi.spyOn(mockQueue, 'dequeue').mockRejectedValue(new Error('Queue error'));
+      
+      // biome-ignore lint/complexity/useLiteralKeys: For Testing purposes
+      vi.spyOn(matchMaking['queue'], 'get').mockReturnValue(mockQueue);
+      
       await expect(matchMaking.searchMatch(matchDetails)).rejects.toThrow('Queue error');
-    });
-    
-    it('should handle empty queue gracefully', async () => {
-    // biome-ignore lint/complexity/useLiteralKeys: For testing purposes
-      vi.spyOn(matchMaking['queue'], 'dequeue').mockResolvedValue(undefined);
-  
-      const matchDetails: MatchDetails = {
-          id: 'match1',
-          host: 'user1',
-          level: 0,
-          map: ''
-      };
-  
-      await matchMaking.searchMatch(matchDetails);
-  
+      
       expect(matchRepository.updateMatch).not.toHaveBeenCalled();
       expect(webSocketService.notifyMatchFound).not.toHaveBeenCalled();
     });

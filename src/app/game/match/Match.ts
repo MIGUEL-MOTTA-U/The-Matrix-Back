@@ -1,12 +1,17 @@
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Worker } from 'node:worker_threads';
+import { Mutex } from 'async-mutex';
 import {
+  type BoardStorage,
   type GameMessageOutput,
   type MatchDTO,
+  type MatchStorage,
   type PlayerState,
+  type PlayerStorage,
   type UpdateAll,
   type UpdateTime,
+  type UserQueue,
   validatePlayerState,
   validateUpdateAll,
   validateUpdateTime,
@@ -15,14 +20,15 @@ import { config, logger } from '../../../server.js';
 import type Player from '../characters/players/Player.js';
 import type GameService from '../services/GameService.js';
 import type Board from './boards/Board.js';
-import BoardDifficulty1 from './boards/BoardDifficulty1.js';
+import BoardFactory from './boards/BoardFactory.js';
 /**
  * @class Match
  * Class representing a match between two players.
  * @since 18/04/2025
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
-class Match {
+export default class Match {
+  private readonly mutex: Mutex;
   private readonly id: string;
   private readonly level: number;
   private readonly map: string;
@@ -32,6 +38,8 @@ class Match {
   private readonly gameService: GameService;
   private started: boolean;
   private running: boolean;
+  private fruitGenerated: boolean;
+  private paused: boolean;
   private timeSeconds: number;
   private worker: Worker | null = null;
   constructor(
@@ -40,18 +48,96 @@ class Match {
     level: number,
     map: string,
     host: string,
-    guest: string
+    guest: string,
+    paused = false,
+    fruitGenerated = false,
+    timeSeconds = config.MATCH_TIME_SECONDS
   ) {
     this.gameService = gameService;
     this.id = id;
     this.level = level;
+    this.mutex = new Mutex();
     this.map = map;
     this.host = host;
     this.guest = guest;
-    this.board = new BoardDifficulty1(this, this.map, this.level);
+    this.board = BoardFactory.createBoard(this, this.map, this.level);
     this.started = false;
-    this.timeSeconds = config.MATCH_TIME_SECONDS; // default time in seconds is 300
+    this.paused = paused;
+    this.fruitGenerated = false;
+    this.fruitGenerated = fruitGenerated;
+    this.timeSeconds = timeSeconds; // default time in seconds is 300
     this.running = true;
+  }
+
+  public updatePlayer(id: string, userData: Partial<UserQueue>): void {
+    if (id === this.host) {
+      this.board.getHost()?.updatePlayer(userData);
+    } else if (id === this.guest) {
+      this.board.getHost()?.updatePlayer(userData);
+    }
+  }
+
+  /**
+   * Initializes the board of the match.
+   *
+   * @return {void} Initializes the board.
+   */
+  public initialize(): void {
+    this.board.initialize();
+  }
+
+  /**
+   * Retrieves the board of the match.
+   *
+   * @return {number} The board of the match.
+   */
+  public getLevel(): number {
+    return this.level;
+  }
+
+  /**
+   * Loads the board with the given storage data.
+   *
+   * @param {BoardStorage} boardStorage The storage data for the board.
+   * @param {PlayerStorage} host The storage data for the host player.
+   * @param {PlayerStorage} guest The storage data for the guest player.
+   */
+  public loadBoard(boardStorage: BoardStorage, host: PlayerStorage, guest: PlayerStorage): void {
+    this.board.loadBoard(boardStorage, host, guest);
+  }
+
+  /**
+   * Retrieves the storage data of the match, including players and board.
+   *
+   * @return {Promise<MatchStorage>} A promise that resolves to the match storage data.
+   */
+  public async getMatchStorage(): Promise<MatchStorage> {
+    const { hostStorage, guestStorage } = this.board.getPlayersStorage() as {
+      hostStorage: PlayerStorage;
+      guestStorage: PlayerStorage;
+    };
+    const boardStorage = await this.board.getBoardStorage();
+    return {
+      id: this.id,
+      level: this.level,
+      map: this.map,
+      host: hostStorage,
+      guest: guestStorage,
+      board: boardStorage,
+      timeSeconds: this.timeSeconds,
+      fruitGenerated: this.fruitGenerated,
+      paused: this.paused,
+    };
+  }
+
+  /**
+   * Return state of the match if paused.
+   * @returns {boolean} true if paused, false otherwise
+   */
+  public async isPaused(): Promise<boolean> {
+    return await this.mutex.runExclusive(() => {
+      return this.paused;
+    });
   }
 
   /**
@@ -62,14 +148,24 @@ class Match {
   public isRunning(): boolean {
     return this.running;
   }
+  /**
+   * Pause the match for both players.
+   * @returns {Promise<void>} Void promise when the match is paused.
+   */
+  public async pauseMatch(): Promise<void> {
+    await this.mutex.runExclusive(() => {
+      this.paused = true;
+    });
+  }
 
   /**
-   * Initializes the match by setting up the board and players.
-   *
-   * @return {Promise<void>} A promise that resolves when the match is initialized.
+   * Resumes the match
+   * @returns {Promise<void>} Void promise when the match is resumed.
    */
-  public async initialize(): Promise<void> {
-    await this.board.initialize();
+  public async resumeMatch(): Promise<void> {
+    await this.mutex.runExclusive(() => {
+      this.paused = false;
+    });
   }
 
   /**
@@ -91,7 +187,9 @@ class Match {
    * @return {Promise<void>} A promise that resolves when the players are notified.
    */
   public async notifyPlayers(data: GameMessageOutput): Promise<void> {
-    this.gameService.updatePlayers(this.id, this.host, this.guest, data);
+    if (this.running) {
+      await this.gameService.updatePlayers(this.id, this.host, this.guest, data);
+    }
   }
 
   /**
@@ -184,9 +282,9 @@ class Match {
    */
   public async stopGame(): Promise<void> {
     if (this.running) {
+      this.running = false;
       await this.stopTime();
       await this.board.stopGame();
-      this.running = false;
     }
   }
 
@@ -230,16 +328,28 @@ class Match {
   private async startTimeMatch(): Promise<void> {
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = dirname(__filename);
+    const timerSpeed = config.TIMER_SPEED_MS;
     const fileName =
       config.NODE_ENV === 'development'
         ? resolve(__dirname, '../../../../dist/src/workers/clock.js')
         : resolve(__dirname, '../../../workers/clock.js');
-    this.worker = new Worker(fileName);
+    this.worker = new Worker(fileName, { workerData: { timerSpeed } });
 
     this.worker.on('message', async (_message) => {
+      if (await this.isPaused()) return;
       if (this.timeSeconds <= 0) {
         await this.stopTime();
         return;
+      }
+      if (!this.fruitGenerated && this.isTimeToGenerateFruit()) {
+        const coordinates = await this.board.generateSpecialFruit();
+        this.fruitGenerated = coordinates !== null;
+        if (coordinates) {
+          await this.notifyPlayers({
+            type: 'update-special-fruit',
+            payload: coordinates,
+          });
+        }
       }
       await this.updateTimeMatch();
     });
@@ -286,5 +396,9 @@ class Match {
       }),
     ];
   }
+
+  private isTimeToGenerateFruit(): boolean {
+    const timeToGenerateFruit = config.TIME_TO_GENERATE_FRUIT;
+    return this.timeSeconds < timeToGenerateFruit;
+  }
 }
-export default Match;

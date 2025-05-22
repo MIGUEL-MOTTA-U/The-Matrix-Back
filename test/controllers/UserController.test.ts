@@ -12,6 +12,7 @@ vi.mock('uuid', () => ({
 
 vi.mock('../../src/schemas/zod.js', () => ({
   validateString: vi.fn((str: string) => str),
+  validateUserQueue: vi.fn((user: { id: string; matchId: string | null }) => user),
 }));
 vi.mock('../../src/server.js', () => ({
   redis: {
@@ -59,27 +60,13 @@ describe('UserController', () => {
       userRepository.getUserById.mockResolvedValue({
         id: 'fixed-uuid',
         matchId: 'matchId',
+        status: 'READY'
       });
       
       await controller.handleGetUser(req, res);
 
-      expect(res.send).toHaveBeenCalledWith({ id: 'fixed-uuid', matchId: 'matchId' });
+      expect(res.send).toHaveBeenCalledWith({ id: 'fixed-uuid', matchId: 'matchId', status: 'READY' });
     });
   });
 
-  describe('handleGetUsers', () => {
-    it('should retrieve all users from Redis and send the user list', async () => {
-      req = {
-        params: {},
-      } as unknown as FastifyRequest;
-
-      userRepository.getAllUsers.mockResolvedValue([{
-      id: 'fixed-uuid',
-      matchId: 'fixed-match-id'
-      }]);
-      await controller.handleGetUsers(req, res);
-
-      expect(res.send).toHaveBeenCalledWith([{ id: 'fixed-uuid', matchId: 'fixed-match-id' }]);
-    });
-  });
 });

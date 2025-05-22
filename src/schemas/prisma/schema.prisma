@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql" // Cambia esto según tu base de datos
+  url      = env("DB_URI")
+  directUrl = env("DB_DIRECT_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum PlayerStatus {
+  READY
+  WAITING
+  PLAYING
+}
+enum PlayerRole {
+  HOST
+  GUEST
+}
+
+model User {
+  id         String     @id @default(cuid())
+  name       String     @default("Anonymous")
+  color      String     @default("coffee")
+  playerRole PlayerRole 
+  role       Role       @default(USER)
+  match      Match?     @relation(fields: [matchId], references: [id])
+  matchId    String?
+  status     PlayerStatus @default(WAITING)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  expiredAt  DateTime?
+}
+
+model Match {
+  id         String     @id @default(cuid())
+  level      Int        @default(1)
+  map        String     @default("desert")
+  started    Boolean    @default(false)
+
+  players    User[]
+
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  expiredAt  DateTime?
+}

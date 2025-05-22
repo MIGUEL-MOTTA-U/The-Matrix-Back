@@ -12,6 +12,7 @@ import type Cell from './CellBoard.js';
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 export default class Fruit extends BoardItem {
+  protected name: string;
   /**
    * Converts the fruit into a BoardItemDTO object.
    *
@@ -40,8 +41,6 @@ export default class Fruit extends BoardItem {
     return this.id;
   }
 
-  private name: string;
-
   /**
    * Creates a new fruit instance.
    *
@@ -49,8 +48,8 @@ export default class Fruit extends BoardItem {
    * @param {string} name The name of the fruit.
    * @param {Board} board The board to which the fruit belongs.
    */
-  constructor(cell: Cell, name: string, board: Board) {
-    super(cell, board);
+  constructor(cell: Cell, name: string, board: Board, id?: string) {
+    super(cell, board, id);
     this.name = name;
   }
 

@@ -1,6 +1,13 @@
 import CharacterError from '../../../../errors/CharacterError.js';
 import MatchError from '../../../../errors/MatchError.js';
-import { type BoardItemDTO, type PlayerMove, validatePlayerMove } from '../../../../schemas/zod.js';
+import {
+  type BoardItemDTO,
+  type CellDTO,
+  type PlayerMove,
+  type PlayerStorage,
+  type UserQueue,
+  validatePlayerMove,
+} from '../../../../schemas/zod.js';
 import type Cell from '../../match/boards/CellBoard.js';
 import Character from '../Character.js';
 
@@ -15,6 +22,8 @@ import Character from '../Character.js';
  * Santiago Avellaneda, Andres Serrato, and Miguel Motta
  */
 class Player extends Character {
+  private status: 'WAITING' | 'PLAYING' | 'READY' = 'WAITING';
+  private name = 'Anonymous';
   /**
    * Retrieves the player's update information, including position, state, and consumed items.
    *
@@ -34,6 +43,22 @@ class Player extends Character {
     });
   }
 
+  public updatePlayer(data: Partial<UserQueue>): void {
+    if (data.color) this.color = data.color;
+    if (data.status) this.status = data.status;
+    if (data.name) this.name = data.name;
+  }
+
+  public getPlayerStorage(): PlayerStorage {
+    return {
+      id: this.id,
+      color: this.color,
+      coordinates: this.getCoordinates(),
+      direction: this.orientation,
+      state: this.getState(),
+    };
+  }
+
   /**
    * Converts the player into a `BoardItemDTO` object.
    *
@@ -46,11 +71,13 @@ class Player extends Character {
   /**
    * Executes the player's special power.
    *
-   * @throws {Error} This method is not implemented.
+   * @returns {Promise<CellDTO[]>} A promise that resolves to an array of `CellDTO` objects representing the frozen cells.
+   *
    */
-  execPower(): void {
-    // TODO --> Implement power
-    throw new Error('Method not implemented.');
+  public async execPower(): Promise<CellDTO[]> {
+    return await this.mutex.runExclusive(() => {
+      return this.cell.executePower(this.orientation, true);
+    });
   }
 
   /**
@@ -78,7 +105,7 @@ class Player extends Character {
    * @throws {Error} This method is not implemented.
    */
   reborn(): void {
-    throw new Error('Method not implemented.');
+    this.alive = true;
   }
 
   /**
@@ -139,7 +166,7 @@ class Player extends Character {
    */
   protected validateMove(cell: Cell | null): { character: Character | null; cell: Cell } {
     if (!cell) throw new CharacterError(CharacterError.NULL_CELL); // If it's a border, it can't move
-    if (cell.blocked()) throw new CharacterError(CharacterError.BLOCKED_CELL); // If it's a block object, it can't move
+    if (cell.blocked() || cell.isFrozen()) throw new CharacterError(CharacterError.BLOCKED_CELL); // If it's a block object, it can't move
     const character = cell.getCharacter();
     if (character && !character.kill()) throw new CharacterError(CharacterError.BLOCKED_CELL); // If it's another player, it can't move
     return { character, cell };

@@ -1,5 +1,19 @@
 import { Mutex } from 'async-mutex';
-import type { PlayerMove, PlayerState, UpdateEnemy } from '../../../schemas/zod.js';
+import {
+  type CellCoordinates,
+  type CellDTO,
+  type Direction,
+  type PathResult,
+  type PathResultWithDirection,
+  type PlayerMove,
+  type PlayerState,
+  type UpdateEnemy,
+  parseCoordinatesToString,
+  parseStringToCoordinates,
+  validatePathResultWithDirection,
+} from '../../../schemas/zod.js';
+import type { Graph } from '../../../utils/Graph.js';
+import type Board from '../match/boards/Board.js';
 import { BoardItem } from '../match/boards/BoardItem.js';
 import type Cell from '../match/boards/CellBoard.js';
 
@@ -11,11 +25,32 @@ import type Cell from '../match/boards/CellBoard.js';
  * @author Santiago Avellaneda, Andres Serrato and Miguel Motta
  */
 abstract class Character extends BoardItem {
+  constructor(
+    cell: Cell,
+    board: Board,
+    id?: string,
+    color = 'brown',
+    orientation: Direction = 'down',
+    alive = true
+  ) {
+    super(cell, board, id);
+    this.orientation = orientation;
+    this.color = color;
+    this.alive = alive;
+  }
   protected readonly mutex = new Mutex();
-  protected alive = true;
-  protected color: string | null = null;
-  protected orientation: 'down' | 'up' | 'left' | 'right' = 'down';
+  protected alive: boolean;
+  protected color: string;
+  protected orientation: Direction;
 
+  /**
+   * Retrieves the color of the character.
+   *
+   * @return {string} The color of the character.
+   */
+  public getColor(): string {
+    return this.color;
+  }
   /**
    * Sets the color of the character.
    *
@@ -23,6 +58,45 @@ abstract class Character extends BoardItem {
    */
   public setColor(color: string): void {
     this.color = color;
+  }
+
+  /**
+   * Returns the shortest path to the target cell with the given mapped graph of the board.
+   *
+   * @param {Cell} targetCell - The target cell to reach.
+   * @param {Graph} mappedGraph - The graph representing the board.
+   * @return {Direction} The direction to move towards the target cell.
+   */
+  public getShortestDirectionToCharacter(
+    targetCell: Cell,
+    mappedGraph: Graph
+  ): PathResultWithDirection | null {
+    const shortestPath = this.getShortestPathToCharacter(targetCell, mappedGraph);
+    if (shortestPath.distance > 0) {
+      const direction: Direction | null = targetCell.getDirection(shortestPath.path[1]);
+      return validatePathResultWithDirection({
+        distance: shortestPath.distance,
+        path: shortestPath.path,
+        direction: direction ?? this.orientation,
+      });
+    }
+    return null;
+  }
+
+  public getShortestPathToCharacter(targetCell: Cell, mappedGraph: Graph): PathResult {
+    const shortestPathRaw = mappedGraph.shortestPathDijkstra(
+      parseCoordinatesToString(targetCell.getCoordinates()),
+      parseCoordinatesToString(this.cell.getCoordinates())
+    );
+    const cellCoordinates: CellCoordinates[] = [];
+    for (const cell of shortestPathRaw.path) {
+      const coordinates = parseStringToCoordinates(cell);
+      cellCoordinates.push(coordinates);
+    }
+    return {
+      distance: shortestPathRaw.distance,
+      path: cellCoordinates,
+    };
   }
 
   /**
@@ -70,9 +144,7 @@ abstract class Character extends BoardItem {
    * @param {'down' | 'up' | 'left' | 'right'} orientation - The new orientation of the character.
    * @return {PlayerMove | UpdateEnemy} The updated state of the character.
    */
-  public changeOrientation(
-    orientation: 'down' | 'up' | 'left' | 'right'
-  ): PlayerMove | UpdateEnemy {
+  public changeOrientation(orientation: Direction): PlayerMove | UpdateEnemy {
     this.orientation = orientation;
     return this.getCharacterUpdate(null);
   }
@@ -128,13 +200,13 @@ abstract class Character extends BoardItem {
   /**
    * Retrieves the current orientation of the character.
    *
-   * @return {'down' | 'up' | 'left' | 'right'} The current orientation of the character.
+   * @return {Direction} The current orientation of the character.
    */
-  public getOrientation(): 'down' | 'up' | 'left' | 'right' {
+  public getOrientation(): Direction {
     return this.orientation;
   }
 
-  abstract execPower(): void;
+  abstract execPower(): Promise<CellDTO[]>;
   abstract die(): boolean;
   abstract kill(): boolean;
   abstract reborn(): void;
