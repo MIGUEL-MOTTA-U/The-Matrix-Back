@@ -28,15 +28,7 @@ export default fp(async (server: FastifyInstance) => {
       `api://${server.config.AZURE_API_APP_ID}/access_as_user`,
       server.config.AZURE_API_APP_ID,
     ];
-    const allowedIssuers = [
-      'https://login.microsoftonline.com/common/v2.0',
-      'https://login.microsoftonline.com/organizations/v2.0',
-      'https://login.microsoftonline.com/consumers/v2.0',
-      `https://login.microsoftonline.com/${server.config.AZURE_TENANT_ID}/v2.0`,
-    ];
-
     const { payload } = await jwtVerify(token, jwks, {
-      issuer: allowedIssuers,
       audience: expectedAudiences,
     });
     return payload;
