@@ -258,7 +258,7 @@ export default class WebsocketServiceImpl implements WebsocketService {
     const guestSocket = matchDetails.guest
       ? this.connections.getConnection(matchDetails.guest)
       : undefined;
-    const hostSocket = this.matchesHosted.get(matchDetails.id);
+    const hostSocket = undefined;
     await this.matchMakingService.notifyPlayerUpdate(hostSocket, guestSocket, changes);
   }
 
@@ -275,9 +275,7 @@ export default class WebsocketServiceImpl implements WebsocketService {
     changes.id = guestId;
     await this.matchMakingService.updatePlayer(matchDetails.id, guestId, changes);
     const hostSocket = this.connections.getConnection(matchDetails.host);
-    const guestSocket = matchDetails.guest
-      ? this.connections.getConnection(matchDetails.guest)
-      : undefined;
+    const guestSocket = undefined;
     await this.matchMakingService.notifyPlayerUpdate(hostSocket, guestSocket, changes);
   }
 
